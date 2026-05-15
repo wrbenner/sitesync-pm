@@ -92,7 +92,7 @@ describe('FMEA P.WIDGET.1 — dashboard widget batch contract', () => {
     }
   })
 
-  it('static probe: no `get_dashboard_payload` (or equivalent) batched RPC exists in src/', () => {
+  it('PARTIAL VALIDATED: `get_dashboard_payload` batched RPC exists in src/', () => {
     let found = false
     const stack = [join(process.cwd(), 'src')]
     while (stack.length) {
@@ -111,8 +111,11 @@ describe('FMEA P.WIDGET.1 — dashboard widget batch contract', () => {
         } catch { /* ignore */ }
       }
     }
-    // KNOWN-VIOLATION pin: currently no batched payload.
-    expect(found).toBe(false)
+    // Wave-4 follow-up: batched RPC hook lives at
+    // src/hooks/queries/dashboard-payload.ts. PARTIAL: 2 widgets wired
+    // (DashboardCompliance, DashboardPortfolio active-project case);
+    // remaining widgets migrate in a follow-up.
+    expect(found).toBe(true)
   })
 
   it('contract: a batched fetcher coalesces ≤ 1 RPC call for N widget metric requests', async () => {

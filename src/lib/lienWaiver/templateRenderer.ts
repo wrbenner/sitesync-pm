@@ -77,18 +77,75 @@ export function listWaiverTemplates(): WaiverTemplate[] {
 }
 
 /**
- * Resolve a template id from jurisdiction + type. Falls back to the AIA
- * conditional progress template when no jurisdictional match is found.
+ * Known jurisdictions the resolver explicitly recognizes. Anything outside
+ * this set is rejected by `validateWaiverJurisdiction` rather than getting
+ * an opaque AIA fallback. `AIA` is the explicit "any state" template.
+ *
+ * FMEA B.LIEN.1 (Wave 4): adding to this set is a deliberate act — a
+ * silent AIA fallback for an unrecognized state would let a project
+ * sign a non-statutory waiver against the wrong jurisdiction.
+ */
+export const KNOWN_WAIVER_JURISDICTIONS = ['AIA', 'CA', 'TX', 'FL', 'NY'] as const;
+export type KnownWaiverJurisdiction = (typeof KNOWN_WAIVER_JURISDICTIONS)[number];
+
+export function isKnownWaiverJurisdiction(value: unknown): value is KnownWaiverJurisdiction {
+  if (typeof value !== 'string') return false;
+  const norm = value.toUpperCase().trim();
+  return (KNOWN_WAIVER_JURISDICTIONS as readonly string[]).includes(norm);
+}
+
+/**
+ * Throws a clear, user-surfaceable error if the project's state is not
+ * one of the resolver's known jurisdictions. NY currently routes to
+ * the AIA template (no NY-specific form yet), but is *recognized* —
+ * the throw is reserved for genuinely unknown states (e.g. 'IL', 'PA')
+ * where we must prompt the user to confirm AIA explicitly rather than
+ * silently signing a non-statutory waiver.
+ *
+ * @throws {Error} when `state` is not in KNOWN_WAIVER_JURISDICTIONS.
+ */
+export function validateWaiverJurisdiction(state: string | null | undefined): KnownWaiverJurisdiction {
+  if (state == null || String(state).trim() === '') {
+    throw new Error(
+      'Lien waiver jurisdiction is required: project state is missing. ' +
+      'Set the project billing state before requesting a waiver.',
+    );
+  }
+  const norm = String(state).toUpperCase().trim();
+  if (!isKnownWaiverJurisdiction(norm)) {
+    throw new Error(
+      `Unknown lien waiver jurisdiction: "${state}". ` +
+      `Supported: ${KNOWN_WAIVER_JURISDICTIONS.join(', ')}. ` +
+      `If this project is in a jurisdiction without a localized template, ` +
+      `explicitly pass 'AIA' to use the AIA G706 fallback.`,
+    );
+  }
+  return norm;
+}
+
+/**
+ * Resolve a template id from jurisdiction + type.
+ *
+ * FMEA B.LIEN.1 (Wave 4): the resolver previously silently fell back to
+ * the AIA template on ANY unrecognized input. That's correct for explicit
+ * AIA opt-in (state = 'AIA') and reasonable for jurisdictions we recognize
+ * but have no localized template for (e.g. NY today). For *unknown* inputs
+ * (typos, unsupported states), we throw via `validateWaiverJurisdiction`
+ * so the caller surfaces an error rather than silently producing a
+ * non-statutory waiver for a CA/TX/FL project.
  */
 export function resolveWaiverTemplateId(
   jurisdiction: WaiverJurisdiction | string | null | undefined,
   type: WaiverType,
 ): string {
-  const j = (jurisdiction ?? 'AIA').toString().toUpperCase();
+  const j = validateWaiverJurisdiction(jurisdiction ?? 'AIA');
   const matches = listWaiverTemplates().filter(
     t => t.jurisdiction === j && t.type === type && !t.supersededDate,
   );
   if (matches.length > 0) return matches[0].id;
+  // No localized template for this jurisdiction — fall back to AIA.
+  // This is *explicit* fallback (the jurisdiction was validated), not
+  // silent fallback (which would mask a typo).
   return aiaConditionalProgress.id;
 }
 

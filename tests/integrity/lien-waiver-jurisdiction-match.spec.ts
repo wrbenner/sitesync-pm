@@ -29,6 +29,7 @@ import {
   resolveWaiverTemplateId,
   getWaiverTemplate,
   listWaiverTemplates,
+  validateWaiverJurisdiction as moduleValidateWaiverJurisdiction,
   type WaiverJurisdiction,
 } from '../../src/lib/lienWaiver/templateRenderer'
 
@@ -162,11 +163,20 @@ describe('FMEA B.LIEN.1 — waiver jurisdiction matches project state', () => {
     expect(result.ok).toBe(false)
   })
 
-  it('KNOWN-VIOLATION ledger: no project-wide validateWaiverJurisdiction wrapper is exported', () => {
-    // This file *authors* the contract. The actual service-layer
-    // wrapper that calls it from the lien_waivers insert path does
-    // not yet exist. Until it does, the resolver's AIA fallback is
-    // the only guard — which is insufficient for CA/TX/FL projects.
-    expect(true).toBe(true)
+  it('VALIDATED: templateRenderer exports validateWaiverJurisdiction; resolver throws on unknown state', () => {
+    // Wave-4 follow-up landed validateWaiverJurisdiction in
+    // src/lib/lienWaiver/templateRenderer.ts. The resolver now calls
+    // it before falling back — so a typo / unsupported state surfaces
+    // an error rather than silently producing a non-statutory waiver.
+    expect(typeof moduleValidateWaiverJurisdiction).toBe('function')
+    // Known states are accepted (returns the normalized string).
+    expect(moduleValidateWaiverJurisdiction('ca')).toBe('CA')
+    expect(moduleValidateWaiverJurisdiction('AIA')).toBe('AIA')
+    // Unknown states throw with a clear message.
+    expect(() => moduleValidateWaiverJurisdiction('IL')).toThrow(/Unknown lien waiver jurisdiction/)
+    expect(() => moduleValidateWaiverJurisdiction('')).toThrow(/required/)
+    expect(() => moduleValidateWaiverJurisdiction(null)).toThrow(/required/)
+    // The resolver inherits the throw.
+    expect(() => resolveWaiverTemplateId('IL', 'conditional_progress')).toThrow(/Unknown lien waiver jurisdiction/)
   })
 })

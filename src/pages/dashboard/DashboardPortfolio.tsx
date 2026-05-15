@@ -1,9 +1,8 @@
 import React, { useMemo } from 'react';
-import { useQuery } from '@tanstack/react-query';
 import { Building2, ChevronRight } from 'lucide-react';
-import { supabase } from '../../lib/supabase';
 import { colors, spacing, typography, borderRadius } from '../../styles/theme';
 import { useProjects } from '../../hooks/queries';
+import { useDashboardPayload } from '../../hooks/queries/dashboard-payload';
 import { useProjectStore } from '../../stores/projectStore';
 import type { Project } from '../../types/database';
 
@@ -31,28 +30,26 @@ interface PortfolioMetricRow {
   overall_progress: number | null;
 }
 
-function usePortfolioHealth(projects: Project[] | undefined) {
-  const ids = useMemo(() => (projects ?? []).map((p) => p.id).sort(), [projects]);
-  return useQuery({
-    queryKey: ['portfolio_metrics', ids.join(',')],
-    queryFn: async (): Promise<Record<string, PortfolioMetricRow>> => {
-      if (ids.length === 0) return {};
-      const { data, error } = await supabase
-        .rpc('get_project_metrics' as never)
-        .in('project_id', ids);
-      if (error) {
-        // Wrapper RPC may not exist on older deploys — degrade gracefully
-        return {};
-      }
-      const map: Record<string, PortfolioMetricRow> = {};
-      for (const row of (data ?? []) as unknown as PortfolioMetricRow[]) {
-        map[row.project_id] = row;
-      }
-      return map;
-    },
-    enabled: ids.length > 0,
-    staleTime: 60_000,
-  });
+// FMEA P.WIDGET.1 (Wave 4): Portfolio now derives the active-project
+// metrics row from the shared useDashboardPayload cache rather than
+// running its own multi-project .rpc('get_project_metrics') round-trip.
+// Cross-project portfolio still ultimately needs a multi-project RPC
+// (P.WIDGET.1 follow-up); for now we degrade gracefully when only the
+// active project's row is present.
+function usePortfolioHealth(
+  projects: Project[] | undefined,
+  activeProjectId: string | null,
+) {
+  const { data: payload } = useDashboardPayload(activeProjectId ?? undefined);
+  return useMemo<Record<string, PortfolioMetricRow>>(() => {
+    if (!projects || projects.length === 0) return {};
+    const map: Record<string, PortfolioMetricRow> = {};
+    const portfolio = (payload?.portfolio ?? {}) as Partial<PortfolioMetricRow>;
+    if (activeProjectId && portfolio.project_id === activeProjectId) {
+      map[activeProjectId] = portfolio as PortfolioMetricRow;
+    }
+    return map;
+  }, [projects, payload, activeProjectId]);
 }
 
 function deriveHealth(row: PortfolioMetricRow | undefined): { health: HealthColor; reason: string; progress: number } {
@@ -80,9 +77,9 @@ const HEALTH_STYLE: Record<HealthColor, { dot: string; label: string }> = {
 
 export const DashboardPortfolio: React.FC = () => {
   const { data: projects } = useProjects();
-  const { data: metricsMap = {} } = usePortfolioHealth(projects);
   const activeProjectId = useProjectStore((s) => s.activeProjectId);
   const setActiveProject = useProjectStore((s) => s.setActiveProject);
+  const metricsMap = usePortfolioHealth(projects, activeProjectId);
 
   const rows = useMemo<ProjectHealthRow[]>(() => {
     return (projects ?? []).map((p) => {

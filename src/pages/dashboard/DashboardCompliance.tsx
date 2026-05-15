@@ -1,10 +1,12 @@
 import React, { useMemo } from 'react';
-import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { Shield, FileWarning, ClipboardCheck, AlertTriangle, ChevronRight } from 'lucide-react';
-import { supabase } from '../../lib/supabase';
 import { colors, spacing, typography, borderRadius } from '../../styles/theme';
 import { getCOIStatus } from '../../hooks/queries/insurance-certificates';
+import {
+  useDashboardPayload,
+  type DashboardPermitRow,
+} from '../../hooks/queries/dashboard-payload';
 
 // ────────────────────────────────────────────────────────────────
 // Compliance — expiring permits (<30d), expiring COIs (<30d),
@@ -24,53 +26,10 @@ interface ComplianceRow {
   path: string;
 }
 
-interface PermitRow { id: string; type: string | null; permit_number: string | null; expiration_date: string | null; }
-interface CertRow { id: string; company: string; policy_type: string | null; expiration_date: string | null; }
-interface InspectionRow { id: string; type: string; date: string; status: string; }
-
-function useComplianceData(projectId: string | undefined) {
-  return useQuery({
-    queryKey: ['compliance_dashboard', projectId],
-    queryFn: async () => {
-      if (!projectId) return { permits: [] as PermitRow[], certs: [] as CertRow[], inspections: [] as InspectionRow[] };
-      const today = new Date().toISOString().split('T')[0];
-      const in30 = new Date(Date.now() + 30 * 86400000).toISOString().split('T')[0];
-
-      const [permitsRes, certsRes, inspectionsRes] = await Promise.all([
-        supabase
-          .from('permits')
-          .select('id, type, permit_number, expiration_date')
-          .eq('project_id' as never, projectId)
-          .not('expiration_date', 'is', null)
-          .lte('expiration_date', in30)
-          .order('expiration_date', { ascending: true }),
-        supabase
-          .from('insurance_certificates')
-          .select('id, company, policy_type, expiration_date')
-          .eq('project_id' as never, projectId)
-          .not('expiration_date', 'is', null)
-          .lte('expiration_date', in30)
-          .order('expiration_date', { ascending: true }),
-        supabase
-          .from('safety_inspections')
-          .select('id, type, date, status')
-          .eq('project_id' as never, projectId)
-          .in('status', ['failed', 'corrective_action_required', 'scheduled'])
-          .lte('date', today)
-          .order('date', { ascending: false })
-          .limit(10),
-      ]);
-
-      return {
-        permits: (permitsRes.data ?? []) as unknown as PermitRow[],
-        certs: (certsRes.data ?? []) as unknown as CertRow[],
-        inspections: (inspectionsRes.data ?? []) as unknown as InspectionRow[],
-      };
-    },
-    enabled: !!projectId,
-    staleTime: 60_000,
-  });
-}
+// FMEA P.WIDGET.1 (Wave 4): widget now reads from the shared
+// useDashboardPayload cache — first paint is one batched RPC across
+// the dashboard rather than per-widget REST calls.
+type PermitRow = DashboardPermitRow;
 
 function daysUntil(dateStr: string | null): number | null {
   if (!dateStr) return null;
@@ -82,11 +41,12 @@ function daysUntil(dateStr: string | null): number | null {
 
 export const DashboardCompliance: React.FC<Props> = ({ projectId }) => {
   const navigate = useNavigate();
-  const { data } = useComplianceData(projectId);
+  const { data: payload } = useDashboardPayload(projectId);
+  const data = payload?.compliance;
 
   const rows = useMemo<ComplianceRow[]>(() => {
     const out: ComplianceRow[] = [];
-    for (const p of data?.permits ?? []) {
+    for (const p of (data?.permits ?? []) as PermitRow[]) {
       const d = daysUntil(p.expiration_date);
       if (d === null) continue;
       const severity: ComplianceRow['severity'] = d < 0 ? 'critical' : d <= 7 ? 'critical' : 'warning';

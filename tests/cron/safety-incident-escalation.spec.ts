@@ -65,66 +65,49 @@ describe('FMEA B.SAFETY.1 — incident escalation cron presence', () => {
     expect(hits.length).toBeGreaterThan(0)
   })
 
-  it('KNOWN-VIOLATION probe: NO cron job targets `incidents` for escalation', () => {
-    // Walk every migration that contains `cron.schedule(...)` and
-    // record whether any of them reference `incidents` AS A QUERY
-    // TARGET — i.e. an UPDATE / SELECT / FROM incidents inside the
-    // scheduled SQL.
-    //
-    // The hazard is recorded — not silently passed — by an inline
-    // KNOWN-VIOLATION assertion so the catalog ledger entry has a
-    // concrete pointer.
+  it('VALIDATED: at least one cron job now targets `incidents` for escalation', () => {
+    // Wave-4 follow-up landed `20261029000000_safety_incident_escalation_cron.sql`
+    // which schedules `escalate_unassigned_high_severity_incidents()` —
+    // the scheduled SQL references public.incidents directly. This
+    // assertion is now the regression guard: if a future revert
+    // removes the escalation cron, the count drops to 0 and the
+    // contract trips.
     if (migrations.length === 0) return
 
     const cronMigrations = migrations.filter((m) => /cron\.schedule\s*\(/i.test(readMig(m)))
     const refsIncidents: string[] = []
     for (const mig of cronMigrations) {
       const body = readMig(mig)
-      // Only count references that look like they're inside the
-      // scheduled-SQL string, not just any incidental mention.
-      // Heuristic: the migration body mentions both `cron.schedule`
-      // AND `FROM incidents` / `UPDATE incidents` / `incidents.id`.
+      // The cron migration may reference incidents either inside the
+      // scheduled SQL or via a SECURITY DEFINER function that the
+      // scheduled SQL invokes (and whose body is in the SAME migration).
+      // Match both bare `incidents` and schema-qualified `public.incidents`.
       const hasTarget =
-        /FROM\s+incidents\b/i.test(body) ||
-        /UPDATE\s+incidents\b/i.test(body) ||
-        /JOIN\s+incidents\b/i.test(body) ||
-        /incidents\.[a-z_]+/i.test(body)
+        /FROM\s+(?:public\.)?incidents\b/i.test(body) ||
+        /UPDATE\s+(?:public\.)?incidents\b/i.test(body) ||
+        /JOIN\s+(?:public\.)?incidents\b/i.test(body) ||
+        /\bpublic\.incidents\b/i.test(body) ||
+        /\bincidents\.[a-z_]+/i.test(body)
       if (hasTarget) refsIncidents.push(mig)
     }
 
-    // Surface the result for the catalog entry. We do NOT fail the
-    // suite — the hazard is documented as a gap, and the spec is
-    // a regression guard: if a future migration ADDS the escalation
-    // cron, this list shifts and the wave-N+1 mutation-injector
-    // pattern would re-pin the contract.
-    if (refsIncidents.length === 0) {
-      // KNOWN-VIOLATION: no incident escalation cron in migrations
-      // as of authoring date. Track this in catalog ledger.
-      // The assertion is the contract pin: "currently zero". When
-      // the platform adds an escalation cron, this expectation must
-      // be flipped to .toBeGreaterThan(0) in a follow-up.
-      expect(refsIncidents.length).toBe(0)
-    } else {
-      // Defensive — if a cron landed silently, surface it.
-      expect(refsIncidents.length).toBeGreaterThan(0)
-    }
+    expect(refsIncidents.length).toBeGreaterThan(0)
   })
 
-  it('contract for a future escalation cron: must reference `investigation_status` and `investigated_by`', () => {
-    // When the platform adds an escalation cron, the scheduled SQL
-    // must filter on (investigation_status='open' AND
-    // investigated_by IS NULL). This is a contract pin: any
-    // migration with `cron.schedule` AND `FROM incidents` MUST
-    // include both column references — otherwise it'll escalate
-    // already-assigned incidents (false-positive flood).
+  it('contract for the escalation cron: must reference `investigation_status` and `investigated_by`', () => {
+    // The scheduled SQL must filter on (investigation_status='open' AND
+    // investigated_by IS NULL). Any cron migration that targets
+    // incidents (bare or schema-qualified) MUST include both column
+    // references — otherwise it'll escalate already-assigned
+    // incidents (false-positive flood).
     if (migrations.length === 0) return
 
     const cronMigrations = migrations.filter((m) => /cron\.schedule\s*\(/i.test(readMig(m)))
     for (const mig of cronMigrations) {
       const body = readMig(mig)
       const targetsIncidents =
-        /FROM\s+incidents\b/i.test(body) ||
-        /UPDATE\s+incidents\b/i.test(body)
+        /FROM\s+(?:public\.)?incidents\b/i.test(body) ||
+        /UPDATE\s+(?:public\.)?incidents\b/i.test(body)
       if (!targetsIncidents) continue
       // The mig DOES target incidents — enforce the filter.
       expect(body, `${mig} schedules over incidents without investigation_status filter`).toMatch(/investigation_status/i)

@@ -29,29 +29,23 @@ const STAGING = process.env.STAGING_URL ?? process.env.E2E_BASE_URL
 const skipReason = 'set STAGING_URL or E2E_BASE_URL to run the live keyboard probe'
 
 test.describe('FMEA M.KBD.1 — Cmd+S handler shape', () => {
-  test('static probe: src/App.tsx registers a Cmd+S shortcut', () => {
+  test('static probe: src/App.tsx does NOT register a Cmd+S shortcut (fixed in wave-4 follow-up)', () => {
     const body = readFileSync(join(process.cwd(), 'src', 'App.tsx'), 'utf8')
-    // The shortcut is registered in the shortcuts array; we just
-    // need to confirm the registration exists.
+    // VALIDATED (wave-4 follow-up): the registration was removed so the
+    // browser's native Cmd+S save behavior is preserved. The shortcut
+    // entry must not be re-introduced without wiring a real save action.
     const matches = body.match(/key:\s*['"]s['"]\s*,\s*meta:\s*true/)
-    expect(matches, 'Cmd+S registration absent from App.tsx').not.toBeNull()
+    expect(matches, 'Cmd+S registration must remain absent — wire a real handler before re-introducing').toBeNull()
   })
 
-  test('KNOWN-VIOLATION: Cmd+S action is an empty closure → preventDefault swallows browser save', () => {
+  test('VALIDATED: no empty-closure Cmd+S shortcut survives in App.tsx', () => {
     const body = readFileSync(join(process.cwd(), 'src', 'App.tsx'), 'utf8')
-    // Find the Cmd+S line and check the action shape on the same line.
+    // The bug pattern was `{ key: 's', meta: true, ..., action: () => {} }`.
+    // Confirm no Cmd+S registration (empty or otherwise) exists.
     const cmdSLine = body
       .split('\n')
       .find((ln) => /key:\s*['"]s['"]\s*,\s*meta:\s*true/.test(ln))
-    expect(cmdSLine, 'Cmd+S line not found').toBeTruthy()
-    if (!cmdSLine) return
-
-    // The bug pattern: `action: () => {}` — an empty arrow with no body.
-    const emptyAction = /action:\s*\(\s*\)\s*=>\s*\{\s*\}/.test(cmdSLine)
-    // We assert the empty-closure shape currently exists. This is
-    // the KNOWN-VIOLATION pin: when fixed, this assertion flips and
-    // the spec must be updated.
-    expect(emptyAction).toBe(true)
+    expect(cmdSLine, 'Cmd+S line must be absent').toBeFalsy()
   })
 
   test('static probe: useKeyboardShortcuts.ts calls preventDefault on meta-modifier match', () => {
@@ -97,23 +91,21 @@ test.describe('FMEA M.KBD.1 — Cmd+S handler shape', () => {
     expect([true, false]).toContain(toastAppeared)
   })
 
-  test('contract: a future fix must either remove the Cmd+S registration or wire a real save handler', () => {
-    // This is the contract surface — pin the acceptable shapes for
-    // a future repair:
-    //   (a) The Cmd+S line is removed from App.tsx shortcuts array.
-    //   (b) The action is a non-empty closure that calls a form save.
-    // Until either lands, the spec records the hazard.
+  test('contract: any future Cmd+S re-introduction must wire a real save handler (not an empty closure)', () => {
+    // Wave-4 fix path (a) removed the registration entirely. If a
+    // future change re-introduces Cmd+S, the action must NOT be an
+    // empty closure (which would re-trigger the silent-swallow bug
+    // due to preventDefault on meta-modifier match).
     const body = readFileSync(join(process.cwd(), 'src', 'App.tsx'), 'utf8')
     const hasCmdS = /key:\s*['"]s['"]\s*,\s*meta:\s*true/.test(body)
     if (!hasCmdS) {
-      // Path (a) — shortcut removed.
+      // Current state — shortcut removed.
       expect(hasCmdS).toBe(false)
       return
     }
-    // Path (b) — shortcut present; action must not be empty.
+    // If re-introduced, the action must not be the empty-closure bug shape.
     const line = body.split('\n').find((ln) => /key:\s*['"]s['"]\s*,\s*meta:\s*true/.test(ln)) ?? ''
     const emptyAction = /action:\s*\(\s*\)\s*=>\s*\{\s*\}/.test(line)
-    // While the bug exists, this is `true`. When fixed, it must be `false`.
-    expect(typeof emptyAction).toBe('boolean')
+    expect(emptyAction).toBe(false)
   })
 })

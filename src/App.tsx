@@ -659,7 +659,12 @@ function AppContent() {
     { key: 'b', meta: true, description: 'Toggle sidebar', action: () => setSidebarCollapsed(!sidebarCollapsed) },
     { key: '.', meta: true, description: 'Toggle AI panel', action: toggleContextPanel },
     { key: 'n', meta: true, description: 'New item', action: () => handleNavigate(activeView === 'rfis' ? 'rfis' : activeView === 'submittals' ? 'submittals' : activeView === 'punch-list' ? 'punch-list' : 'tasks') },
-    { key: 's', meta: true, description: 'Save current form', action: () => {} },
+    // FMEA M.KBD.1 (Wave 4): Cmd+S removed. The previous entry was an empty
+    // closure paired with useKeyboardShortcuts.ts calling preventDefault on
+    // meta-modifier match, which silently swallowed the browser's native save
+    // affordance. There is no global "save current form" surface to wire to;
+    // active forms persist via their own submit handlers. Removing the
+    // registration lets Cmd+S fall through to the browser unchanged.
     { key: 'e', meta: true, description: 'Export', action: () => setExportOpen(true) },
     // Page navigation: Cmd+1 through Cmd+9
     { key: '1', meta: true, description: 'Command (The Day)', action: () => handleNavigate('day') },
