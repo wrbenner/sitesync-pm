@@ -3,9 +3,9 @@
   "loop_name": "functional-frog-self-heal",
   "version": 1,
   "started_at": "2026-05-14T22:45:00Z",
-  "last_run": "2026-05-15T19:00:00Z",
-  "consecutive_passes": 12,
-  "iterations": 13,
+  "last_run": "2026-05-15T19:07:00Z",
+  "consecutive_passes": 13,
+  "iterations": 14,
   "stop_reason": null,
   "stop_condition_checks": {
     "two_consecutive_passes": true,
@@ -45,12 +45,12 @@
   ],
   "fixes_applied": [],
   "quarantined": [],
-  "cost_today_usd": 21.0,
+  "cost_today_usd": 22.5,
   "cost_cap_usd_per_day": 30.0,
   "cost_pause_until": null,
   "in_scope_cells_total": 31744,
-  "in_scope_cells_covered": 3776,
-  "coverage_percent": 11.9,
+  "in_scope_cells_covered": 3880,
+  "coverage_percent": 12.22,
   "coverage_target_percent": 90.0,
   "phases": {
     "phase_1_one_shot_triage": {
@@ -77,8 +77,9 @@
     },
     "phase_2_steady_state": {
       "status": "in_progress",
-      "watch_mode_runs": 12,
+      "watch_mode_runs": 13,
       "expand_mode_batches_completed": [
+        "Route × viewer access matrix — +104 cells via iter 14 (e2e/workflows/codegen/B2-route-viewer-access.generated.spec.ts, 104 routes × viewer × 1 viewport)",
         "Route × anon access matrix — +104 cells via iter 13 (e2e/workflows/codegen/B2-route-anon-access.generated.spec.ts, 104 routes × anon × 1 viewport)",
         "B.2 role × delete-flow matrix — +75 cells via iter 12 (e2e/workflows/codegen/B2-role-matrix-delete-flows.generated.spec.ts, 15 roles × 5 delete flows; COMPLETES CRUD QUAD = 300 cells across iter 9-12)",
         "B.2 role × update-flow matrix — +75 cells via iter 11 (e2e/workflows/codegen/B2-role-matrix-update-flows.generated.spec.ts, 15 roles × 5 update flows)",
