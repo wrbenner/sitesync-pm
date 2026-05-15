@@ -226,13 +226,12 @@ export async function buildCursorPaginatedQuery<TRow, TMapped = TRow>(
     mapFn,
   } = options
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let query: any = fromTable(tableName as never)
+  let query = fromTable(tableName as never)
     .select('*')
     .eq('project_id' as never, projectId)
 
   if (filterFn) {
-    query = filterFn(query)
+    query = filterFn(query) as typeof query
   }
 
   if (cursor) {
