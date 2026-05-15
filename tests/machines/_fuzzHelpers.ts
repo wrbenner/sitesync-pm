@@ -99,7 +99,7 @@ export function fuzzMatrix(
       const payload = payloadFor(event)
       try {
         actor.send({ type: event, ...payload } as EventObject)
-      } catch (err) {
+      } catch {
         // XState v5 throws on unknown event types when `strict` is on; we treat
         // that as a rejected event (the contract test below would catch a
         // silent drop, but raising is also acceptable).
