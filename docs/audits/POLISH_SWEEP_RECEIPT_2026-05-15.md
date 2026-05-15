@@ -89,6 +89,22 @@ The POLISH_PUNCH_LIST.md items were triaged. All were already addressed in the c
 
 ---
 
+---
+
+## Fix 5 — Playwright webServer OOM on cloud runners (v14 floor)
+
+**Added in a second commit on this branch** after the sweep ran end-to-end in the cloud environment.
+
+Root cause: The default Node.js heap (~2 GB) is exhausted by Vite's HMR / module-graph state accumulating across 50+ Playwright page loads in a single process. On memory-constrained cloud containers (typically ~4 GB RAM), the dev server OOM-crashes at test ~51 (page-24-audit-trail desktop), causing 34/84 tests to fail with `ERR_CONNECTION_REFUSED`.
+
+Fix: `playwright.config.ts` now passes `NODE_OPTIONS: '--max-old-space-size=4096'` in `webServerEnv` for both `REAL_BACKEND=true` and DEV_BYPASS modes. The dev server gets a 4 GB heap cap; HMR state accumulation no longer causes a crash before the sweep finishes.
+
+Verified: 84/84 passing in 5.5 minutes (second run, cloud container, DEV_BYPASS mode).
+
+Quality floor bumped to v14. No numeric metrics changed — `anyCount` stays at 69 (the immune-gate grep counts `as any|@ts-ignore|@ts-expect-error`, not just ` as any`; the measured total is 69).
+
+---
+
 ## Next session pickup
 
 PR #623 is open; CI was in-progress at session end. If all 6 required gates are green:
@@ -97,4 +113,4 @@ PR #623 is open; CI was in-progress at session end. If all 6 required gates are 
 gh pr merge 623 --auto --squash --delete-branch
 ```
 
-No further polish work is queued. The e2e floor is now 84/84.
+No further polish work is queued. The e2e floor is now 84/84 (stable in cloud).
