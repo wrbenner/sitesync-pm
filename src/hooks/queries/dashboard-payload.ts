@@ -102,7 +102,7 @@ export function useDashboardPayload(projectId: string | undefined) {
       if (!projectId) return EMPTY_PAYLOAD;
       const { data, error } = await supabase.rpc('get_dashboard_payload' as never, {
         p_project_id: projectId,
-      });
+      } as never);
       if (error) {
         // Wrapper RPC may not exist on older deploys — degrade gracefully.
         return EMPTY_PAYLOAD;

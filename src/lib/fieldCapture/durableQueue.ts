@@ -181,7 +181,7 @@ export async function readyItems(): Promise<QueueItem[]> {
 export function nextDelayMs(attempts: number): number {
   const exp = BASE_DELAY_MS * Math.pow(2, attempts)
   const capped = Math.min(MAX_DELAY_MS, exp)
-  const jitter = Math.random() * capped * 0.2  // ±20%
+  const jitter = (crypto.getRandomValues(new Uint32Array(1))[0] / 0x100000000) * capped * 0.2  // ±20%
   return Math.round(capped - jitter / 2 + jitter)
 }
 

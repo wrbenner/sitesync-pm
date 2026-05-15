@@ -1,7 +1,8 @@
 import { useCallback, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { supabase, fromTable } from '../lib/supabase'
+import { supabase } from '../lib/supabase'
 import { fromTable } from '../lib/db/queries'
+import { runDiscrepancyDetectedChain } from '../lib/crossFeatureWorkflows'
 import type { DrawingPair, DrawingDiscrepancy } from '../types/ai'
 
 // ── Pipeline Stages ─────────────────────────────────────────
@@ -287,21 +288,17 @@ export function useDrawingIntelligence(projectId: string | undefined) {
             .order('created_at', { ascending: false })
             .limit(20)
           if (!highSev || highSev.length === 0) return
-          const { runDiscrepancyDetectedChain } = await import('../lib/crossFeatureWorkflows')
           const ids = (highSev as Array<{ id: string }>).map((d) => d.id)
           for (const id of ids) {
             const result = await runDiscrepancyDetectedChain(id)
             if (result.created) console.info('[discrepancy_detected chain] drafted RFI', result.created)
             else if (result.error) console.warn('[discrepancy_detected chain]', result.error)
           }
-        })().catch((err) => console.warn('[discrepancy_detected chain] dispatch failed:', err))
+        })().catch((dispatchErr) => console.warn('[discrepancy_detected chain] dispatch failed:', dispatchErr))
       }
-    } catch (err) {
-      setState((s) => ({
-        ...s,
-        stage: 'failed',
-        error: (err as Error).message ?? 'Analysis failed',
-      }))
+    } catch (analysisErr) {
+      const analysisErrMsg = (analysisErr as Error).message ?? 'Analysis failed'
+      setState((s) => ({ ...s, stage: 'failed', error: analysisErrMsg }))
     }
   }, [projectId, qc])
 
