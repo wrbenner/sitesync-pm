@@ -30,6 +30,7 @@ export const getRfis = async (
         fromTable('rfis')
           .select('*', { count: 'exact' })
           .eq('project_id' as never, projectId)
+          .is('deleted_at', null)
           .order('number', { ascending: false })
           .range(from, to) as never,
       pagination,
@@ -44,7 +45,12 @@ export const getRfis = async (
 }
 export const getRfiById = async (projectId: string, id: string) => {
   await assertProjectAccess(projectId)
-  const { data, error } = await fromTable('rfis').select('*').eq('project_id' as never, projectId).eq('id' as never, id).single()
+  const { data, error } = await fromTable('rfis')
+    .select('*')
+    .eq('project_id' as never, projectId)
+    .eq('id' as never, id)
+    .is('deleted_at', null)
+    .single()
   if (error) throw transformSupabaseError(error)
   return mapRfi(data as unknown as RfiRow)
 }
