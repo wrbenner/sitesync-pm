@@ -95,15 +95,8 @@ async function sha256Hex(input: string): Promise<string> {
   return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, '0')).join('')
 }
 
-/** Random UUID, falls back to a manual implementation in older runtimes. */
 function makeUuid(): string {
-  const c = globalThis.crypto as Crypto | undefined
-  if (c?.randomUUID) return c.randomUUID()
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, ch => {
-    const r = (Math.random() * 16) | 0
-    const v = ch === 'x' ? r : (r & 0x3) | 0x8
-    return v.toString(16)
-  })
+  return globalThis.crypto.randomUUID()
 }
 
 /**
@@ -187,7 +180,7 @@ export async function readyItems(): Promise<QueueItem[]> {
 export function nextDelayMs(attempts: number): number {
   const exp = BASE_DELAY_MS * Math.pow(2, attempts)
   const capped = Math.min(MAX_DELAY_MS, exp)
-  const jitter = Math.random() * capped * 0.2  // ±20%
+  const jitter = (globalThis.crypto.getRandomValues(new Uint32Array(1))[0] / 0x100000000) * capped * 0.2
   return Math.round(capped - jitter / 2 + jitter)
 }
 
