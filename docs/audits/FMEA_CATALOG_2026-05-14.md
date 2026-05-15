@@ -178,11 +178,11 @@ For each entity × page tuple, an assertion: after entity creation, page renders
 
 ## Section E — Cron / Queue / Materialized View (15+ hazards)
 
-- E.CRON.1 — cron fires while previous run active (concurrent overlap)
+- E.CRON.1 — cron fires while previous run active (concurrent overlap) — PARTIAL (Wave 6 — `tests/cron/cron-overlap-guard.spec.ts` enumerates every `cron.schedule` body + paired edge fn for advisory-lock / `FOR UPDATE SKIP LOCKED` / singleton-row guards; **REAL BUG SURFACED**: `notification-queue-worker` cron has zero overlap protection — see FMEA_WAVE_6_KNOWN_VIOLATIONS.md)
 - E.PGMQ.1 — message delivered twice — covered by #31
 - E.MV.1 — REFRESH (not CONCURRENTLY) blocks reads — covered by #30
-- E.MV.2 — matview stale > N min (alert never fires)
-- E.PGMQ.2 — queue grows unbounded (no monitoring)
+- E.MV.2 — matview stale > N min (alert never fires) — PARTIAL (Wave 6 — `tests/cron/matview-staleness-alert.spec.ts` inventories every `CREATE MATERIALIZED VIEW`, asserts refresh-path + alert-watcher exists; live RPC probe skip-gracefully; **REAL BUG**: no MV-staleness watcher fn — only generic cron-error-rate-alert)
+- E.PGMQ.2 — queue grows unbounded (no monitoring) — PARTIAL (Wave 6 — `tests/cron/pgmq-queue-depth-monitor.spec.ts` enumerates `pgmq.create*` calls + searches for depth-monitor fn; behavioural monitor contract pinned; live `pgmq_metrics_all` RPC probe skip-gracefully; **REAL BUG**: no queue-depth alerting in repo)
 - E.PGMQ.3 — DLQ never consumed
 - E.CRON.2 — timezone mismatch (UTC vs PST)
 - E.CRON.3 — clock drift resets cron
@@ -423,14 +423,14 @@ Remaining 25+:
 ## Section O — Network / Offline (10+ hazards)
 
 - O.RETRY.1 — network timeout not retried
-- O.RETRY.2 — retry retries side-effect mutation (duplicate write)
+- O.RETRY.2 — retry retries side-effect mutation (duplicate write) — PARTIAL (Wave 6 — `tests/concurrency/retry-side-effect-duplicate.spec.ts` proves the hazard with an in-memory server that commits then drops the network response; also pins the idempotency-key contract; **REAL BUG**: bulk of `src/hooks/mutations/*.ts` has no `Idempotency-Key` / client-PK pattern)
 - O.RETRY.3 — retry pile-up user can't cancel
-- O.OFFLINE.1 — offline-queue replays on stale state
+- O.OFFLINE.1 — offline-queue replays on stale state — PARTIAL (Wave 6 — `tests/concurrency/offline-queue-stale-replay.spec.ts` static + behavioural; **REAL BUG**: `src/lib/offlineQueue.ts :: drainAnnotationQueue` performs no revision / deleted_at check before re-pushing queued markups)
 - O.OFFLINE.2 — no stale-while-revalidate warning
 - O.SYNC.1 — background sync fires duplicate on app suspend/resume
 - O.SYNC.2 — IndexedDB lost on app crash
 - O.CACHE.1 — cache stale after focus return
-- O.MUT.1 — mutationKey collision data loss
+- O.MUT.1 — mutationKey collision data loss — PARTIAL (Wave 6 — `tests/concurrency/mutation-key-collision.spec.ts` proves the hazard surface with two parallel mutations sharing a `mutationKey`; pins the buildMutationKey(op, entity, id) contract; current call sites use no `mutationKey` so the hazard is latent until somebody adds one without id discriminator)
 - O.NET.1 — navigator.onLine false-positive
 
 ---
@@ -452,11 +452,11 @@ Remaining 25+:
 
 ## Section Q — Mobile / Capacitor (15+ hazards)
 
-- Q.CAM.1 — camera permission denied no fallback
+- Q.CAM.1 — camera permission denied no fallback — PARTIAL (Wave 6 — `tests/mobile/camera-permission-fallback.spec.ts` runs with `permissions=[]` + patched `getUserMedia` rejection, sweeps /walkthrough, /field-capture, /photos, /files for file-input / upload-button / denied-copy fallback; skip-gracefully if dev server unreachable)
 - Q.CAM.2 — iOS 18 camera returns null on cancel
 - Q.CAM.3 — Android EXIF rotation stripped
 - Q.GPS.1 — covered by #39
-- Q.GPS.2 — geolocation 30s timeout freezes UI
+- Q.GPS.2 — geolocation 30s timeout freezes UI — PARTIAL (Wave 6 — `tests/mobile/geolocation-timeout-freeze.spec.ts` static + runtime; **REAL BUG**: `src/pages/SiteMap.tsx :: useCurrentLocation` passes no `timeout` option to `getCurrentPosition` — slow GPS hangs UI indefinitely)
 - Q.GPS.3 — high-accuracy drains battery, app killed
 - Q.PUSH.1 — covered by #38
 - Q.PUSH.2 — token rotation server not updated
@@ -474,9 +474,9 @@ Remaining 25+:
 ## Section R — Third-Party UI (10+ hazards)
 
 - R.STRIPE.1 — covered by #42
-- R.STRIPE.2 — Stripe redirect cancelled mid-flow
+- R.STRIPE.2 — Stripe redirect cancelled mid-flow — PARTIAL (Wave 6 — `tests/mobile/stripe-redirect-cancel.spec.ts` static (PaySubFlow processing-branch) + runtime back-nav simulation; **REAL BUG**: `src/components/financial/PaySubFlow.tsx` `processing` step has no Cancel CTA / visibilitychange listener / setTimeout fallback)
 - R.STRIPE.3 — SCA challenge timeout
-- R.SLACK.1 — OAuth origin mismatch
+- R.SLACK.1 — OAuth origin mismatch — PARTIAL (Wave 6 — `tests/security/slack-oauth-origin-mismatch.spec.ts` static + reference validator contract; **REAL BUG (CRITICAL)**: `supabase/functions/oauth-token-exchange/index.ts` accepts client-supplied `redirectUri` without origin allowlist / Origin header check / state nonce verification — generic to all OAuth providers, not just Slack)
 - R.SLACK.2 — token expires mid-session
 - R.CAL.1 — Calendly link expired UI shows OK
 - R.CAL.2 — Calendly iframe blocks page scroll
