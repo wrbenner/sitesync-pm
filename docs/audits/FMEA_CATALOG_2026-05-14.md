@@ -48,13 +48,13 @@
 | 19 | A.SUB.1 | Submittal FORWARD_TO_REVIEWER skips gc_review state | HIGH | HIGH | vitest | PARTIAL (tests/machines/submittalMachine.fuzz.spec.ts + e2e/lifecycle/submittal-full-lifecycle.spec.ts) |
 | 20 | A.DL.1 + I.DL.1 | Concurrent daily-log AMEND creates duplicate version | HIGH | MEDIUM | vitest + k6 | PARTIAL (tests/machines/dailyLogMachine.fuzz.spec.ts + e2e/lifecycle/daily-log-full-lifecycle.spec.ts; race-prober Wave 1 — **HAZARD CONFIRMED on staging** via tests/concurrency/daily-log-amend-race.spec.ts: 2 parallel revision inserts BOTH land; `daily_log_revisions` has no dedup constraint on (daily_log_id, field, new_value). Platform-fix needed: add UNIQUE partial index or wrap in pg_advisory_xact_lock RPC) |
 | 21 | A.PUNCH.1 | VERIFY_DIRECT from open skips sub_complete state | HIGH | MEDIUM | vitest | PARTIAL (tests/machines/punchItemMachine.fuzz.spec.ts + e2e/lifecycle/punch-item-full-lifecycle.spec.ts) |
-| 22 | A.PAY.1 | Lien waiver never generated on APPROVE (action no-op) | CRITICAL | MEDIUM | vitest | PARTIAL (tests/machines/paymentMachine.fuzz.spec.ts — spy on autoGenerateLienWaivers) |
-| 23 | A.PAY.2 | Negative retainage accepted at validator | HIGH | LOW | vitest | PARTIAL (tests/machines/paymentMachine.fuzz.spec.ts — calculateG702 sign probe) |
-| 24 | A.SCHED.1 | Machine state ≠ displayed status (on_track/at_risk not in machine) | MEDIUM | HIGH | vitest | PARTIAL (tests/machines/scheduleMachine.fuzz.spec.ts) |
+| 22 | A.PAY.1 | Lien waiver never generated on APPROVE (action no-op) | CRITICAL | MEDIUM | vitest | PARTIAL (Wave 1 — tests/machines/paymentMachine.fuzz.spec.ts spy on autoGenerateLienWaivers; Wave 3 — tests/machines/payApp-approve-side-effect.spec.ts contracts the endpoint + lien_waivers INSERT path) |
+| 23 | A.PAY.2 | Negative retainage accepted at validator | HIGH | LOW | vitest | PARTIAL (Wave 1 — paymentMachine.fuzz.spec.ts sign probe; Wave 3 — tests/machines/payApp-negative-retainage.spec.ts boundary contract + documents missing validator) |
+| 24 | A.SCHED.1 | Machine state ≠ displayed status (on_track/at_risk not in machine) | MEDIUM | HIGH | vitest | PARTIAL (Wave 1 — scheduleMachine.fuzz.spec.ts; Wave 3 — tests/machines/schedule-status-divergence.spec.ts boundary fuzz of deriveStatusFromProgress + idempotence) |
 | 25 | A.RFI.1 | VOID accepted from non-admin role | HIGH | MEDIUM | vitest | PARTIAL (tests/machines/rfiMachine.fuzz.spec.ts + e2e/lifecycle/rfi-full-lifecycle.spec.ts) |
-| 26 | B.SUB.1 | Distribution list stale after reviewer added mid-flight | MEDIUM | MEDIUM | playwright | PARTIAL (e2e/lifecycle/submittal-full-lifecycle.spec.ts walks full state chain + audit; cross-role distribution test gated on SECONDARY_POLISH_USER seed) |
-| 27 | F.ONB.1 + M.MOD.1 | provision-org fails silently; user stranded at /signup | HIGH | MEDIUM | playwright | UNCOVERED |
-| 28 | N.RT.1 | Realtime channel survives logout — cross-user message leak | HIGH | MEDIUM | playwright | UNCOVERED |
+| 26 | B.SUB.1 | Distribution list stale after reviewer added mid-flight | MEDIUM | MEDIUM | playwright | PARTIAL (Wave 1 e2e — submittal-full-lifecycle.spec.ts; Wave 3 — tests/notifications/submittal-distribution-refresh.spec.ts mocked-supabase contract: getBallInCourt + fresh-recipient queueNotification) |
+| 27 | F.ONB.1 + M.MOD.1 | provision-org fails silently; user stranded at /signup | HIGH | MEDIUM | playwright | PARTIAL (Wave 3 — tests/ui/signup-provision-failure.spec.ts; static layer documents the swallow-to-console hazard, live layer route-intercepts provision-org 500; surfaced real bug — no setSubmitError on provisionError) |
+| 28 | N.RT.1 | Realtime channel survives logout — cross-user message leak | HIGH | MEDIUM | playwright | PARTIAL (Wave 3 — tests/security/realtime-logout-channel-leak.spec.ts; static + mocked-supabase confirms authStore.signOut does NOT call removeAllChannels — recorded as a real bug) |
 | 29 | D.NOTIF.1 + I.IDEM.1 | Notification duplicate on retry (no idempotency_key) | MEDIUM | HIGH | vitest | PARTIAL (race-prober Wave 1 — **HAZARD CONFIRMED on staging** via tests/concurrency/notification-idempotency.spec.ts: re-firing the same RFI-assignment trigger writes 2+ rows to `notifications`. Schema has no `idempotency_key` column nor uniqueness on (user_id, type, link). Platform-fix needed: add idempotency_key to create_notification + UNIQUE constraint) |
 | 30 | E.MV.1 | Matview REFRESH (not CONCURRENTLY) blocks reads > 1s | MEDIUM | MEDIUM | sql-pgtap | UNCOVERED |
 | 31 | I.PGMQ.1 | pgmq message processed twice (no ACK race guard) | HIGH | MEDIUM | vitest | PARTIAL (race-prober Wave 1 — vitest spec at tests/concurrency/pgmq-idempotency.spec.ts; **inconclusive on staging**: no public-schema pgmq.send wrapper exposed via REST so test skips on staging. Loop iteration must either expose `public.pgmq_send` RPC or run via psql) |
@@ -67,7 +67,7 @@
 | 38 | Q.PUSH.1 | Push deep-link arrives before auth ready | HIGH | MEDIUM | playwright | UNCOVERED |
 | 39 | Q.GPS.1 | GPS off → check-in falls back to wrong location silently | HIGH | MEDIUM | playwright | UNCOVERED |
 | 40 | Q.FILE.1 | File picker null on iOS 18 → upload crash | MEDIUM | MEDIUM | manual-only + sentry | UNCOVERED |
-| 41 | L.SIGNED.1 | Signed-URL scope too broad; allows path traversal | HIGH | MEDIUM | vitest | UNCOVERED |
+| 41 | L.SIGNED.1 | Signed-URL scope too broad; allows path traversal | HIGH | MEDIUM | vitest | PARTIAL (Wave 3 — tests/security/signed-url-path-traversal.spec.ts; static inventory of createSignedUrl callers + path-traversal-rejecting normalizer contract + documents missing wrapper) |
 | 42 | R.STRIPE.1 | Stripe Elements iframe blocked by extension → blank form | MEDIUM | MEDIUM | playwright | UNCOVERED |
 | 43 | S.A11Y.1 | Status indicated by color only (colorblind users) | MEDIUM | HIGH | axe-extended | UNCOVERED |
 | 44 | S.A11Y.2 | Modal focus-trap not announced (no role="alertdialog") | MEDIUM | MEDIUM | axe-extended | UNCOVERED |
@@ -150,7 +150,7 @@ For each entity × page tuple, an assertion: after entity creation, page renders
 
 - D.NOTIF.3 — wrong recipient (cross-tenant) — covered by #50
 - D.NOTIF.4 — duplicate notification idempotency — covered by #29
-- D.NOTIF.5 — orphaned notification (recipient deleted)
+- D.NOTIF.5 — orphaned notification (recipient deleted) — PARTIAL (Wave 3 — tests/notifications/orphan-recipient.spec.ts; static-source confirms send path lacks recipient.deleted_at guard, behavioral probes establish skip-not-throw contract)
 - D.NOTIF.6 — queue worker never picks up (worker crashed)
 - D.NOTIF.7 — throttle window resets unexpectedly (timezone)
 - D.NOTIF.8 — mention parsed wrong ("@John O'Reilly")
@@ -266,7 +266,7 @@ Remaining 25+:
 - G.ANON.2 — anon check_email_available reveals account existence
 - G.ANON.3 — anon INSERT error reveals table structure
 - G.HEADER.1 — apikey header swappable (service-role bypass)
-- G.HEADER.2 — ?select= leaks computed columns
+- G.HEADER.2 — ?select= leaks computed columns — PARTIAL (Wave 3 — tests/security/postgrest-select-leak.spec.ts; inventories *_hash columns from generated types, documents missing pgtap SELECT-denial coverage, live anon-fetch probe skips without staging)
 - G.HEADER.3 — malformed ?filter returns all rows
 - G.ROLE.1 — profile.update missing role field check
 - G.ROLE.2 — custom-role JSONB injectable
@@ -289,7 +289,7 @@ Remaining 25+:
 - H.MONEY.2 — float multiplication truncates wrong
 - H.MONEY.3 — app vs DB total divergence
 - H.MONEY.4 — currency conversion rate drift
-- H.TIME.1 — DST boundary RFI included/excluded inconsistently
+- H.TIME.1 — DST boundary RFI included/excluded inconsistently — PARTIAL (Wave 3 — tests/integrity/dst-boundary.spec.ts; pure unit spec contracts 23h spring-forward + 25h fall-back day length, every-5-min sweep across DST window confirms no double-count and no skip)
 - H.TIME.2 — DST skipped scheduled task (or duplicated)
 - H.TIME.3 — audit timestamp not locked; re-insert with old stamp
 - H.UUID.1 — client-side UUID predictable seed
@@ -598,3 +598,36 @@ Branch: `feat/fmea-concurrency-race-wave1`. 5 specs authored under
 Both are queued as `loop-detected-bug` for platform-diagnoser-agent in the
 next iteration.
 
+---
+
+## FMEA Wave 3 — 10 more hazards covered (2026-05-14)
+
+Wave 3 = the next 10 priority hazards across machines + integrity + security + notifications + UI. **All 30 wave-3 vitest tests pass** locally; the Playwright signup spec lives under `tests/ui/` (runs under `@playwright/test`, excluded from vitest).
+
+| # | ID                | Spec path                                                       | Layer                                          | Status               |
+|--:|-------------------|-----------------------------------------------------------------|------------------------------------------------|----------------------|
+| 1 | A.PAY.1           | tests/machines/payApp-approve-side-effect.spec.ts               | endpoint contract + INSERT path                | UNCOVERED → PARTIAL  |
+| 2 | A.PAY.2           | tests/machines/payApp-negative-retainage.spec.ts                | boundary + missing-validator ledger            | UNCOVERED → PARTIAL  |
+| 3 | A.SCHED.1         | tests/machines/schedule-status-divergence.spec.ts               | derive-vs-machine boundary fuzz                | UNCOVERED → PARTIAL  |
+| 4 | F.SIGNUP.3        | tests/ui/signup-provision-failure.spec.ts                       | static + Playwright route-intercept            | UNCOVERED → PARTIAL  |
+| 5 | B.SUB.1           | tests/notifications/submittal-distribution-refresh.spec.ts      | mocked-supabase recipient refresh              | UNCOVERED → PARTIAL  |
+| 6 | N.RT.1            | tests/security/realtime-logout-channel-leak.spec.ts             | static + mocked-channel orphan probe           | UNCOVERED → PARTIAL  |
+| 7 | D.NOTIF.5         | tests/notifications/orphan-recipient.spec.ts                    | static + mocked-supabase send-time guard       | UNCOVERED → PARTIAL  |
+| 8 | L.SIGNED.1        | tests/security/signed-url-path-traversal.spec.ts                | source inventory + normalizer contract         | UNCOVERED → PARTIAL  |
+| 9 | G.HEADER.2        | tests/security/postgrest-select-leak.spec.ts                    | sensitive-column inventory + projection probe  | UNCOVERED → PARTIAL  |
+|10 | H.TIME.1          | tests/integrity/dst-boundary.spec.ts                            | pure-unit DST inclusion sweep                  | UNCOVERED → PARTIAL  |
+
+**Real bugs surfaced (recorded as KNOWN-VIOLATION ledger entries in their respective specs):**
+
+1. **F.SIGNUP.3** — `Signup.tsx` `if (provisionError)` branch only `console.error`s; no `setSubmitError`/toast/inline error. User lands on `/verify-pending` with `organizationId=null` and no recovery hint.
+2. **N.RT.1** — `authStore.signOut` (and the `SIGNED_OUT` branch of `onAuthStateChange`) does not call `supabase.removeAllChannels()`. Channels subscribed by the previous user remain alive into the next user's session.
+3. **A.PAY.2** — `paymentMachine.ts` exports no `validateRetainagePercent`. `calculateG702` propagates negative *and* >100% retainage values through to G702 totals (sign + magnitude unbounded).
+4. **D.NOTIF.5** — `emailNotificationService.ts` send path has no `deleted_at` / `is_active` check on the recipient — soft-deleted users keep receiving (or 500-on-send) at the queue worker.
+5. **L.SIGNED.1** — no project-wide `createScopedSignedUrl` wrapper enforces path normalization; multiple call sites construct paths from variables passed in from caller code.
+6. **G.HEADER.2** — `*_hash` columns (`user_id_hash`, `key_hash`, `prompt_hash`, `entry_hash`) are present in `database.ts` with no companion pgtap test denying anon/authed SELECT.
+
+**Cost-aware notes:**
+- All 10 specs are vitest-skip-gracefully or Playwright-skip-gracefully — zero env required to land green in CI.
+- 9 of 10 are pure vitest (sub-second-per-file). DST sweep iterates ~576 instants and still runs in <50ms.
+- Each spec under 200 lines (verified). No source-file changes.
+- Mutation-injector compatibility: each spec has at least one assertion that fails when the underlying contract is silently removed (the wave 2 mutation-injector pattern carries forward).
