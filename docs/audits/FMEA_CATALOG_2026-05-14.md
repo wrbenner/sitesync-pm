@@ -38,7 +38,7 @@
 | 9 | G.RLS.1 | Anon-write violations on N tables | HIGH | MEDIUM | sql-pgtap | PARTIAL (PR #574 fixed 5; loop validates the rest) |
 | 10 | I.PROV.1 | Concurrent provision-org creates duplicate slug | HIGH | MEDIUM | k6-load | UNCOVERED |
 | 11 | K.STRIPE.1 | Stripe webhook replay (old event re-processed) | HIGH | MEDIUM | vitest | UNCOVERED |
-| 12 | H.SOFTDEL.1 | Soft-deleted entity still returned by queries missing deleted_at filter | HIGH | HIGH | sql-pgtap | UNCOVERED |
+| 12 | H.SOFTDEL.1 | Soft-deleted entity still returned by queries missing deleted_at filter | HIGH | HIGH | sql-pgtap | VALIDATED (tests/integrity/softdel.spec.ts — static + live SQL; 3 production leaks in rfis/submittals/field closed 2026-05-14) |
 | 13 | H.MONEY.1 | Money cents drift: $12.35×3 ≠ 3705 cents in DB | MEDIUM | MEDIUM | vitest | UNCOVERED |
 | 14 | H.AUDIT.1 | Audit hash chain broken by partial rollback | HIGH | MEDIUM | sql-pgtap | UNCOVERED |
 | 15 | F.MFA.1 | MFA backup codes never displayed; account recovery impossible | CRITICAL | MEDIUM | playwright | UNCOVERED |

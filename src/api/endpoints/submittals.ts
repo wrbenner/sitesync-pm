@@ -39,6 +39,7 @@ export const getSubmittals = async (
       fromTable('submittals')
         .select('*', { count: 'exact' })
         .eq('project_id' as never, projectId)
+        .is('deleted_at', null)
         .order('number', { ascending: false })
         .range(from, to),
     pagination,
@@ -47,7 +48,12 @@ export const getSubmittals = async (
 }
 export const getSubmittalById = async (projectId: string, id: string) => {
   await assertProjectAccess(projectId)
-  const { data, error } = await fromTable('submittals').select('*').eq('project_id' as never, projectId).eq('id' as never, id).single()
+  const { data, error } = await fromTable('submittals')
+    .select('*')
+    .eq('project_id' as never, projectId)
+    .eq('id' as never, id)
+    .is('deleted_at', null)
+    .single()
   if (error) throw transformSupabaseError(error)
   return mapSubmittal(data)
 }
