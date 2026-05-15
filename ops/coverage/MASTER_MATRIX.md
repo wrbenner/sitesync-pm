@@ -147,3 +147,84 @@ Updated gate total: **15 new gates** (7–21).
 - Numbers in this matrix match the JSON artifacts (spot-checks: 104 routes, 294 RPCs, 348 tables, 310 migrations).
 - No "TBD" / "deferred" cells — every cell is either tested, uncovered (will be Phase B), or documented out-of-scope.
 - Walker approval gate for Phase A.16 was **overridden by "go don't stop"** directive on 2026-05-14 — proceeding directly to Phase B authoring.
+
+---
+
+## Phase 2 — Crystalline Standard sub-suites (B16–B43)
+
+**Authored:** 2026-05-15
+**Roadmap:** `docs/audits/CRYSTALLINE_STANDARD_ROADMAP_2026-05-15.md`
+**Mission:** depth + every-facet coverage, soft-pilot (Day 60) → public GA (~Jan 2027)
+
+Phase 2 extends the existing breadth matrix (B1–B14) with 28 deep sub-suites organized in six tiers. Each follows the same `tests/codegen/gen-*.ts → ops/coverage/*.json → BN-*.generated.spec.ts → gate-NN-*.yml` pattern. Gate numbers start at gate-28 to avoid collision with existing gates 7–27.
+
+### Tier 1 — Correctness (B16–B23)
+
+| Sub-suite | Manifest | Spec | Gate | Cells | Status |
+|---|---|---|---|---:|---|
+| B16 Workflow depth | `workflows-deep.json` | `e2e/workflows/codegen/B16-workflow-depth.generated.spec.ts` | gate-28-workflow-depth | ~2,160 | planned |
+| B17 Button behavior | `buttons-actions.json` | `e2e/buttons/codegen/B17-button-behavior.generated.spec.ts` | gate-29-button-behavior | ~1,200 | planned |
+| B18 Money math audit | `money-audit-allowlist.json` | `scripts/audit-money-math.mjs` (AST audit, not a vitest spec) | gate-30-money-math | 1 gate + ~50 property suites | **shipped 2026-05-15 (informational); 153-entry baseline expires 2026-08-13** |
+| B19 Invariants | `invariants.json` | `tests/invariants/codegen/B19-invariants.generated.spec.ts` | gate-31-invariants | ~600 | planned |
+| B20 IRIS quality | `iris-quality.json` | `tests/iris/codegen/B20-iris-quality.generated.spec.ts` | gate-32-iris-quality | ~480 | planned |
+| B21 Realtime behavior | `realtime-scenarios.json` | `tests/realtime/codegen/B21-realtime-behavior.generated.spec.ts` | gate-33-realtime-behavior | ~288 | planned |
+| B22 Integration fidelity | `integrations.json` (extended) | `tests/integrations/codegen/B22-integration-fidelity.generated.spec.ts` | gate-34-integration-fidelity | ~384 + nightly live-ping | planned |
+| B23 Performance tiered | `performance-budgets.json` | `tests/perf/codegen/B23-performance-budgets.generated.spec.ts` | gate-35-performance | ~936 | planned |
+
+### Tier 2 — Security & Privacy (B24–B27)
+
+| Sub-suite | Gate | Cells | Status |
+|---|---|---:|---|
+| B24 App security (OWASP) | gate-36-app-security | ~4,160 + adjacent SCA/secrets/headers | planned |
+| B25 Cross-tenant isolation | gate-37-tenant-isolation | ~2,784 | planned |
+| B26 Auth lifecycle | gate-38-auth-lifecycle | ~300 | planned |
+| B27 Privacy compliance | gate-39-privacy | ~180 | planned |
+
+### Tier 3 — Reliability & Operations (B28–B32)
+
+| Sub-suite | Gate | Cells | Status |
+|---|---|---:|---|
+| B28 Disaster recovery | gate-40-disaster-recovery | ~36 + weekly restore drill | planned |
+| B29 Observability | gate-41-observability | ~150 + synthetic uptime probes | planned |
+| B30 Incident readiness | gate-42-incident-readiness | ~75 + quarterly game-day | planned |
+| B31 Migration safety | gate-43-migration-safety | ~migrations × 4 | planned |
+| B32 Referential integrity | gate-44-referential-integrity | ~1,000 + nightly orphan sweep | planned |
+
+### Tier 4 — Compliance & Commercial (B33–B36)
+
+| Sub-suite | Gate | Cells | Status |
+|---|---|---:|---|
+| B33 Billing & subscription | gate-45-billing | ~300 | planned |
+| B34 Notification delivery | gate-46-notification-delivery | ~360 + deliverability probe | planned |
+| B35 Legal & licensing | gate-47-legal | ~96 | planned |
+| B36 Customer support | gate-48-support-readiness | ~312 | planned |
+
+### Tier 5 — Quality & Polish (B37–B40)
+
+| Sub-suite | Gate | Cells | Status |
+|---|---|---:|---|
+| B37 A11y deep | gate-49-a11y-deep | ~624 | planned |
+| B38 i18n | gate-50-i18n | ~1,248 | planned |
+| B39 Mobile / field | gate-51-mobile-field | ~180 + touch-target audit | planned |
+| B40 Browser/device | gate-52-browser-compat | ~2,080 | planned |
+
+### Tier 6 — Continuous Quality (B41–B43)
+
+| Sub-suite | Gate | Cells | Status |
+|---|---|---:|---|
+| B41 Supply chain | gate-53-supply-chain | ~30 + nightly CVE scan | planned |
+| B42 Code quality ratchet | gate-54-code-quality | ~8 metrics × per-PR delta | planned |
+| B43 Search & retrieval | gate-55-search | ~480 | planned |
+
+### Phase 2 cell totals
+
+| Tier | New cells | Note |
+|---|---:|---|
+| 1 Correctness | ~6,048 | deep, 5–6 assertions/cell |
+| 2 Security & Privacy | ~7,424 | + adjacent gates |
+| 3 Reliability & Ops | ~1,261 | small count, high criticality |
+| 4 Compliance & Commercial | ~1,068 | |
+| 5 Quality & Polish | ~4,132 | |
+| 6 Continuous Quality | ~510 + ratchet | |
+| **Phase 2 total new** | **~20,443 deep cells** | assertion density 5–10× Phase 1 |
+| **Combined with Phase 1 breadth** | **~52,000+ cells** | matrix becomes the platform immune system |
