@@ -1,0 +1,77 @@
+# Gate 23 - Lifecycle E2E (FMDC)
+#
+# Runs Playwright specs under e2e/lifecycle/ which exercise full-lifecycle
+# entity flows (create -> transition -> complete -> archive) against the
+# configured preview deployment + staging Supabase.
+#
+# Informational mode (continue-on-error) until 5 stable runs prove
+# reliability; promotion to required happens autonomously via the loop.
+#
+# Required secrets:
+#   PREVIEW_BASE_URL              (e.g., https://sitesync-pm.vercel.app)
+#   STAGING_SUPABASE_URL
+#   STAGING_SUPABASE_ANON_KEY
+#   STAGING_POLISH_USER
+#   STAGING_POLISH_PASS
+#
+# SECURITY: only secrets.* via env: blocks. No github.event.* in run:.
+
+name: Gate 23 - Lifecycle E2E
+
+on:
+  pull_request:
+    paths:
+      - 'src/pages/**'
+      - 'src/components/**'
+      - 'e2e/lifecycle/**'
+      - 'supabase/migrations/**'
+      - '.github/workflows/gate-23-lifecycle-e2e.yml'
+  push:
+    branches: [main]
+
+jobs:
+  lifecycle-e2e:
+    name: Playwright lifecycle specs
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: npm
+
+      - run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Run Playwright lifecycle specs
+        env:
+          E2E_REAL_BACKEND: 'true'
+          E2E_BASE_URL: ${{ secrets.PREVIEW_BASE_URL }}
+          SUPABASE_URL: ${{ secrets.STAGING_SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.STAGING_SUPABASE_ANON_KEY }}
+          POLISH_USER: ${{ secrets.STAGING_POLISH_USER }}
+          POLISH_PASS: ${{ secrets.STAGING_POLISH_PASS }}
+        run: |
+          set -euo pipefail
+          if [ -z "${SUPABASE_URL:-}" ] || [ -z "${E2E_BASE_URL:-}" ]; then
+            echo "::warning::Required secrets not set; gate skipped (informational mode)."
+            exit 0
+          fi
+          if [ ! -d e2e/lifecycle ]; then
+            echo "::warning::e2e/lifecycle/ not present yet; gate skipped (informational mode)."
+            exit 0
+          fi
+          npx playwright test e2e/lifecycle/ --project=chromium --reporter=list
+
+      - name: Upload Playwright report on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-lifecycle-report
+          path: playwright-report/
+          retention-days: 7

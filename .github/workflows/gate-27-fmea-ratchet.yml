@@ -1,0 +1,79 @@
+# Gate 27 - FMEA Ratchet (FMDC)
+#
+# Verifies the FMEA catalog (docs/audits/FMEA_CATALOG_<DATE>.md) has not
+# regressed: counts VALIDATED entries and compares against the baseline
+# stored at .agent/fmea-baseline.json. Fails if the validated count
+# drops below baseline.
+#
+# On push to main: runs with --update-baseline so subsequent PRs ratchet
+# from the new baseline.
+#
+# Informational mode (continue-on-error) until 5 stable runs prove
+# reliability; promotion to required happens autonomously via the loop.
+#
+# No external secrets required.
+#
+# SECURITY: only secrets.* via env: blocks (none used). No
+# github.event.* in run: blocks.
+
+name: Gate 27 - FMEA Ratchet
+
+on:
+  pull_request:
+    paths:
+      - 'docs/audits/FMEA_CATALOG_*.md'
+      - 'scripts/fmea/**'
+      - '.github/workflows/gate-27-fmea-ratchet.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'docs/audits/FMEA_CATALOG_*.md'
+      - 'scripts/fmea/**'
+      - '.github/workflows/gate-27-fmea-ratchet.yml'
+
+jobs:
+  fmea-ratchet:
+    name: Verify FMEA catalog has not regressed
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: npm
+
+      - run: npm ci
+
+      - name: Verify FMEA catalog (PR mode)
+        if: github.event_name == 'pull_request'
+        run: |
+          set -euo pipefail
+          if [ ! -f scripts/fmea/verify-catalog.ts ]; then
+            echo "::warning::scripts/fmea/verify-catalog.ts not present yet; gate skipped (informational mode)."
+            exit 0
+          fi
+          npx tsx scripts/fmea/verify-catalog.ts
+
+      - name: Verify + update baseline (main push)
+        if: github.event_name == 'push'
+        run: |
+          set -euo pipefail
+          if [ ! -f scripts/fmea/verify-catalog.ts ]; then
+            echo "::warning::scripts/fmea/verify-catalog.ts not present yet; gate skipped (informational mode)."
+            exit 0
+          fi
+          npx tsx scripts/fmea/verify-catalog.ts --update-baseline
+          if [ -n "$(git status --porcelain .agent/fmea-baseline.json 2>/dev/null)" ]; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add .agent/fmea-baseline.json
+            git commit -m "chore(fmea): ratchet baseline [skip ci]"
+            git push
+          else
+            echo "Baseline unchanged."
+          fi
