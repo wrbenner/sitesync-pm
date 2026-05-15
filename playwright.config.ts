@@ -11,9 +11,14 @@ const webServerEnv: Record<string, string> = REAL_BACKEND
       VITE_SUPABASE_ANON_KEY:
         process.env.VITE_SUPABASE_ANON_KEY ?? process.env.SUPABASE_ANON_KEY ?? '',
       VITE_DEV_BYPASS: 'false',
+      // Give the dev server 4 GB on large suites — the full 84-test page-e2e
+      // sweep accumulates enough HMR / module-graph state to OOM the default
+      // ~2 GB Node heap on memory-constrained CI runners and cloud containers.
+      NODE_OPTIONS: '--max-old-space-size=4096',
     }
   : {
       VITE_DEV_BYPASS: 'true',
+      NODE_OPTIONS: '--max-old-space-size=4096',
     }
 
 export default defineConfig({
