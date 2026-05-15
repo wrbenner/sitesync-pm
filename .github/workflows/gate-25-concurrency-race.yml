@@ -1,0 +1,65 @@
+# Gate 25 - Concurrency & Race (FMDC)
+#
+# Runs vitest specs under tests/concurrency/ which exercise multi-writer
+# race conditions, optimistic-lock contention, and idempotency tokens
+# against staging Supabase. Some specs may shell out to k6 — generous
+# 30-min timeout accommodates load runs.
+#
+# Informational mode (continue-on-error) until 5 stable runs prove
+# reliability.
+#
+# Required secrets:
+#   STAGING_SUPABASE_URL
+#   STAGING_SUPABASE_ANON_KEY
+#   STAGING_SUPABASE_SERVICE_KEY
+#
+# SECURITY: only secrets.* via env: blocks. No github.event.* in run:.
+
+name: Gate 25 - Concurrency Race
+
+on:
+  pull_request:
+    paths:
+      - 'src/services/**'
+      - 'supabase/migrations/**'
+      - 'tests/concurrency/**'
+      - '.github/workflows/gate-25-concurrency-race.yml'
+  push:
+    branches: [main]
+
+jobs:
+  concurrency-race:
+    name: Vitest concurrency specs
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: npm
+
+      - run: npm ci
+
+      - name: Run vitest concurrency specs
+        env:
+          SUPABASE_URL: ${{ secrets.STAGING_SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.STAGING_SUPABASE_ANON_KEY }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.STAGING_SUPABASE_SERVICE_KEY }}
+        run: |
+          set -euo pipefail
+          if [ -z "${SUPABASE_URL:-}" ] || [ -z "${SUPABASE_ANON_KEY:-}" ]; then
+            echo "::warning::Required secrets not set; gate skipped (informational mode)."
+            exit 0
+          fi
+          if [ ! -d tests/concurrency ]; then
+            echo "::warning::tests/concurrency/ not present yet; gate skipped (informational mode)."
+            exit 0
+          fi
+          if [ -z "$(find tests/concurrency -name '*.test.ts' -o -name '*.spec.ts' 2>/dev/null | head -n1)" ]; then
+            echo "::warning::tests/concurrency/ has no spec files yet; gate skipped (informational mode)."
+            exit 0
+          fi
+          npx vitest run tests/concurrency/

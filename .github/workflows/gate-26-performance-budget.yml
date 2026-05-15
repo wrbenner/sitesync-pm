@@ -1,0 +1,73 @@
+# Gate 26 - Performance Budget (FMDC)
+#
+# Runs vitest specs under tests/perf/ which assert performance budgets
+# (route render time, query latency, bundle size deltas, etc.) against
+# the staging preview deployment.
+#
+# Currently tests/perf/ is empty — gate skips gracefully until sibling
+# agents author the specs. Informational mode (continue-on-error) until
+# 5 stable runs prove reliability.
+#
+# Required secrets:
+#   PREVIEW_BASE_URL
+#   STAGING_SUPABASE_URL
+#   STAGING_SUPABASE_ANON_KEY
+#   STAGING_POLISH_USER
+#   STAGING_POLISH_PASS
+#
+# SECURITY: only secrets.* via env: blocks. No github.event.* in run:.
+
+name: Gate 26 - Performance Budget
+
+on:
+  pull_request:
+    paths:
+      - 'src/pages/**'
+      - 'src/components/**'
+      - 'tests/perf/**'
+      - '.github/workflows/gate-26-performance-budget.yml'
+  push:
+    branches: [main]
+
+jobs:
+  performance-budget:
+    name: Vitest performance budget specs
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: npm
+
+      - run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Run vitest perf specs
+        env:
+          E2E_REAL_BACKEND: 'true'
+          E2E_BASE_URL: ${{ secrets.PREVIEW_BASE_URL }}
+          SUPABASE_URL: ${{ secrets.STAGING_SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.STAGING_SUPABASE_ANON_KEY }}
+          POLISH_USER: ${{ secrets.STAGING_POLISH_USER }}
+          POLISH_PASS: ${{ secrets.STAGING_POLISH_PASS }}
+        run: |
+          set -euo pipefail
+          if [ -z "${SUPABASE_URL:-}" ] || [ -z "${E2E_BASE_URL:-}" ]; then
+            echo "::warning::Required secrets not set; gate skipped (informational mode)."
+            exit 0
+          fi
+          if [ ! -d tests/perf ]; then
+            echo "::warning::tests/perf/ not present yet; gate skipped (informational mode)."
+            exit 0
+          fi
+          if [ -z "$(find tests/perf -name '*.test.ts' -o -name '*.spec.ts' 2>/dev/null | head -n1)" ]; then
+            echo "::warning::tests/perf/ is empty; gate skipped (informational mode)."
+            exit 0
+          fi
+          npx vitest run tests/perf/

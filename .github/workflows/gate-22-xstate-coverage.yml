@@ -1,0 +1,53 @@
+# Gate 22 - XState Machine Coverage (FMDC)
+#
+# Runs vitest specs under tests/machines/ to verify XState state machines
+# in src/machines/ have transition, guard, and action coverage. Pure-unit
+# layer — no external services required.
+#
+# Informational mode (continue-on-error) until 5 stable runs prove
+# reliability; promotion to required happens autonomously via the loop.
+#
+# No external secrets required.
+#
+# SECURITY: only secrets.* via env: blocks (none used here). No
+# github.event.* in run: blocks.
+
+name: Gate 22 - XState Coverage
+
+on:
+  pull_request:
+    paths:
+      - 'src/machines/**'
+      - 'tests/machines/**'
+      - '.github/workflows/gate-22-xstate-coverage.yml'
+  push:
+    branches: [main]
+
+jobs:
+  xstate-coverage:
+    name: Vitest XState machine specs
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: npm
+
+      - run: npm ci
+
+      - name: Run vitest machine specs
+        run: |
+          set -euo pipefail
+          if [ ! -d tests/machines ]; then
+            echo "::warning::tests/machines/ not present yet; gate skipped (informational mode)."
+            exit 0
+          fi
+          if [ -z "$(find tests/machines -name '*.test.ts' -o -name '*.spec.ts' 2>/dev/null | head -n1)" ]; then
+            echo "::warning::tests/machines/ has no spec files yet; gate skipped (informational mode)."
+            exit 0
+          fi
+          npx vitest run tests/machines/

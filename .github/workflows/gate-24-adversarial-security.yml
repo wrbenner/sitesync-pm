@@ -1,0 +1,90 @@
+# Gate 24 - Adversarial Security (FMDC)
+#
+# Runs two test bodies:
+#   1. vitest unit specs under tests/security/ (RLS-bypass attempts,
+#      JWT-claim tampering, signed-URL replay, etc.)
+#   2. Playwright specs at tests/security/*.spec.ts (browser-level
+#      auth/CSRF/clickjacking adversarial scenarios)
+#
+# Both are run against staging Supabase to ensure RLS + edge function
+# guards hold under attack.
+#
+# Informational mode (continue-on-error) until 5 stable runs prove
+# reliability.
+#
+# Required secrets:
+#   STAGING_SUPABASE_URL
+#   STAGING_SUPABASE_ANON_KEY
+#   STAGING_SUPABASE_SERVICE_KEY
+#
+# SECURITY: only secrets.* via env: blocks. No github.event.* in run:.
+
+name: Gate 24 - Adversarial Security
+
+on:
+  pull_request:
+    paths:
+      - 'src/auth/**'
+      - 'supabase/functions/**'
+      - 'supabase/migrations/**'
+      - 'tests/security/**'
+      - '.github/workflows/gate-24-adversarial-security.yml'
+  push:
+    branches: [main]
+
+jobs:
+  adversarial-security:
+    name: Vitest + Playwright security specs
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: npm
+
+      - run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Run vitest security specs
+        env:
+          SUPABASE_URL: ${{ secrets.STAGING_SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.STAGING_SUPABASE_ANON_KEY }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.STAGING_SUPABASE_SERVICE_KEY }}
+        run: |
+          set -euo pipefail
+          if [ -z "${SUPABASE_URL:-}" ] || [ -z "${SUPABASE_ANON_KEY:-}" ]; then
+            echo "::warning::Required secrets not set; gate skipped (informational mode)."
+            exit 0
+          fi
+          if [ ! -d tests/security ]; then
+            echo "::warning::tests/security/ not present yet; gate skipped (informational mode)."
+            exit 0
+          fi
+          if [ -z "$(find tests/security -maxdepth 2 -name '*.test.ts' 2>/dev/null | head -n1)" ]; then
+            echo "::warning::No vitest specs under tests/security/; skipping unit half."
+          else
+            npx vitest run tests/security/
+          fi
+
+      - name: Run Playwright security specs
+        env:
+          SUPABASE_URL: ${{ secrets.STAGING_SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.STAGING_SUPABASE_ANON_KEY }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.STAGING_SUPABASE_SERVICE_KEY }}
+        run: |
+          set -euo pipefail
+          if [ -z "${SUPABASE_URL:-}" ]; then
+            echo "::warning::Required secrets not set; playwright half skipped."
+            exit 0
+          fi
+          if [ -z "$(find tests/security -maxdepth 2 -name '*.spec.ts' 2>/dev/null | head -n1)" ]; then
+            echo "::warning::No playwright specs under tests/security/; skipping browser half."
+            exit 0
+          fi
+          npx playwright test tests/security/ --project=chromium --reporter=list
