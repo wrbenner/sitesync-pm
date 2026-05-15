@@ -188,14 +188,17 @@ export const QuickCapture: React.FC<QuickCaptureProps> = ({ open, onClose, onSav
 
     // Start Web Speech API recognition
     try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const SpeechRecognition = (window as unknown as Record<string, any>).SpeechRecognition || (window as unknown as Record<string, any>).webkitSpeechRecognition;
-      if (SpeechRecognition) {
-        const recognition = new SpeechRecognition();
+      const w = window as unknown as { SpeechRecognition?: unknown; webkitSpeechRecognition?: unknown }
+      const SpeechRecognitionCtor = (w.SpeechRecognition ?? w.webkitSpeechRecognition) as undefined | (new () => {
+        continuous: boolean; interimResults: boolean; lang: string; start(): void; stop(): void;
+        onresult: ((event: { results: { length: number; [index: number]: { [index: number]: { transcript: string } } } }) => void) | null
+      })
+      if (SpeechRecognitionCtor) {
+        const recognition = new SpeechRecognitionCtor();
         recognition.continuous = true;
         recognition.interimResults = true;
         recognition.lang = 'en-US';
-        recognition.onresult = (event: { results: { length: number; [index: number]: { [index: number]: { transcript: string } } } }) => {
+        recognition.onresult = (event) => {
           let full = '';
           for (let i = 0; i < event.results.length; i++) {
             full += event.results[i][0].transcript;
@@ -685,13 +688,13 @@ export const QuickCapture: React.FC<QuickCaptureProps> = ({ open, onClose, onSav
           {/* AI Caption */}
           {mode === 'camera' && (analysisState === 'analyzing' || analysisState === 'ready') && (
             <div style={{ marginBottom: spacing['5'] }}>
-              <label style={{
+              <p style={{
                 display: 'flex', alignItems: 'center', gap: spacing['1'],
                 fontSize: typography.fontSize.body, fontWeight: typography.fontWeight.medium,
-                color: colors.textPrimary, marginBottom: spacing['2'],
+                color: colors.textPrimary, marginBottom: spacing['2'], margin: `0 0 ${spacing['2']}`,
               }}>
                 <Sparkles size={14} color={colors.primaryOrange} /> AI Caption
-              </label>
+              </p>
               {analysisState === 'analyzing' ? (
                 <div style={{
                   padding: `${spacing['3.5']} ${spacing['4']}`,
@@ -723,13 +726,13 @@ export const QuickCapture: React.FC<QuickCaptureProps> = ({ open, onClose, onSav
           {/* AI Detected Tags */}
           {aiTags.length > 0 && (
             <div style={{ marginBottom: spacing['5'] }}>
-              <label style={{
+              <p style={{
                 display: 'flex', alignItems: 'center', gap: spacing['1'],
                 fontSize: typography.fontSize.body, fontWeight: typography.fontWeight.medium,
-                color: colors.textPrimary, marginBottom: spacing['2'],
+                color: colors.textPrimary, margin: `0 0 ${spacing['2']}`,
               }}>
                 <Sparkles size={14} color={colors.primaryOrange} /> Detected Tags
-              </label>
+              </p>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: spacing['2'] }}>
                 {aiTags.map((tag) => (
                   <span key={tag} style={{
@@ -762,9 +765,9 @@ export const QuickCapture: React.FC<QuickCaptureProps> = ({ open, onClose, onSav
           )}
 
           {/* Category */}
-          <label style={{ display: 'block', fontSize: typography.fontSize.body, fontWeight: typography.fontWeight.medium, color: colors.textPrimary, marginBottom: spacing['2'] }}>
-            <Tag size={14} style={{ marginRight: spacing['1'], verticalAlign: 'middle' }} /> Category
-          </label>
+          <p style={{ display: 'flex', alignItems: 'center', gap: spacing['1'], fontSize: typography.fontSize.body, fontWeight: typography.fontWeight.medium, color: colors.textPrimary, margin: `0 0 ${spacing['2']}` }}>
+            <Tag size={14} /> Category
+          </p>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: spacing['2'], marginBottom: spacing['5'] }}>
             {CATEGORIES.map((cat) => (
               <button
@@ -787,10 +790,11 @@ export const QuickCapture: React.FC<QuickCaptureProps> = ({ open, onClose, onSav
           </div>
 
           {/* Location */}
-          <label style={{ display: 'block', fontSize: typography.fontSize.body, fontWeight: typography.fontWeight.medium, color: colors.textPrimary, marginBottom: spacing['2'] }}>
+          <label htmlFor="qc-location" style={{ display: 'block', fontSize: typography.fontSize.body, fontWeight: typography.fontWeight.medium, color: colors.textPrimary, marginBottom: spacing['2'] }}>
             <MapPin size={14} style={{ marginRight: spacing['1'], verticalAlign: 'middle' }} /> Location
           </label>
           <input
+            id="qc-location"
             value={locationText}
             onChange={(e) => setLocationText(e.target.value)}
             placeholder="Floor, area, room..."
@@ -804,10 +808,11 @@ export const QuickCapture: React.FC<QuickCaptureProps> = ({ open, onClose, onSav
           />
 
           {/* Related item */}
-          <label style={{ display: 'block', fontSize: typography.fontSize.body, fontWeight: typography.fontWeight.medium, color: colors.textPrimary, marginBottom: spacing['2'] }}>
+          <label htmlFor="qc-related" style={{ display: 'block', fontSize: typography.fontSize.body, fontWeight: typography.fontWeight.medium, color: colors.textPrimary, marginBottom: spacing['2'] }}>
             <Link2 size={14} style={{ marginRight: spacing['1'], verticalAlign: 'middle' }} /> Link to Item (optional)
           </label>
           <input
+            id="qc-related"
             value={relatedItem}
             onChange={(e) => setRelatedItem(e.target.value)}
             placeholder="RFI, task, punch item..."
@@ -821,10 +826,11 @@ export const QuickCapture: React.FC<QuickCaptureProps> = ({ open, onClose, onSav
           />
 
           {/* Notes */}
-          <label style={{ display: 'block', fontSize: typography.fontSize.body, fontWeight: typography.fontWeight.medium, color: colors.textPrimary, marginBottom: spacing['2'] }}>
+          <label htmlFor="qc-notes" style={{ display: 'block', fontSize: typography.fontSize.body, fontWeight: typography.fontWeight.medium, color: colors.textPrimary, marginBottom: spacing['2'] }}>
             Notes
           </label>
           <textarea
+            id="qc-notes"
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             placeholder="Additional context..."

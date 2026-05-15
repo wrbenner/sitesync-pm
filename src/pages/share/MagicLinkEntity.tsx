@@ -21,8 +21,9 @@ interface ValidationResult {
 }
 
 const FUNCTION_BASE =
-  (typeof window !== 'undefined' && (window as any).VITE_SUPABASE_URL) ||
-  (import.meta as any).env?.VITE_SUPABASE_URL ||
+  (typeof window !== 'undefined' &&
+    (window as Window & Record<string, string | undefined>)['VITE_SUPABASE_URL']) ||
+  import.meta.env.VITE_SUPABASE_URL ||
   '';
 
 export const MagicLinkEntity: React.FC = () => {

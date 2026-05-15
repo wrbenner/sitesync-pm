@@ -6,6 +6,12 @@
 // Inputs are intentionally small (a URL + optional file). Callers don't
 // need to know which path will be taken.
 
+// Web Share API Level 2 — not in older TypeScript navigator types.
+interface NavigatorWithShare extends Navigator {
+  share(data: ShareData): Promise<void>
+  canShare(data: ShareData): boolean
+}
+
 export interface ShareInput {
   title: string
   /** A direct link OR a sealed-PDF URL for the entity. */
@@ -34,7 +40,7 @@ export async function detectShareChannel(): Promise<ShareResult['channel']> {
   } catch {
     /* not capacitor */
   }
-  if (typeof navigator !== 'undefined' && typeof (navigator as any).share === 'function') {
+  if (typeof navigator !== 'undefined' && typeof (navigator as NavigatorWithShare).share === 'function') {
     return 'web'
   }
   if (typeof navigator !== 'undefined' && navigator.clipboard != null) {
@@ -50,6 +56,7 @@ export async function shareEntity(input: ShareInput): Promise<ShareResult> {
   try {
     const { Capacitor } = await import('@capacitor/core')
     if (Capacitor.isNativePlatform()) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const mod = await import('@capacitor/share' as any).catch(() => null)
       if (mod?.Share) {
         await mod.Share.share({
@@ -67,16 +74,18 @@ export async function shareEntity(input: ShareInput): Promise<ShareResult> {
 
   // 2. Web Share API
   try {
-    if (typeof navigator !== 'undefined' && typeof (navigator as any).share === 'function') {
+    if (typeof navigator !== 'undefined' && typeof (navigator as NavigatorWithShare).share === 'function') {
+      const nav = navigator as NavigatorWithShare
       const payload: ShareData = {
         title: input.title,
         text: input.text,
         url: input.url,
       }
-      if (input.file && (navigator as any).canShare?.({ files: [new File([input.file.blob], input.file.name, { type: input.file.type })] })) {
-        ;(payload as any).files = [new File([input.file.blob], input.file.name, { type: input.file.type })]
+      const shareFile = input.file ? new File([input.file.blob], input.file.name, { type: input.file.type }) : null
+      if (shareFile && nav.canShare?.({ files: [shareFile] })) {
+        payload.files = [shareFile]
       }
-      await (navigator as any).share(payload)
+      await nav.share(payload)
       return { ok: true, channel: 'web' }
     }
   } catch (err) {

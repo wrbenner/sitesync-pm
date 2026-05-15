@@ -2,6 +2,7 @@ import { useCallback, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
 import { fromTable } from '../lib/db/queries'
+import { runDiscrepancyDetectedChain } from '../lib/crossFeatureWorkflows'
 import type { DrawingPair, DrawingDiscrepancy } from '../types/ai'
 
 // ── Pipeline Stages ─────────────────────────────────────────
@@ -279,34 +280,25 @@ export function useDrawingIntelligence(projectId: string | undefined) {
       // so a re-run is safe. Fire-and-forget — never blocks the pipeline.
       if (totalDiscrepancies > 0) {
         void (async () => {
-          // Strict generated Database types fight us on .in() with computed
-          // string arrays; cast locally — this is best-effort observability.
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const sb = supabase as any
           const pairIds = (pairs as Array<{ id: string }>).map((p) => p.id)
-          const { data: highSev } = await sb
-            .from('drawing_discrepancies')
+          const { data: highSev } = await fromTable('drawing_discrepancies')
             .select('id, severity, created_at')
             .in('pair_id' as never, pairIds)
             .in('severity' as never, ['high', 'critical'])
             .order('created_at', { ascending: false })
             .limit(20)
           if (!highSev || highSev.length === 0) return
-          const { runDiscrepancyDetectedChain } = await import('../lib/crossFeatureWorkflows')
           const ids = (highSev as Array<{ id: string }>).map((d) => d.id)
           for (const id of ids) {
             const result = await runDiscrepancyDetectedChain(id)
             if (result.created) console.info('[discrepancy_detected chain] drafted RFI', result.created)
             else if (result.error) console.warn('[discrepancy_detected chain]', result.error)
           }
-        })().catch((err) => console.warn('[discrepancy_detected chain] dispatch failed:', err))
+        })().catch((dispatchErr) => console.warn('[discrepancy_detected chain] dispatch failed:', dispatchErr))
       }
-    } catch (err) {
-      setState((s) => ({
-        ...s,
-        stage: 'failed',
-        error: (err as Error).message ?? 'Analysis failed',
-      }))
+    } catch (analysisErr) {
+      const analysisErrMsg = (analysisErr as Error).message ?? 'Analysis failed'
+      setState((s) => ({ ...s, stage: 'failed', error: analysisErrMsg }))
     }
   }, [projectId, qc])
 

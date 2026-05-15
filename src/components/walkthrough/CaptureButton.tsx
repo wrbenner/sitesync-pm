@@ -115,10 +115,7 @@ export const CaptureButton: React.FC<CaptureButtonProps> = ({
     const videoTrack = stream.getVideoTracks()[0]
     if (videoTrack && typeof window !== 'undefined' && 'ImageCapture' in window) {
       try {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const ImageCaptureCtor = (window as any).ImageCapture as new (track: MediaStreamTrack) => {
-          takePhoto: () => Promise<Blob>
-        }
+        const ImageCaptureCtor = (window as unknown as { ImageCapture: new (track: MediaStreamTrack) => { takePhoto: () => Promise<Blob> } }).ImageCapture
         const ic = new ImageCaptureCtor(videoTrack)
         ic.takePhoto().then((b) => { photoRef.current = b }).catch(() => { /* no-op */ })
       } catch {

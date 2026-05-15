@@ -76,8 +76,8 @@ export async function runRfiOverdueSweep(projectId: string): Promise<WorkflowRes
       .eq('project_id', projectId)
       .contains('metadata', { source: 'rfi_overdue_sweep' });
     const linkedRfiIds = new Set(
-      ((existingTasks ?? []) as any[])
-        .map((t: any) => (t?.metadata as { rfi_id?: string } | null)?.rfi_id)
+      (existingTasks ?? [])
+        .map((t: { metadata?: { rfi_id?: string } | null }) => t?.metadata?.rfi_id)
         .filter((v: string | undefined): v is string => !!v),
     );
 
@@ -375,8 +375,8 @@ export async function runDrawingRevisedChain(
     }
 
     // Idempotency: skip RFIs already flagged for this exact revision drawing.
-    const toFlag = (candidateRfis as any[]).filter((rfi) => {
-      const existing = (rfi.metadata as unknown as Record<string, unknown> | null) ?? {};
+    const toFlag = (candidateRfis as Array<{ id: string; metadata: Record<string, unknown> | null }>).filter((rfi) => {
+      const existing = rfi.metadata ?? {};
       const flags = (existing.affected_by_revisions as string[] | undefined) ?? [];
       return !flags.includes(newDrawingId);
     });
@@ -755,7 +755,8 @@ export async function runMeetingActionItemTaskSweep(
 
     if (!pending || pending.length === 0) return results;
 
-    for (const item of pending as any[]) {
+    type MeetingActionItem = { id: string; description?: string; assigned_to?: string; due_date?: string; priority?: string; status?: string; meeting_id?: string; meetings: { title?: string } | Array<{ title?: string }> }
+    for (const item of pending as MeetingActionItem[]) {
       const meetingTitle =
         Array.isArray(item.meetings) ? item.meetings[0]?.title : item.meetings?.title;
       const description =

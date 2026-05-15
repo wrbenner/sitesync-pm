@@ -53,9 +53,7 @@ export function useAIInsightsByCategory(projectId: string | undefined, category?
   return useQuery({
     queryKey: ['ai_insights', projectId, 'category', category ?? null],
     queryFn: async () => {
-      // category column added by migration but not yet in generated DB types
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      let query: any = fromTable('ai_insights')
+      let query = fromTable('ai_insights')
         .select('*')
         .eq('project_id' as never, projectId!)
         .eq('dismissed' as never, false)

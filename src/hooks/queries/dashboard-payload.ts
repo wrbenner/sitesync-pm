@@ -100,10 +100,9 @@ export function useDashboardPayload(projectId: string | undefined) {
     queryKey: ['dashboard_payload', projectId],
     queryFn: async () => {
       if (!projectId) return EMPTY_PAYLOAD;
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data, error } = await (supabase.rpc as any)('get_dashboard_payload', {
+      const { data, error } = await supabase.rpc('get_dashboard_payload' as never, {
         p_project_id: projectId,
-      });
+      } as never);
       if (error) {
         // Wrapper RPC may not exist on older deploys — degrade gracefully.
         return EMPTY_PAYLOAD;

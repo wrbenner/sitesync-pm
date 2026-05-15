@@ -86,12 +86,9 @@ export function stripAngleBrackets(messageId: string): string {
 // ── Helpers ───────────────────────────────────────────────────────────────
 
 function randomHex(bytes: number): string {
-  // Works in Deno, browsers, and modern Node.
+  // crypto.getRandomValues is available in all browsers and Node 15+.
+  // We target Node 22+ and modern browsers — no insecure fallback needed.
   const buf = new Uint8Array(bytes)
-  if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
-    crypto.getRandomValues(buf)
-  } else {
-    for (let i = 0; i < bytes; i++) buf[i] = Math.floor(Math.random() * 256)
-  }
+  crypto.getRandomValues(buf)
   return Array.from(buf, (b) => b.toString(16).padStart(2, '0')).join('')
 }
