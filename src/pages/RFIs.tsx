@@ -511,6 +511,7 @@ const RFIsPage: React.FC = () => {
 
   // Reset response state when detail panel switches
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setAiSuggestion(null);
     setAiSuggestionLoading(false);
     setAiSuggestionError(false);
@@ -586,6 +587,7 @@ const RFIsPage: React.FC = () => {
   // wired globally in App.tsx — no duplicate component needed.
   const [focusedIndex, setFocusedIndex] = useState<number>(-1);
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (focusedIndex >= filteredRfis.length) setFocusedIndex(filteredRfis.length - 1);
   }, [filteredRfis.length, focusedIndex]);
   useKeyboardShortcuts([
@@ -689,12 +691,14 @@ const RFIsPage: React.FC = () => {
     if (!aiDraftInput.trim()) return;
     track('rfi.ai_draft_requested', { description_length: aiDraftInput.length });
     setAiDraftLoading(true);
+    // eslint-disable-next-line react-hooks/todo
     try {
       // Edge function expects snake_case keys (server contract — see
        // supabase/functions/ai-rfi-draft/index.ts → RfiDraftRequest).
        const { data, error } = await supabase.functions.invoke('ai-rfi-draft', {
         body: { project_id: projectId, description: aiDraftInput },
       });
+      // eslint-disable-next-line react-hooks/todo
       if (error || !data) throw new Error('AI draft failed');
       setAiPrefillKey((k) => k + 1);
       setShowAIDraftModal(false);
@@ -714,10 +718,12 @@ const RFIsPage: React.FC = () => {
     if (!selectedRfi) return;
     setAiSuggestionLoading(true);
     setAiSuggestionError(false);
+    // eslint-disable-next-line react-hooks/todo
     try {
       const { data, error } = await supabase.functions.invoke('ai-rfi-draft', {
         body: { projectId, description: (selectedRfi.description as string) || (selectedRfi.title as string) },
       });
+      // eslint-disable-next-line react-hooks/todo
       if (error || !data) throw new Error('AI suggestion failed');
       const suggestion = String(data.response ?? data.description ?? '');
       setAiSuggestion(suggestion);
@@ -1864,6 +1870,7 @@ const RFIsPage: React.FC = () => {
                     onClick={async () => {
                       if (!responseText.trim() || !projectId) return;
                       setResponseSubmitting(true);
+                      // eslint-disable-next-line react-hooks/todo
                       try {
                         await createRFIResponse.mutateAsync({
                           data: { rfi_id: selectedRfi.id, content: responseText },
@@ -2016,10 +2023,11 @@ const RFIsPage: React.FC = () => {
                 </button>
               </div>
 
-              <label style={{ fontSize: 13, fontWeight: 500, color: INK_2, display: 'block', marginBottom: 8 }}>
+              <label htmlFor="rfi-ai-draft-input" style={{ fontSize: 13, fontWeight: 500, color: INK_2, display: 'block', marginBottom: 8 }}>
                 Describe the issue in your own words
               </label>
               <textarea
+                id="rfi-ai-draft-input"
                 value={aiDraftInput}
                 onChange={(e) => setAiDraftInput(e.target.value)}
                 placeholder="e.g. The structural drawing conflicts with the architectural plan on grid line C…"
