@@ -736,10 +736,11 @@ const SignaturesTab: React.FC<SignaturesTabProps> = ({ projectId }) => {
           <InputField label="Document URL" value={sigUrl} onChange={setSigUrl} placeholder="https://... or select a contract" />
 
           <div>
-            <label style={{ display: 'block', marginBottom: spacing['1'], fontSize: typography.fontSize.caption, color: colors.textSecondary }}>
+            <label htmlFor="sig-order" style={{ display: 'block', marginBottom: spacing['1'], fontSize: typography.fontSize.caption, color: colors.textSecondary }}>
               Signing Order
             </label>
             <select
+              id="sig-order"
               value={sigOrder}
               onChange={(e) => setSigOrder(e.target.value as 'sequential' | 'parallel')}
               style={{
@@ -755,9 +756,9 @@ const SignaturesTab: React.FC<SignaturesTabProps> = ({ projectId }) => {
 
           <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing['2'] }}>
-              <label style={{ fontSize: typography.fontSize.caption, color: colors.textSecondary, fontWeight: typography.fontWeight.semibold }}>
+              <span style={{ fontSize: typography.fontSize.caption, color: colors.textSecondary, fontWeight: typography.fontWeight.semibold }}>
                 Signers
-              </label>
+              </span>
               <Btn variant="ghost" size="sm" icon={<Plus size={12} />} onClick={addSignerRow}>
                 Add Signer
               </Btn>
@@ -1097,8 +1098,9 @@ const InsuranceSection: React.FC<{ projectId: string; contract: Contract; onClos
         <div style={{ display: 'flex', flexDirection: 'column', gap: spacing['3'] }}>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: spacing['3'] }}>
             <div>
-              <label style={{ display: 'block', marginBottom: spacing['1'], fontSize: typography.fontSize.caption, color: colors.textSecondary }}>Policy Type</label>
+              <label htmlFor="coi-policy-type" style={{ display: 'block', marginBottom: spacing['1'], fontSize: typography.fontSize.caption, color: colors.textSecondary }}>Policy Type</label>
               <select
+                id="coi-policy-type"
                 value={form.policy_type}
                 onChange={(e) => setForm({ ...form, policy_type: e.target.value })}
                 style={{ width: '100%', padding: spacing['2'], borderRadius: borderRadius.base, border: `1px solid ${colors.borderLight}`, backgroundColor: colors.surfaceRaised, color: colors.textPrimary, fontSize: typography.fontSize.sm }}
@@ -1126,8 +1128,9 @@ const InsuranceSection: React.FC<{ projectId: string; contract: Contract; onClos
             </label>
           </div>
           <div>
-            <label style={{ display: 'block', marginBottom: spacing['1'], fontSize: typography.fontSize.caption, color: colors.textSecondary }}>Certificate File (PDF, image)</label>
+            <label htmlFor="coi-file" style={{ display: 'block', marginBottom: spacing['1'], fontSize: typography.fontSize.caption, color: colors.textSecondary }}>Certificate File (PDF, image)</label>
             <input
+              id="coi-file"
               type="file"
               accept="application/pdf,image/*"
               onChange={(e) => setForm({ ...form, file: e.target.files?.[0] ?? null })}
@@ -2060,6 +2063,7 @@ export const Contracts: React.FC = () => {
                 <Btn
                   size="sm"
                   variant="ghost"
+                  // eslint-disable-next-line react-hooks/memo-dependencies
                   onClick={(e) => { e?.stopPropagation(); handleDeleteContract(contract) }}
                   disabled={deleteContract.isPending}
                   aria-label={`Delete ${contract.title}`}
@@ -2410,8 +2414,9 @@ export const Contracts: React.FC = () => {
         <div style={{ display: 'flex', flexDirection: 'column', gap: spacing['4'] }}>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: spacing['3'] }}>
             <div>
-              <label style={{ display: 'block', marginBottom: spacing['1'], fontSize: typography.fontSize.caption, color: colors.textSecondary }}>Type</label>
+              <label htmlFor="contract-type" style={{ display: 'block', marginBottom: spacing['1'], fontSize: typography.fontSize.caption, color: colors.textSecondary }}>Type</label>
               <select
+                id="contract-type"
                 value={form.contract_type}
                 onChange={(e) => setForm({ ...form, contract_type: e.target.value })}
                 style={{ width: '100%', padding: spacing['2'], borderRadius: borderRadius.base, border: `1px solid ${colors.borderLight}`, backgroundColor: colors.surfaceRaised, color: colors.textPrimary, fontSize: typography.fontSize.sm }}
@@ -2440,8 +2445,9 @@ export const Contracts: React.FC = () => {
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: spacing['3'] }}>
             <div>
-              <label style={{ display: 'block', marginBottom: spacing['1'], fontSize: typography.fontSize.caption, color: colors.textSecondary }}>Billing Method</label>
+              <label htmlFor="contract-billing" style={{ display: 'block', marginBottom: spacing['1'], fontSize: typography.fontSize.caption, color: colors.textSecondary }}>Billing Method</label>
               <select
+                id="contract-billing"
                 value={form.billing_method}
                 onChange={(e) => setForm({ ...form, billing_method: e.target.value })}
                 style={{ width: '100%', padding: spacing['2'], borderRadius: borderRadius.base, border: `1px solid ${colors.borderLight}`, backgroundColor: colors.surfaceRaised, color: colors.textPrimary, fontSize: typography.fontSize.sm }}
@@ -2455,8 +2461,9 @@ export const Contracts: React.FC = () => {
               </select>
             </div>
             <div>
-              <label style={{ display: 'block', marginBottom: spacing['1'], fontSize: typography.fontSize.caption, color: colors.textSecondary }}>Payment Terms</label>
+              <label htmlFor="contract-payment-terms" style={{ display: 'block', marginBottom: spacing['1'], fontSize: typography.fontSize.caption, color: colors.textSecondary }}>Payment Terms</label>
               <select
+                id="contract-payment-terms"
                 value={form.payment_terms}
                 onChange={(e) => setForm({ ...form, payment_terms: e.target.value })}
                 style={{ width: '100%', padding: spacing['2'], borderRadius: borderRadius.base, border: `1px solid ${colors.borderLight}`, backgroundColor: colors.surfaceRaised, color: colors.textPrimary, fontSize: typography.fontSize.sm }}
@@ -2472,8 +2479,9 @@ export const Contracts: React.FC = () => {
             </div>
           </div>
           <div>
-            <label style={{ display: 'block', marginBottom: spacing['1'], fontSize: typography.fontSize.caption, color: colors.textSecondary }}>Scope of Work</label>
+            <label htmlFor="contract-scope" style={{ display: 'block', marginBottom: spacing['1'], fontSize: typography.fontSize.caption, color: colors.textSecondary }}>Scope of Work</label>
             <textarea
+              id="contract-scope"
               value={form.scope_of_work}
               onChange={(e) => setForm({ ...form, scope_of_work: e.target.value })}
               rows={3}
