@@ -1,0 +1,871 @@
+{
+  "_schema": {
+    "description": "UI voice linter allowlist. Each entry exempts one (file, line, ruleId) voice-rule violation for a documented reason, scoped to a 90-day expiry from added. Resolve by rewriting the string to match the voice rules in src/lib/iris/style.ts."
+  },
+  "entries": [
+    {
+      "file": "src/components/CommandPalette.tsx",
+      "line": 317,
+      "rule": "no-em-dash",
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/components/ConfirmDialog.tsx",
+      "line": 367,
+      "rule": "no-em-dash",
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/components/Sidebar.tsx",
+      "line": 544,
+      "rule": "no-em-dash",
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/components/admin/DemoSeedButton.tsx",
+      "line": 45,
+      "rule": "no-em-dash",
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/components/ai/ProactiveAlerts.tsx",
+      "line": 102,
+      "rule": "no-em-dash",
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/components/ai/ProactiveAlerts.tsx",
+      "line": 102,
+      "rule": "acronym-casing",
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/components/audit/EntityAuditViewer.tsx",
+      "line": 116,
+      "rule": "no-em-dash",
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/components/drawings/DrawingTiledViewer.tsx",
+      "line": 2288,
+      "rule": "no-em-dash",
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/components/drawings/DrawingTiledViewer.tsx",
+      "line": 2309,
+      "rule": "no-em-dash",
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/components/field-capture/FieldCaptureModal.tsx",
+      "line": 62,
+      "rule": "no-em-dash",
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/components/field-capture/FieldCaptureModal.tsx",
+      "line": 77,
+      "rule": "no-em-dash",
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/components/payApplications/DrawReportUpload.tsx",
+      "line": 167,
+      "rule": "no-em-dash",
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/components/payApplications/DrawReportUpload.tsx",
+      "line": 172,
+      "rule": "no-em-dash",
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/components/reports/DiscrepancyReport.tsx",
+      "line": 339,
+      "rule": "no-em-dash",
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/components/reports/DrawingAnalysisReport.tsx",
+      "line": 98,
+      "rule": "no-em-dash",
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/components/reports/OwnerLinkButton.tsx",
+      "line": 52,
+      "rule": "no-em-dash",
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/components/reports/OwnerLinkButton.tsx",
+      "line": 65,
+      "rule": "no-em-dash",
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/components/reports/OwnerReport.tsx",
+      "line": 760,
+      "rule": "no-em-dash",
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/components/reports/OwnerUpdateGenerator.tsx",
+      "line": 560,
+      "rule": "no-em-dash",
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/components/reports/OwnerUpdateGenerator.tsx",
+      "line": 353,
+      "rule": "no-em-dash",
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/components/reports/OwnerUpdateGenerator.tsx",
+      "line": 339,
+      "rule": "no-em-dash",
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/components/reports/ReportGenerationModal.tsx",
+      "line": 119,
+      "rule": "no-em-dash",
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/components/reports/ScaleAuditReport.tsx",
+      "line": 102,
+      "rule": "no-em-dash",
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/components/rfi/RFIReopenDialog.tsx",
+      "line": 288,
+      "rule": "no-em-dash",
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/components/schedule/GanttChart.tsx",
+      "line": 696,
+      "rule": "no-em-dash",
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/components/schedule/ScheduleCanvas.tsx",
+      "line": 1220,
+      "rule": "no-em-dash",
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/components/search/CrossProjectSearchPalette.tsx",
+      "line": 120,
+      "rule": "no-em-dash",
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/components/submittals/BulkActionsMenu.tsx",
+      "line": 185,
+      "rule": "no-em-dash",
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/components/submittals/BulkActionsMenu.tsx",
+      "line": 198,
+      "rule": "no-em-dash",
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/components/submittals/Create/EntryMethods/VoiceEntryHandler.tsx",
+      "line": 65,
+      "rule": "no-em-dash",
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/components/submittals/Create/EntryMethods/VoiceEntryHandler.tsx",
+      "line": 57,
+      "rule": "no-em-dash",
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/components/submittals/Create/FullTierProgressive.tsx",
+      "line": 163,
+      "rule": "no-em-dash",
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/components/submittals/Create/FullTierProgressive.tsx",
+      "line": 250,
+      "rule": "no-em-dash",
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/components/submittals/Create/QuickTierFields.tsx",
+      "line": 78,
+      "rule": "no-em-dash",
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/components/submittals/PackagesView/ManagePackageMembersDialog.tsx",
+      "line": 109,
+      "rule": "no-em-dash",
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/components/submittals/SpecParser.tsx",
+      "line": 49,
+      "rule": "no-em-dash",
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/components/submittals/SpecParser.tsx",
+      "line": 59,
+      "rule": "no-em-dash",
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/components/submittals/SpecParser.tsx",
+      "line": 64,
+      "rule": "no-em-dash",
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/components/submittals/SpecParser.tsx",
+      "line": 65,
+      "rule": "no-em-dash",
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/components/submittals/SpecParser.tsx",
+      "line": 83,
+      "rule": "no-em-dash",
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/components/ui/OfflineBanner.tsx",
+      "line": 76,
+      "rule": "no-em-dash",
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/pages/Budget.tsx",
+      "line": 449,
+      "rule": "no-em-dash",
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/pages/ChangeOrders.tsx",
+      "line": 200,
+      "rule": "no-em-dash",
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/pages/Closeout.tsx",
+      "line": 946,
+      "rule": "no-em-dash",
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/pages/Contracts.tsx",
+      "line": 735,
+      "rule": "no-em-dash",
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/pages/Contracts.tsx",
+      "line": 331,
+      "rule": "no-em-dash",
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/pages/Contracts.tsx",
+      "line": 1024,
+      "rule": "no-em-dash",
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/pages/Contracts.tsx",
+      "line": 1196,
+      "rule": "no-em-dash",
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/pages/Contracts.tsx",
+      "line": 972,
+      "rule": "no-em-dash",
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/pages/Deliveries.tsx",
+      "line": 708,
+      "rule": "no-em-dash",
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/pages/Integrations.tsx",
+      "line": 434,
+      "rule": "acronym-casing",
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/pages/Integrations.tsx",
+      "line": 504,
+      "rule": "no-em-dash",
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/pages/Meetings.tsx",
+      "line": 797,
+      "rule": "no-em-dash",
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/pages/Preconstruction.tsx",
+      "line": 1457,
+      "rule": "no-em-dash",
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/pages/Preconstruction.tsx",
+      "line": 422,
+      "rule": "no-em-dash",
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/pages/Procurement.tsx",
+      "line": 1094,
+      "rule": "no-em-dash",
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/pages/Procurement.tsx",
+      "line": 1164,
+      "rule": "no-em-dash",
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/pages/Safety.tsx",
+      "line": 2746,
+      "rule": "no-em-dash",
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/pages/Tasks.tsx",
+      "line": 813,
+      "rule": "no-em-dash",
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/pages/TimeTracking.tsx",
+      "line": 470,
+      "rule": "no-em-dash",
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/pages/TimeTracking.tsx",
+      "line": 698,
+      "rule": "no-em-dash",
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/pages/TimeTracking.tsx",
+      "line": 230,
+      "rule": "no-em-dash",
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/pages/TimeTracking.tsx",
+      "line": 281,
+      "rule": "no-em-dash",
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/pages/Vendors.tsx",
+      "line": 872,
+      "rule": "no-em-dash",
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/pages/admin/webhooks/index.tsx",
+      "line": 128,
+      "rule": "acronym-casing",
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/pages/compliance/HUDCompliancePage.tsx",
+      "line": 734,
+      "rule": "no-em-dash",
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/pages/compliance/HUDCompliancePage.tsx",
+      "line": 632,
+      "rule": "no-em-dash",
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/pages/compliance/HUDCompliancePage.tsx",
+      "line": 734,
+      "rule": "no-em-dash",
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/pages/daily-log/index.tsx",
+      "line": 1045,
+      "rule": "no-em-dash",
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/pages/daily-log/index.tsx",
+      "line": 1045,
+      "rule": "no-em-dash",
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/pages/dashboard/SundialDashboard.tsx",
+      "line": 59,
+      "rule": "no-em-dash",
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/pages/dashboard/SundialDashboard.tsx",
+      "line": 65,
+      "rule": "no-em-dash",
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/pages/dashboard/SundialDashboard.tsx",
+      "line": 69,
+      "rule": "no-em-dash",
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/pages/dashboard/SundialDashboard.tsx",
+      "line": 73,
+      "rule": "no-em-dash",
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/pages/drawings/DrawingToolbar.tsx",
+      "line": 508,
+      "rule": "no-em-dash",
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/pages/drawings/DrawingUpload.tsx",
+      "line": 72,
+      "rule": "no-em-dash",
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/pages/drawings/DrawingVersions.tsx",
+      "line": 99,
+      "rule": "no-em-dash",
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/pages/drawings/DrawingVersions.tsx",
+      "line": 177,
+      "rule": "no-em-dash",
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/pages/field-capture/CaptureUpload.tsx",
+      "line": 169,
+      "rule": "no-em-dash",
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/pages/field-capture/CaptureUpload.tsx",
+      "line": 169,
+      "rule": "no-em-dash",
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/pages/iris/IrisInboxPage.tsx",
+      "line": 283,
+      "rule": "no-em-dash",
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/pages/iris/IrisInboxPage.tsx",
+      "line": 228,
+      "rule": "no-em-dash",
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/pages/payment-applications/PayAppDetail.tsx",
+      "line": 305,
+      "rule": "no-em-dash",
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/pages/payment-applications/PayAppList.tsx",
+      "line": 54,
+      "rule": "no-em-dash",
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/pages/payment-applications/PayAppList.tsx",
+      "line": 229,
+      "rule": "no-em-dash",
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/pages/payment-applications/index.tsx",
+      "line": 374,
+      "rule": "no-em-dash",
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/pages/punch-list/PunchItemDetailPage.tsx",
+      "line": 881,
+      "rule": "no-em-dash",
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/pages/punch-list/PunchItemDetailPage.tsx",
+      "line": 888,
+      "rule": "no-em-dash",
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/pages/punch-list/index.tsx",
+      "line": 239,
+      "rule": "no-em-dash",
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/pages/punch-list/index.tsx",
+      "line": 272,
+      "rule": "no-em-dash",
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/pages/punch-list/index.tsx",
+      "line": 308,
+      "rule": "no-em-dash",
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/pages/site-intelligence/SiteIntelligencePage.tsx",
+      "line": 1082,
+      "rule": "no-em-dash",
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/pages/submittals/SubmittalDetail.tsx",
+      "line": 391,
+      "rule": "no-em-dash",
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/pages/submittals/SubmittalDetailV2/index.tsx",
+      "line": 293,
+      "rule": "no-em-dash",
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/pages/submittals/SubmittalsTable.tsx",
+      "line": 125,
+      "rule": "no-em-dash",
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/pages/walkthrough/index.tsx",
+      "line": 193,
+      "rule": "no-em-dash",
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    }
+  ]
+}

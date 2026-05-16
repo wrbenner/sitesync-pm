@@ -1,0 +1,49 @@
+name: Gate UI Voice (Crystalline cross-cutting invariant)
+
+on:
+  pull_request:
+    paths:
+      - 'src/components/**'
+      - 'src/pages/**'
+      - 'src/lib/iris/style.ts'
+      - 'src/lib/iris/voiceLinter.ts'
+      - 'scripts/lint-ui-voice.ts'
+      - 'ops/coverage/ui-voice-allowlist.json'
+      - '.github/workflows/gate-ui-voice.yml'
+  push:
+    branches: [main]
+
+jobs:
+  voice:
+    name: UI voice rules
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: npm
+      - run: npm ci
+      - name: Run UI voice linter
+        run: |
+          NODE_OPTIONS=--max-old-space-size=4096 npx tsx scripts/lint-ui-voice.ts --json > /tmp/voice.json
+          head -100 /tmp/voice.json
+          CHECKED=$(jq -r .strings_checked /tmp/voice.json)
+          FILES=$(jq -r .total_files /tmp/voice.json)
+          TOTAL=$(jq -r .total_violations /tmp/voice.json)
+          ALLOWED=$(jq -r .allowed /tmp/voice.json)
+          LIVE=$(jq -r .live /tmp/voice.json)
+          {
+            echo "## UI Voice Linter"
+            echo ""
+            echo "| metric | count |"
+            echo "|---|---|"
+            echo "| files swept | $FILES |"
+            echo "| strings checked | $CHECKED |"
+            echo "| total violations | $TOTAL |"
+            echo "| allowlisted | $ALLOWED |"
+            echo "| live | $LIVE |"
+          } >> "$GITHUB_STEP_SUMMARY"
+          exit $LIVE
