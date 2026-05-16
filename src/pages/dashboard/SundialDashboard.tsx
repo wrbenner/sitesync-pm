@@ -56,21 +56,21 @@ function handleDecisionAnswer(
   // Primary "Yes" — route by decision kind.
   switch (decision.kind) {
     case 'weather_pull_forward':
-      toast.success('Pulling work forward — Iris is drafting sub notifications and the schedule update.');
+      toast.success('Pulling work forward. Iris is drafting sub notifications and the schedule update.');
       // Future: insert into drafted_actions; for now, navigate to the
       // schedule page so the PM can verify the affected phase.
       navigate('/schedule');
       return;
     case 'budget_contingency':
-      toast.success('Contingency authorization drafted — finance has been notified.');
+      toast.success('Contingency authorization drafted. Finance has been notified.');
       navigate('/budget');
       return;
     case 'rfi_escalation':
-      toast.success('Escalation queued — notice is being sent and the owner is being CC\'d.');
+      toast.success('Escalation queued. Notice is being sent and the owner is being CC\'d.');
       navigate('/rfis?status=overdue');
       return;
     case 'overtime_authorization':
-      toast.success('Overtime authorized — crew leads will be notified and the schedule will reflect the recovery.');
+      toast.success('Overtime authorized. Crew leads will be notified and the schedule will reflect the recovery.');
       navigate('/workforce');
       return;
     default: {

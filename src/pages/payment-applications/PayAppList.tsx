@@ -51,7 +51,7 @@ export const PayAppList: React.FC<PayAppListProps> = ({
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['pay_applications', projectId] })
-      toast.success('Payment recorded — pay app marked as paid')
+      toast.success('Payment recorded. Pay app marked as paid.')
     },
     onError: (err) => toast.error(err instanceof Error ? err.message : 'Failed to record payment'),
   })
@@ -226,7 +226,7 @@ export const PayAppList: React.FC<PayAppListProps> = ({
           projectId={projectId}
           onSuccess={() => {
             queryClient.invalidateQueries({ queryKey: ['pay_applications', projectId] })
-            toast.success('Draw report imported — pay app created from extracted line items')
+            toast.success('Draw report imported. Pay app created from extracted line items.')
           }}
         />
       )}

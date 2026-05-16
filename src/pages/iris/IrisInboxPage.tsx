@@ -225,7 +225,7 @@ const IrisInboxPage: React.FC = () => {
                             await approveDraft.mutateAsync(d)
                             toast.success('Approved')
                           } catch {
-                            toast.error('Could not approve — please try again')
+                            toast.error('Could not approve. Please try again.')
                           }
                         }}
                         onReject={async (d) => {

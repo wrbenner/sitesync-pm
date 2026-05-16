@@ -190,7 +190,7 @@ const WalkthroughPage: React.FC = () => {
       toast.error('Could not end session')
       return
     }
-    toast.success('Walk ended — review captures next')
+    toast.success('Walk ended. Review captures next.')
     // Navigate to review page. Hash router convention used elsewhere in app.
     window.location.hash = `#/walkthrough/${session.id}`
   }, [session])

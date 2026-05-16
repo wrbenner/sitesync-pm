@@ -324,7 +324,7 @@ const SubmittalsPage: React.FC = () => {
         <ExportButton onExportXLSX={handleExportXlsx} pdfFilename="SiteSync_Submittal_Log" />
       </PermissionGate>
       <PermissionGate permission="submittals.view">
-        <SecondaryBtn onClick={() => toast.info('Reports — coming in Phase 5')} title="Reports">
+        <SecondaryBtn onClick={() => toast.info('Reports: coming in Phase 5')} title="Reports">
           Reports
           <ChevronDown size={11} />
         </SecondaryBtn>

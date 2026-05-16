@@ -371,7 +371,7 @@ const PaymentApplicationsPage: React.FC = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['pay_applications', projectId] })
-      toast.success('Payment recorded — pay app marked as paid')
+      toast.success('Payment recorded. Pay app marked as paid.')
     },
     onError: () => toast.error('Failed to record payment'),
   })

@@ -302,7 +302,7 @@ export const PayAppDetail = memo<PayAppDetailProps>(({
                   // Audit logger swallows its own errors in dev; nothing to do here.
                 })
                 setOverrideAccepted(true)
-                toast.success('Override recorded — proceeding to submit')
+                toast.success('Override recorded. Proceeding to submit.')
               }
               onApprove()
             } catch (e) {
