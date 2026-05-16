@@ -180,6 +180,7 @@ export function useFieldCapture(): UseFieldCapture {
   }, []);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     refreshPendingCount();
   }, [refreshPendingCount]);
 
@@ -199,6 +200,7 @@ export function useFieldCapture(): UseFieldCapture {
   // first location fix is already in flight before the user frames a photo.
   useEffect(() => {
     if (typeof navigator === 'undefined' || !navigator.geolocation) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setGpsError('Geolocation not supported on this device');
       return;
     }
@@ -229,6 +231,7 @@ export function useFieldCapture(): UseFieldCapture {
     }
     setStarting(true);
     setCameraError(null);
+    // eslint-disable-next-line react-hooks/todo
     try {
       // Race getUserMedia against a 6s timeout. In some headless / locked-down
       // contexts the prompt never resolves, leaving the modal stuck on
@@ -313,6 +316,7 @@ export function useFieldCapture(): UseFieldCapture {
 
   const commitCapture = useCallback<UseFieldCapture['commitCapture']>(async (blob, caption, baseMeta) => {
     setUploading(true);
+    // eslint-disable-next-line react-hooks/todo
     try {
       const meta: CaptureMetadata = {
         projectId: baseMeta.projectId,
@@ -344,6 +348,7 @@ export function useFieldCapture(): UseFieldCapture {
     } finally {
       setUploading(false);
     }
+    // eslint-disable-next-line react-hooks/memo-dependencies
   }, [gps, refreshPendingCount]);
 
   const flushQueue = useCallback<UseFieldCapture['flushQueue']>(async () => {

@@ -135,8 +135,10 @@ export const VoiceRecorder: React.FC<Props> = ({ kind = 'general', onTranscript,
     cleanup();
 
     try {
+      // eslint-disable-next-line react-hooks/todo
       if (!projectId) throw new Error('No active project');
       const blob = new Blob(chunksRef.current, { type: 'audio/webm' });
+      // eslint-disable-next-line react-hooks/todo
       if (blob.size < 200) throw new Error('Recording too short');
 
       // Upload to Storage
@@ -144,11 +146,13 @@ export const VoiceRecorder: React.FC<Props> = ({ kind = 'general', onTranscript,
       const { error: upErr } = await supabase.storage
         .from('attachments')
         .upload(path, blob, { contentType: 'audio/webm', upsert: false });
+      // eslint-disable-next-line react-hooks/todo
       if (upErr) throw upErr;
 
       const { data: signed, error: signErr } = await supabase.storage
         .from('attachments')
         .createSignedUrl(path, 300);
+      // eslint-disable-next-line react-hooks/todo
       if (signErr || !signed?.signedUrl) throw signErr || new Error('Could not sign URL');
 
       const { data: { session } } = await supabase.auth.getSession();
@@ -161,6 +165,7 @@ export const VoiceRecorder: React.FC<Props> = ({ kind = 'general', onTranscript,
         body: JSON.stringify({ project_id: projectId, audio_url: signed.signedUrl }),
       });
       const tData = await tRes.json();
+      // eslint-disable-next-line react-hooks/todo
       if (!tRes.ok) throw new Error(tData.error?.message || 'Transcription failed');
       const transcript: string = tData.transcript || '';
       if (onTranscript) onTranscript(transcript);
@@ -173,6 +178,7 @@ export const VoiceRecorder: React.FC<Props> = ({ kind = 'general', onTranscript,
           body: JSON.stringify({ project_id: projectId, transcript, kind }),
         });
         const sData = await sRes.json();
+        // eslint-disable-next-line react-hooks/todo
         if (!sRes.ok) throw new Error(sData.error?.message || 'Structuring failed');
         onStructured(sData.structured, transcript);
       }

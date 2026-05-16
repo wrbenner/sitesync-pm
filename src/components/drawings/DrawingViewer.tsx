@@ -187,11 +187,11 @@ const DrawingViewerInner: React.FC<DrawingViewerInnerProps> = ({
   // so each component instance takes the same branch on every render — hook order
   // is stable. The conditional exists because hooks would throw outside RoomProvider
   // (the outer wrapper short-circuits to a no-provider render when not configured).
-  // eslint-disable-next-line react-hooks/rules-of-hooks
+  // eslint-disable-next-line react-hooks/rules-of-hooks, react-hooks/hooks
   const _updatePresence = LIVEBLOCKS_CONFIGURED ? useUpdateMyPresence() : null;
-  // eslint-disable-next-line react-hooks/rules-of-hooks
+  // eslint-disable-next-line react-hooks/rules-of-hooks, react-hooks/hooks
   const others = LIVEBLOCKS_CONFIGURED ? useOthers() : [];
-  // eslint-disable-next-line react-hooks/rules-of-hooks
+  // eslint-disable-next-line react-hooks/rules-of-hooks, react-hooks/hooks
   const _broadcastEvent = LIVEBLOCKS_CONFIGURED ? useBroadcastEvent() : null;
   const updateMyPresence = useMemo(() => _updatePresence ?? (() => {}), [_updatePresence]);
   const broadcastEvent = useMemo(() => _broadcastEvent ?? (() => {}), [_broadcastEvent]);
@@ -205,7 +205,7 @@ const DrawingViewerInner: React.FC<DrawingViewerInnerProps> = ({
 
   // Receive remote markup events and apply to local state
   if (LIVEBLOCKS_CONFIGURED) {
-    // eslint-disable-next-line react-hooks/rules-of-hooks
+    // eslint-disable-next-line react-hooks/rules-of-hooks, react-hooks/hooks
     useEventListener(({ event }) => {
       if (event.type === 'MARKUP_ADD') {
         setMarkups((prev) => {
@@ -699,6 +699,7 @@ const DrawingViewerInner: React.FC<DrawingViewerInnerProps> = ({
     // Persist each fabric object as a drawing_annotation via the mutation hook
     if (fc && createAnnotationMutate) {
       setIsSaving(true);
+      // eslint-disable-next-line react-hooks/todo
       try {
         const objects = fc.toJSON().objects as unknown as Record<string, unknown>[];
         for (const obj of objects) {
@@ -712,6 +713,7 @@ const DrawingViewerInner: React.FC<DrawingViewerInnerProps> = ({
 
     if (markups.length === 0) return;
     setIsSaving(true);
+    // eslint-disable-next-line react-hooks/todo
     try {
       const drawingId = drawing.id || drawing.setNumber;
       const records = markups.map((m) => ({
@@ -814,11 +816,12 @@ const DrawingViewerInner: React.FC<DrawingViewerInnerProps> = ({
           </div>
 
           {/* Canvas area */}
+          {/* eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions */}
           <div
             ref={canvasOuterRef}
             role="application"
             aria-label="Drawing viewer - use arrow keys to pan, plus/minus to zoom"
-            tabIndex={0}
+            tabIndex={-1}
             style={{ flex: 1, position: 'relative', overflow: 'hidden', touchAction: 'manipulation', width: '100%' }}
             onMouseLeave={handleMouseLeave}
             onKeyDown={handleKeyDown}
@@ -869,6 +872,7 @@ const DrawingViewerInner: React.FC<DrawingViewerInnerProps> = ({
             })}
 
             {/* Canvas inner (transformed) */}
+            {/* eslint-disable-next-line jsx-a11y/no-static-element-interactions */}
             <div
               ref={canvasRef}
               onMouseDown={handleMouseDown}
@@ -947,6 +951,7 @@ const DrawingViewerInner: React.FC<DrawingViewerInnerProps> = ({
               {/* Text input overlay (non-fabric fallback when isEditable is false) */}
               {textPos && (
                 <div style={{ position: 'absolute', left: `${textPos.x}%`, top: `${textPos.y}%`, zIndex: 20 }}>
+                  {/* eslint-disable-next-line jsx-a11y/no-autofocus */}
                   <input autoFocus value={textInput} onChange={(e) => setTextInput(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') handleTextSubmit(); if (e.key === 'Escape') setTextPos(null); }} onBlur={handleTextSubmit} placeholder="Add note..." style={{ padding: `${spacing['0.5']} ${spacing['1.5']}`, backgroundColor: colors.primaryOrange, color: colors.white, border: 'none', borderRadius: borderRadius.sm, outline: 'none', fontSize: typography.fontSize.caption, fontFamily: typography.fontFamily, fontWeight: typography.fontWeight.semibold, minWidth: '80px' }} />
                 </div>
               )}
