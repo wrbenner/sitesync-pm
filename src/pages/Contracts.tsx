@@ -2184,35 +2184,45 @@ export const Contracts: React.FC = () => {
         alignItems: 'center', justifyContent: 'space-between',
         marginBottom: spacing['lg'], flexWrap: 'wrap',
       }}>
-        <div style={{
-          display: 'flex', gap: spacing['1'], backgroundColor: colors.surfaceInset,
-          borderRadius: borderRadius.lg, padding: spacing['1'],
-          overflowX: 'auto', WebkitOverflowScrolling: 'touch',
-        }}>
-          {topTabs.map((tab) => {
-            const isActive = topTab === tab.key
-            return (
-              <button
-                key={tab.key}
-                onClick={() => setTopTab(tab.key)}
-                aria-pressed={isActive}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: spacing['2'],
-                  padding: `${spacing['2']} ${spacing['4']}`, border: 'none',
-                  borderRadius: borderRadius.base, cursor: 'pointer',
-                  fontSize: typography.fontSize.sm, fontFamily: typography.fontFamily,
-                  fontWeight: isActive ? typography.fontWeight.medium : typography.fontWeight.normal,
-                  color: isActive ? colors.orangeText : colors.textSecondary,
-                  backgroundColor: isActive ? colors.surfaceRaised : 'transparent',
-                  transition: `all ${transitions.instant}`, whiteSpace: 'nowrap',
-                  flexShrink: 0,
-                }}
-              >
-                {React.createElement(tab.icon, { size: 14 })}
-                {tab.label}
-              </button>
-            )
-          })}
+        <div style={{ position: 'relative' }}>
+          <div style={{
+            display: 'flex', gap: spacing['1'], backgroundColor: colors.surfaceInset,
+            borderRadius: borderRadius.lg, padding: spacing['1'],
+            overflowX: 'auto', WebkitOverflowScrolling: 'touch',
+            scrollbarWidth: 'none', msOverflowStyle: 'none',
+          }}>
+            {topTabs.map((tab) => {
+              const isActive = topTab === tab.key
+              return (
+                <button
+                  key={tab.key}
+                  onClick={() => setTopTab(tab.key)}
+                  aria-pressed={isActive}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: spacing['2'],
+                    padding: `${spacing['2']} ${spacing['4']}`, border: 'none',
+                    borderRadius: borderRadius.base, cursor: 'pointer',
+                    fontSize: typography.fontSize.sm, fontFamily: typography.fontFamily,
+                    fontWeight: isActive ? typography.fontWeight.medium : typography.fontWeight.normal,
+                    color: isActive ? colors.orangeText : colors.textSecondary,
+                    backgroundColor: isActive ? colors.surfaceRaised : 'transparent',
+                    transition: `all ${transitions.instant}`, whiteSpace: 'nowrap',
+                    flexShrink: 0,
+                  }}
+                >
+                  {React.createElement(tab.icon, { size: 14 })}
+                  {tab.label}
+                </button>
+              )
+            })}
+          </div>
+          {/* Right-edge gradient hints more tabs are scrollable on narrow viewports */}
+          <div aria-hidden style={{
+            position: 'absolute', top: 0, right: 0, bottom: 0, width: 32,
+            background: `linear-gradient(to left, ${colors.surfaceInset}, transparent)`,
+            borderTopRightRadius: borderRadius.lg, borderBottomRightRadius: borderRadius.lg,
+            pointerEvents: 'none',
+          }} />
         </div>
         <div style={{
           position: 'relative', display: 'flex', alignItems: 'center',
@@ -2251,34 +2261,43 @@ export const Contracts: React.FC = () => {
         <ChangeOrdersTab projectId={projectId} contracts={typedContracts} search={search} />
       ) : (
       <>
-      <div style={{
-        display: 'flex', gap: spacing['1'], backgroundColor: colors.surfaceInset,
-        borderRadius: borderRadius.lg, padding: spacing['1'], marginBottom: spacing['2xl'],
-        overflowX: 'auto', WebkitOverflowScrolling: 'touch',
-      }}>
-        {tabs.map((tab) => {
-          const isActive = activeTab === tab.key
-          return (
-            <button
-              key={tab.key}
-              onClick={() => setActiveTab(tab.key)}
-              style={{
-                display: 'flex', alignItems: 'center', gap: spacing['2'],
-                padding: `${spacing['2']} ${spacing['4']}`, border: 'none',
-                borderRadius: borderRadius.base, cursor: 'pointer',
-                fontSize: typography.fontSize.sm, fontFamily: typography.fontFamily,
-                fontWeight: isActive ? typography.fontWeight.medium : typography.fontWeight.normal,
-                color: isActive ? colors.orangeText : colors.textSecondary,
-                backgroundColor: isActive ? colors.surfaceRaised : 'transparent',
-                transition: `all ${transitions.instant}`, whiteSpace: 'nowrap',
-                flexShrink: 0,
-              }}
-            >
-              {React.createElement(tab.icon, { size: 14 })}
-              {tab.label}
-            </button>
-          )
-        })}
+      <div style={{ position: 'relative', marginBottom: spacing['2xl'] }}>
+        <div style={{
+          display: 'flex', gap: spacing['1'], backgroundColor: colors.surfaceInset,
+          borderRadius: borderRadius.lg, padding: spacing['1'],
+          overflowX: 'auto', WebkitOverflowScrolling: 'touch',
+          scrollbarWidth: 'none', msOverflowStyle: 'none',
+        }}>
+          {tabs.map((tab) => {
+            const isActive = activeTab === tab.key
+            return (
+              <button
+                key={tab.key}
+                onClick={() => setActiveTab(tab.key)}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: spacing['2'],
+                  padding: `${spacing['2']} ${spacing['4']}`, border: 'none',
+                  borderRadius: borderRadius.base, cursor: 'pointer',
+                  fontSize: typography.fontSize.sm, fontFamily: typography.fontFamily,
+                  fontWeight: isActive ? typography.fontWeight.medium : typography.fontWeight.normal,
+                  color: isActive ? colors.orangeText : colors.textSecondary,
+                  backgroundColor: isActive ? colors.surfaceRaised : 'transparent',
+                  transition: `all ${transitions.instant}`, whiteSpace: 'nowrap',
+                  flexShrink: 0,
+                }}
+              >
+                {React.createElement(tab.icon, { size: 14 })}
+                {tab.label}
+              </button>
+            )
+          })}
+        </div>
+        <div aria-hidden style={{
+          position: 'absolute', top: 0, right: 0, bottom: 0, width: 32,
+          background: `linear-gradient(to left, ${colors.surfaceInset}, transparent)`,
+          borderTopRightRadius: borderRadius.lg, borderBottomRightRadius: borderRadius.lg,
+          pointerEvents: 'none',
+        }} />
       </div>
 
       {activeTab === 'clause_library' ? (

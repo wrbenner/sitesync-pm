@@ -35,30 +35,33 @@ for (const vp of VIEWPORTS) {
       await settle(page, 600)
       await shot(page, vp.name, 1, 'list-or-empty')
 
-      // Upload modal
+      // Upload modal — open, capture, then fully dismiss before proceeding.
       const uploadOpened =
         (await tryClick(page, /^upload$/i)) || (await tryClick(page, /upload drawings/i))
       if (uploadOpened) {
         await settle(page, 500)
         await shot(page, vp.name, 2, 'upload-modal')
         await page.keyboard.press('Escape')
-        await settle(page, 200)
+        // Wait for the modal overlay to disappear before clicking other elements.
+        await page.waitForSelector('[role="dialog"]', { state: 'hidden', timeout: 3000 }).catch(() => undefined)
+        await settle(page, 400)
       }
 
-      // Sets panel
+      // Sets panel — only attempt after upload modal is fully gone.
       if (await tryClick(page, /^sets$/i)) {
-        await settle(page, 500)
+        await settle(page, 600)
         await shot(page, vp.name, 3, 'sets-panel')
         await page.keyboard.press('Escape')
-        await settle(page, 200)
+        await page.waitForSelector('[role="dialog"]', { state: 'hidden', timeout: 3000 }).catch(() => undefined)
+        await settle(page, 400)
       }
 
-      // Annotations panel
+      // Annotations panel — only attempt after sets panel is fully gone.
       if (await tryClick(page, /^annotations$/i)) {
-        await settle(page, 500)
+        await settle(page, 600)
         await shot(page, vp.name, 4, 'annotations-panel')
         await page.keyboard.press('Escape')
-        await settle(page, 200)
+        await settle(page, 400)
       }
 
       // Open first drawing if any
