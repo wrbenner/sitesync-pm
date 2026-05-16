@@ -1,0 +1,79 @@
+# Gate 30 - Money Math Audit (B18, Crystalline Standard Tier 1)
+#
+# Runs scripts/audit-money-math.mjs against src/. Flags raw +,-,*,/
+# arithmetic on a money-typed value (Cents-typed, money column name, or
+# money-suggesting identifier) not routed through addCents/subtractCents/
+# multiplyCents/applyRateCents in src/types/money.ts.
+#
+# Allowlist: ops/coverage/money-audit-allowlist.json — baseline of 153
+# pre-existing violations (2026-05-15) expires 2026-08-13. Migrate per
+# docs/audits/MONEY_CENTS_AUDIT_2026-05-01.md before expiry.
+#
+# Promotion path (see CRYSTALLINE_STANDARD_ROADMAP_2026-05-15.md):
+#   1. Informational (continue-on-error: true) — current
+#   2. Required, non-blocking — after 14 days at green
+#   3. Required, blocking — after 30 days at green
+#
+# SECURITY: only repo-committed inputs (script + allowlist) are read.
+# No github.event.* interpolation in run: blocks.
+
+name: Gate 30 - Money Math Audit
+
+on:
+  pull_request:
+    paths:
+      - 'src/**/*.ts'
+      - 'src/**/*.tsx'
+      - 'scripts/audit-money-math.mjs'
+      - 'ops/coverage/money-audit-allowlist.json'
+      - '.github/workflows/gate-30-money-math.yml'
+  push:
+    branches: [main]
+
+jobs:
+  audit:
+    name: Money math audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run money math audit
+        id: audit
+        run: |
+          set +e
+          node scripts/audit-money-math.mjs --json > /tmp/money-audit.json
+          AUDIT_EXIT=$?
+          set -e
+          LIVE=$(jq -r '.live_violations' /tmp/money-audit.json)
+          ALLOWED=$(jq -r '.allowed_violations' /tmp/money-audit.json)
+          TOTAL=$(jq -r '.total_violations' /tmp/money-audit.json)
+          {
+            echo "## B18 Money Math Audit"
+            echo ""
+            echo "| Metric | Count |"
+            echo "|---|---:|"
+            echo "| Total findings | $TOTAL |"
+            echo "| Allowlisted (unexpired) | $ALLOWED |"
+            echo "| **Live violations** | **$LIVE** |"
+            echo ""
+            if [ "$LIVE" = "0" ]; then
+              echo "PASS - no new raw money math introduced."
+            else
+              echo "FAIL - $LIVE new violation(s) detected. Either:"
+              echo "1. Refactor to addCents/subtractCents/multiplyCents/applyRateCents from src/types/money.ts, or"
+              echo "2. Add to ops/coverage/money-audit-allowlist.json with reason + owner + expires."
+              echo ""
+              echo "Run locally: node scripts/audit-money-math.mjs"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+          exit $AUDIT_EXIT
