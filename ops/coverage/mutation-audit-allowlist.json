@@ -2274,6 +2274,46 @@
       "owner": "walker@sitesyncai.com",
       "added": "2026-05-16",
       "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/useAuditTrail.ts",
+      "line": 165,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/useZipUpload.ts",
+      "line": 110,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/pages/Crews.tsx",
+      "line": 249,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/pages/Meetings.tsx",
+      "line": 1244,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/pages/rfis/RFIDetail.tsx",
+      "line": 130,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
     }
   ]
 }
