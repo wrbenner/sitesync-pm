@@ -184,8 +184,8 @@ export const BudgetKPIs: React.FC<BudgetKPIProps> = ({
       trendInvert: false,
     },
     {
-      label: 'REMAINING',
-      value: remaining,
+      label: remaining < 0 ? 'OVER BUDGET' : 'REMAINING',
+      value: Math.abs(remaining),
       formatter: fmtCurrency,
       icon: ShieldCheck,
       color: remaining >= 0 ? '#16A34A' : '#DC2626',
