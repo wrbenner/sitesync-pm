@@ -1,0 +1,373 @@
+{
+  "_schema": {
+    "description": "B17 button-behavior manifest. Inventory of every createAuditedMutation() call site discovered in src/. Each entry pairs a mutation with its expected audit kind, action, and required permission — the contract a UI button must satisfy.",
+    "fields": {
+      "file": "Path relative to repo root",
+      "line": "1-indexed line number of createAuditedMutation(",
+      "entityType": "Entity domain (string from config)",
+      "action": "One of: create|update|delete|status_change|approve|reject|submit|close",
+      "permission": "usePermissions permission key required to execute"
+    }
+  },
+  "generated_at": "2026-05-16",
+  "total": 51,
+  "entries": [
+    {
+      "file": "src/hooks/mutations/budget.ts",
+      "line": 20,
+      "entityType": "budget_line_item",
+      "action": "create",
+      "permission": "budget.edit"
+    },
+    {
+      "file": "src/hooks/mutations/budget.ts",
+      "line": 44,
+      "entityType": "budget_line_item",
+      "action": "delete",
+      "permission": "budget.edit"
+    },
+    {
+      "file": "src/hooks/mutations/change-orders.ts",
+      "line": 10,
+      "entityType": "change_order",
+      "action": "create",
+      "permission": "change_orders.create"
+    },
+    {
+      "file": "src/hooks/mutations/change-orders.ts",
+      "line": 29,
+      "entityType": "change_order",
+      "action": "update",
+      "permission": "change_orders.edit"
+    },
+    {
+      "file": "src/hooks/mutations/change-orders.ts",
+      "line": 53,
+      "entityType": "change_order",
+      "action": "update",
+      "permission": "change_orders.promote"
+    },
+    {
+      "file": "src/hooks/mutations/change-orders.ts",
+      "line": 85,
+      "entityType": "change_order",
+      "action": "submit",
+      "permission": "change_orders.create"
+    },
+    {
+      "file": "src/hooks/mutations/change-orders.ts",
+      "line": 109,
+      "entityType": "change_order",
+      "action": "approve",
+      "permission": "change_orders.approve"
+    },
+    {
+      "file": "src/hooks/mutations/change-orders.ts",
+      "line": 214,
+      "entityType": "change_order",
+      "action": "reject",
+      "permission": "change_orders.approve"
+    },
+    {
+      "file": "src/hooks/mutations/change-orders.ts",
+      "line": 237,
+      "entityType": "change_order",
+      "action": "delete",
+      "permission": "change_orders.delete"
+    },
+    {
+      "file": "src/hooks/mutations/crews.ts",
+      "line": 14,
+      "entityType": "crew",
+      "action": "create",
+      "permission": "crews.manage"
+    },
+    {
+      "file": "src/hooks/mutations/crews.ts",
+      "line": 33,
+      "entityType": "crew",
+      "action": "update",
+      "permission": "crews.manage"
+    },
+    {
+      "file": "src/hooks/mutations/crews.ts",
+      "line": 53,
+      "entityType": "crew",
+      "action": "delete",
+      "permission": "crews.manage"
+    },
+    {
+      "file": "src/hooks/mutations/daily-log-entries.ts",
+      "line": 123,
+      "entityType": "daily_log",
+      "action": "approve",
+      "permission": "daily_log.approve"
+    },
+    {
+      "file": "src/hooks/mutations/daily-log-entries.ts",
+      "line": 146,
+      "entityType": "daily_log",
+      "action": "reject",
+      "permission": "daily_log.approve"
+    },
+    {
+      "file": "src/hooks/mutations/daily-logs.ts",
+      "line": 14,
+      "entityType": "daily_log",
+      "action": "create",
+      "permission": "daily_log.create"
+    },
+    {
+      "file": "src/hooks/mutations/daily-logs.ts",
+      "line": 33,
+      "entityType": "daily_log",
+      "action": "update",
+      "permission": "daily_log.edit"
+    },
+    {
+      "file": "src/hooks/mutations/daily-logs.ts",
+      "line": 63,
+      "entityType": "daily_log",
+      "action": "delete",
+      "permission": "daily_log.edit"
+    },
+    {
+      "file": "src/hooks/mutations/directory-contacts.ts",
+      "line": 14,
+      "entityType": "contact",
+      "action": "create",
+      "permission": "directory.manage"
+    },
+    {
+      "file": "src/hooks/mutations/directory-contacts.ts",
+      "line": 33,
+      "entityType": "contact",
+      "action": "update",
+      "permission": "directory.manage"
+    },
+    {
+      "file": "src/hooks/mutations/directory-contacts.ts",
+      "line": 53,
+      "entityType": "contact",
+      "action": "delete",
+      "permission": "directory.manage"
+    },
+    {
+      "file": "src/hooks/mutations/meetings.ts",
+      "line": 13,
+      "entityType": "meeting",
+      "action": "create",
+      "permission": "meetings.create"
+    },
+    {
+      "file": "src/hooks/mutations/meetings.ts",
+      "line": 32,
+      "entityType": "meeting",
+      "action": "update",
+      "permission": "meetings.create"
+    },
+    {
+      "file": "src/hooks/mutations/meetings.ts",
+      "line": 118,
+      "entityType": "meeting",
+      "action": "delete",
+      "permission": "meetings.delete"
+    },
+    {
+      "file": "src/hooks/mutations/projects.ts",
+      "line": 14,
+      "entityType": "project",
+      "action": "update",
+      "permission": "project.settings"
+    },
+    {
+      "file": "src/hooks/mutations/projects.ts",
+      "line": 38,
+      "entityType": "project",
+      "action": "delete",
+      "permission": "project.delete"
+    },
+    {
+      "file": "src/hooks/mutations/punch-items.ts",
+      "line": 36,
+      "entityType": "punch_item",
+      "action": "create",
+      "permission": "punch_list.create"
+    },
+    {
+      "file": "src/hooks/mutations/punch-items.ts",
+      "line": 62,
+      "entityType": "punch_item",
+      "action": "update",
+      "permission": "punch_list.edit"
+    },
+    {
+      "file": "src/hooks/mutations/punch-items.ts",
+      "line": 92,
+      "entityType": "punch_item",
+      "action": "delete",
+      "permission": "punch_list.delete"
+    },
+    {
+      "file": "src/hooks/mutations/rfis.ts",
+      "line": 35,
+      "entityType": "rfi",
+      "action": "create",
+      "permission": "rfis.create"
+    },
+    {
+      "file": "src/hooks/mutations/rfis.ts",
+      "line": 71,
+      "entityType": "rfi",
+      "action": "update",
+      "permission": "rfis.edit"
+    },
+    {
+      "file": "src/hooks/mutations/rfis.ts",
+      "line": 114,
+      "entityType": "rfi",
+      "action": "delete",
+      "permission": "rfis.edit"
+    },
+    {
+      "file": "src/hooks/mutations/submittals.ts",
+      "line": 59,
+      "entityType": "submittal",
+      "action": "create",
+      "permission": "submittals.create"
+    },
+    {
+      "file": "src/hooks/mutations/submittals.ts",
+      "line": 98,
+      "entityType": "submittal",
+      "action": "update",
+      "permission": "submittals.edit"
+    },
+    {
+      "file": "src/hooks/mutations/submittals.ts",
+      "line": 147,
+      "entityType": "submittal",
+      "action": "delete",
+      "permission": "submittals.delete"
+    },
+    {
+      "file": "src/hooks/mutations/tasks.ts",
+      "line": 17,
+      "entityType": "task",
+      "action": "create",
+      "permission": "tasks.create"
+    },
+    {
+      "file": "src/hooks/mutations/tasks.ts",
+      "line": 42,
+      "entityType": "task",
+      "action": "update",
+      "permission": "tasks.edit"
+    },
+    {
+      "file": "src/hooks/mutations/tasks.ts",
+      "line": 71,
+      "entityType": "task",
+      "action": "delete",
+      "permission": "tasks.delete"
+    },
+    {
+      "file": "src/hooks/queries/enterprise-modules.ts",
+      "line": 11,
+      "entityType": "contract",
+      "action": "create",
+      "permission": "project.settings"
+    },
+    {
+      "file": "src/hooks/queries/enterprise-modules.ts",
+      "line": 30,
+      "entityType": "contract",
+      "action": "update",
+      "permission": "project.settings"
+    },
+    {
+      "file": "src/hooks/queries/enterprise-modules.ts",
+      "line": 55,
+      "entityType": "contract",
+      "action": "delete",
+      "permission": "project.settings"
+    },
+    {
+      "file": "src/hooks/queries/financials.ts",
+      "line": 34,
+      "entityType": "pay_application",
+      "action": "create",
+      "permission": "financials.edit"
+    },
+    {
+      "file": "src/hooks/queries/financials.ts",
+      "line": 52,
+      "entityType": "pay_application",
+      "action": "update",
+      "permission": "financials.edit"
+    },
+    {
+      "file": "src/hooks/queries/financials.ts",
+      "line": 71,
+      "entityType": "pay_application",
+      "action": "submit",
+      "permission": "financials.edit"
+    },
+    {
+      "file": "src/hooks/queries/financials.ts",
+      "line": 87,
+      "entityType": "pay_application",
+      "action": "approve",
+      "permission": "budget.approve"
+    },
+    {
+      "file": "src/hooks/queries/financials.ts",
+      "line": 106,
+      "entityType": "pay_application",
+      "action": "delete",
+      "permission": "financials.edit"
+    },
+    {
+      "file": "src/hooks/queries/permits.ts",
+      "line": 24,
+      "entityType": "permit",
+      "action": "create",
+      "permission": "project.settings"
+    },
+    {
+      "file": "src/hooks/queries/permits.ts",
+      "line": 47,
+      "entityType": "permit",
+      "action": "update",
+      "permission": "project.settings"
+    },
+    {
+      "file": "src/hooks/queries/permits.ts",
+      "line": 70,
+      "entityType": "permit",
+      "action": "delete",
+      "permission": "project.settings"
+    },
+    {
+      "file": "src/hooks/queries/vendors.ts",
+      "line": 79,
+      "entityType": "vendor",
+      "action": "create",
+      "permission": "directory.manage"
+    },
+    {
+      "file": "src/hooks/queries/vendors.ts",
+      "line": 98,
+      "entityType": "vendor",
+      "action": "update",
+      "permission": "directory.manage"
+    },
+    {
+      "file": "src/hooks/queries/vendors.ts",
+      "line": 122,
+      "entityType": "vendor",
+      "action": "delete",
+      "permission": "directory.manage"
+    }
+  ]
+}

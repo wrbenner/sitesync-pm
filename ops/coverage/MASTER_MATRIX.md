@@ -163,7 +163,7 @@ Phase 2 extends the existing breadth matrix (B1–B14) with 28 deep sub-suites o
 | Sub-suite | Manifest | Spec | Gate | Cells | Status |
 |---|---|---|---|---:|---|
 | B16 Workflow depth | `workflows-deep.json` | `e2e/workflows/codegen/B16-workflow-depth.generated.spec.ts` | gate-28-workflow-depth | ~2,160 | planned |
-| B17 Button behavior | `buttons-actions.json` | `e2e/buttons/codegen/B17-button-behavior.generated.spec.ts` | gate-29-button-behavior | ~1,200 | planned |
+| B17 Button behavior | `buttons-actions.json` (51 audited mutations manifested), `mutation-audit-allowlist.json` (284 pre-existing raw `useMutation` entries) | `scripts/audit-mutations.mjs` (AST audit; Playwright spec deferred) | gate-29-button-behavior | 1 gate + 51-mutation inventory | **shipped 2026-05-16 (informational); 284-entry baseline expires 2026-08-14** |
 | B18 Money math audit | `money-audit-allowlist.json` | `scripts/audit-money-math.mjs` (AST audit, not a vitest spec) | gate-30-money-math | 1 gate + ~50 property suites | **shipped 2026-05-15 (informational); 153-entry baseline expires 2026-08-13** |
 | B19 Invariants | `invariants.json` | `tests/invariants/codegen/B19-invariants.generated.spec.ts` | gate-31-invariants | ~600 | planned |
 | B20 IRIS quality | `iris-quality.json` | `tests/iris/codegen/B20-iris-quality.generated.spec.ts` | gate-32-iris-quality | ~480 | planned |
