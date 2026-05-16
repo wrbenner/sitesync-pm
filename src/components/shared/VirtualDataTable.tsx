@@ -229,6 +229,7 @@ export function VirtualDataTable<T>({
               <div
                 key={header.id}
                 role="columnheader"
+                tabIndex={header.column.getCanSort() ? 0 : undefined}
                 aria-sort={
                   header.column.getCanSort()
                     ? header.column.getIsSorted() === 'asc'

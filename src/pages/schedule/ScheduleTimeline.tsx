@@ -228,6 +228,7 @@ export const ScheduleTimeline: React.FC<ScheduleTimelineProps> = ({
             <div
               key={phase.id}
               role="row"
+              tabIndex={0}
               aria-rowindex={idx + 1}
               aria-selected={isFocused}
               data-phase-id={phase.id}

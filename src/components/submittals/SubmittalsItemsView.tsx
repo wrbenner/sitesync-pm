@@ -531,6 +531,7 @@ const ColumnHeaderMenu: React.FC<ColumnHeaderMenuProps> = ({
 }) => (
   <div
     role="menu"
+    tabIndex={-1}
     aria-label={`Column ${columnId} actions`}
     onClick={(e) => e.stopPropagation()}
     style={{

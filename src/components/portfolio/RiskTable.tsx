@@ -50,6 +50,7 @@ export const RiskTable: React.FC<RiskTableProps> = ({ projects, onProjectClick }
         <div
           key={p.project_id}
           role="row"
+          tabIndex={onProjectClick ? 0 : undefined}
           onClick={() => onProjectClick?.(p.project_id)}
           style={{
             display: 'grid',
