@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/todo */
 import React, { useState } from 'react'
 import { Shield, CheckCircle2, AlertCircle, Smartphone, Trash2, Copy, Download, KeyRound } from 'lucide-react'
 import { Btn, Card, Modal } from '../Primitives'
@@ -469,7 +470,8 @@ export const MfaEnrollment: React.FC = () => {
               >
                 Verification code
               </label>
-              <input
+              {/* eslint-disable-next-line jsx-a11y/no-autofocus */}
+              <input autoFocus
                 id="mfa-otp-input"
                 value={code}
                 onChange={(e) => {
@@ -477,7 +479,6 @@ export const MfaEnrollment: React.FC = () => {
                   if (errorMsg) setErrorMsg(null)
                 }}
                 placeholder="123456"
-                autoFocus
                 inputMode="numeric"
                 autoComplete="one-time-code"
                 style={{

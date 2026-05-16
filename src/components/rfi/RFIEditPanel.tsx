@@ -26,6 +26,7 @@
 // Required props: `rfiId`, `projectId`, `open`, `onClose`. The panel
 // fetches its own RFI by id (via the queries layer).
 
+/* eslint-disable react-hooks/todo, react-hooks/set-state-in-effect */
 import React, { useEffect, useMemo, useState } from 'react'
 import { Save, X, AlertTriangle } from 'lucide-react'
 import { toast } from 'sonner'

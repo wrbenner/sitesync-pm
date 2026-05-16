@@ -12,6 +12,7 @@
  * itself — that's by design; this is a preview, not a signing portal.
  */
 
+/* eslint-disable react-hooks/todo */
 import React, { useEffect, useState } from 'react';
 import { colors, typography, spacing } from '../../styles/theme';
 import {

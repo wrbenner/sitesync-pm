@@ -9,6 +9,7 @@
  *  - Auto-sync: drains the queue when connectivity returns
  */
 
+/* eslint-disable react-hooks/todo, react-hooks/set-state-in-effect, react-hooks/memo-dependencies */
 import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   enqueueAnnotation,

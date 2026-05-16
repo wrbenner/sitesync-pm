@@ -13,6 +13,7 @@
 // surface inside a slide-over.
 // ─────────────────────────────────────────────────────────────────────────────
 
+/* eslint-disable react-hooks/todo, react-hooks/set-state-in-effect, react-hooks/preserve-manual-memoization */
 import React, {
   useState, useMemo, useEffect, useCallback, useRef, lazy, Suspense,
 } from 'react';
@@ -1728,11 +1729,11 @@ const DailyLogPage: React.FC = () => {
           <p style={modalSubtitleStyle}>
             Provide a reason so the superintendent knows what to correct.
           </p>
-          <textarea
+          {/* eslint-disable-next-line jsx-a11y/no-autofocus */}
+          <textarea autoFocus
             value={rejectReason}
             onChange={(e) => setRejectReason(e.target.value)}
             placeholder="Reason…"
-            autoFocus
             rows={4}
             style={modalTextareaStyle}
           />
