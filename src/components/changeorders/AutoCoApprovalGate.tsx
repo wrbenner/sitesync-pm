@@ -87,7 +87,6 @@ export const AutoCoApprovalGate: React.FC<AutoCoApprovalGateProps> = ({
 
   return (
     <section
-      role="region"
       aria-label="Auto-drafted change order"
       style={{
         display: 'flex',

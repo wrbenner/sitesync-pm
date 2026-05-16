@@ -90,7 +90,6 @@ export const IrisCoPilotPanel: React.FC<IrisCoPilotPanelProps> = ({
 
   return (
     <aside
-      role="complementary"
       aria-label="Iris co-pilot"
       style={{
         flex: `0 0 ${COPILOT_PANEL_WIDTH}px`,

@@ -45,7 +45,7 @@ export const RevisionHistory: React.FC<RevisionHistoryProps> = ({
   formatField = startCase,
 }) => {
   return (
-    <section role="region" aria-label="Revision history">
+    <section aria-label="Revision history">
       <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, marginBottom: spacing['3'] }}>
         <History size={12} style={{ color: colors.ink3 }} />
         <Eyebrow>Revision history</Eyebrow>

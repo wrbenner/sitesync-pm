@@ -74,7 +74,6 @@ export const CompactWorkflowChain: React.FC<CompactWorkflowChainProps> = ({ step
     >
       <h3 style={headingStyle}>Workflow Chain</h3>
       <ol
-        role="list"
         style={{
           listStyle: 'none',
           padding: 0,

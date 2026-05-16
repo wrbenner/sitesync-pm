@@ -91,7 +91,6 @@ export const EntityHistoryPanel: React.FC<EntityHistoryPanelProps> = ({
 
   return (
     <section
-      role="region"
       aria-label={title}
       style={{
         backgroundColor: colors.surfaceRaised,

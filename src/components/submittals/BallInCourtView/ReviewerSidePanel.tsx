@@ -111,7 +111,7 @@ export const ReviewerSidePanel: React.FC<ReviewerSidePanelProps> = ({ open, onCl
       {/* Items list */}
       <section>
         <h3 style={sectionHeading}>Items ({reviewer.rows.length})</h3>
-        <ul role="list" style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+        <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
           {reviewer.rows.map((row) => {
             const days = (row.days_in_court as number | null) ?? null
             const isOverdueRow = days != null && days > 7

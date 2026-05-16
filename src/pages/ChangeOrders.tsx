@@ -885,7 +885,6 @@ const DetailPanel: React.FC<DetailPanelProps> = ({
 
   return (
     <aside
-      role="complementary"
       aria-label={`Change order #${co.number ?? ''} detail`}
       style={{
         position: 'fixed',

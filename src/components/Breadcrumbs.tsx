@@ -367,7 +367,6 @@ export const Breadcrumbs: React.FC = () => {
       }}
     >
       <ol
-        role="list"
         style={{
           display: 'flex',
           alignItems: 'center',
