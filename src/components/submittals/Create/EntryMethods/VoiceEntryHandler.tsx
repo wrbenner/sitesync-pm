@@ -54,7 +54,7 @@ export const VoiceEntryHandler: React.FC<VoiceEntryHandlerProps> = ({ onDraftRea
     onDraftReady(draft)
     setOpen(false)
     setTranscript('')
-    toast.success('Voice captured — review the pre-filled draft and Send.')
+    toast.success('Voice captured. Review the pre-filled draft and send.')
   }, [transcript, onDraftReady])
 
   return (

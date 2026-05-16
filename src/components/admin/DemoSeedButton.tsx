@@ -42,7 +42,7 @@ export const DemoSeedButton: React.FC = () => {
       if (total > 0) {
         toast.success(`Seeded ${total} demo records across ${result.created.length} tables`)
       } else {
-        toast.error('Nothing was seeded — check console for skipped tables')
+        toast.error('Nothing was seeded. Check console for skipped tables.')
       }
       if (result.skipped.length > 0) {
          

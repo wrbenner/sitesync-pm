@@ -73,7 +73,7 @@ export const OfflineBanner: React.FC = () => {
   useEffect(() => {
     if (conflictCount > prevConflictCount.current) {
       const newOnes = conflictCount - prevConflictCount.current;
-      toast.error(`Conflict — review and resubmit${newOnes > 1 ? ` (${newOnes} items)` : ''}`, {
+      toast.error(`Conflict. Review and resubmit${newOnes > 1 ? ` (${newOnes} items)` : ''}`, {
         description: 'Your offline change conflicts with the server. Open the sync panel to resolve.',
       });
     }

@@ -95,7 +95,7 @@ export function useZipUpload() {
           queryClient.invalidateQueries({ queryKey: ['documents'] })
           queryClient.invalidateQueries({ queryKey: ['drawings'] })
           if (j.status === 'completed') {
-            toast.success(`ZIP extracted — ${j.processed_files ?? 0} files`)
+            toast.success(`ZIP extracted: ${j.processed_files ?? 0} files`)
           } else {
             toast.error(`ZIP extraction failed${j.error ? `: ${j.error}` : ''}`)
           }
