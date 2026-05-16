@@ -46,6 +46,7 @@
     "eval:iris:expand": "tsx scripts/build-iris-corpus.ts",
     "doctor": "tsx scripts/doctor.ts",
     "doctor:fix": "tsx scripts/doctor.ts --fix",
+    "frog:B19": "vitest run src/test/invariants/B19-invariants.property.test.ts",
     "prepare": "husky"
   },
   "dependencies": {

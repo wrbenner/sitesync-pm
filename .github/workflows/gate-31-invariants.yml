@@ -1,0 +1,41 @@
+# Gate 31 - Cross-Feature Invariants (B19, Crystalline Standard Tier 1)
+#
+# Runs src/test/invariants/B19-invariants.property.test.ts via vitest.
+# Property tests assert the 5 pure-function invariants from
+# ops/coverage/invariants.json hold under random valid input and reject
+# deliberately-constructed violations.
+#
+# The 6th (cost_code_total_consistency) is integration-only and skipped
+# until the test-DB harness is wired.
+#
+# Promotion path: informational -> required non-blocking (14 days)
+# -> required blocking (30 days).
+#
+# SECURITY: only repo-committed inputs read.
+
+name: Gate 31 - Invariants
+
+on:
+  pull_request:
+    paths:
+      - 'src/lib/invariants/**'
+      - 'src/test/invariants/**'
+      - 'ops/coverage/invariants.json'
+      - '.github/workflows/gate-31-invariants.yml'
+  push:
+    branches: [main]
+
+jobs:
+  invariants:
+    name: Cross-feature invariants
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: npm
+      - run: npm ci
+      - run: npx vitest run src/test/invariants/B19-invariants.property.test.ts
