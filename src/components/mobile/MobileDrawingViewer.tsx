@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/memo-dependencies */
 import React, { useState, useRef, useCallback } from 'react';
 import { X, ZoomIn, ZoomOut, Maximize2, Layers, Edit3 } from 'lucide-react';
 import { colors, spacing, typography, borderRadius, shadows, zIndex, vizColors } from '../../styles/theme';

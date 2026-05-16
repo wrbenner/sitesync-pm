@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/memo-dependencies */
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'

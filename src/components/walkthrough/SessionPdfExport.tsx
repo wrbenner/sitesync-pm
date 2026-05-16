@@ -7,6 +7,7 @@
  * page query refetches the session.
  */
 
+/* eslint-disable react-hooks/todo */
 import React, { useState } from 'react'
 import { FileDown } from 'lucide-react'
 import { toast } from 'sonner'

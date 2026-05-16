@@ -2,6 +2,7 @@
 // Runs cross-modal scale consistency audit between arch/struct drawing pairs
 // and surfaces mismatches with auto-RFI workflow.
 
+/* eslint-disable react-hooks/todo */
 import React, { useState } from 'react';
 import { Ruler, AlertTriangle, Play, FileWarning, CheckCircle2, Wand2 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';

@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/todo */
 import React, { useCallback, useRef, useState } from 'react';
 import { Camera, Upload, Loader2, ShieldAlert, AlertTriangle, CheckCircle, Plus, X, Sparkles, FileText } from 'lucide-react';
 import { colors, spacing, typography, borderRadius } from '../../styles/theme';

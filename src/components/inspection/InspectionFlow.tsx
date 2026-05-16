@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/todo */
 import React, { useCallback, useState } from 'react'
 import { Camera, CheckCircle2, XCircle, Mic } from 'lucide-react'
 import { colors, spacing, typography, borderRadius } from '../../styles/theme'

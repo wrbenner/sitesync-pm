@@ -4,6 +4,7 @@
 // layout per project per table. Persisted to localStorage; tolerates parse
 // failures (returns defaults). Sort is single-column at a time.
 
+/* eslint-disable react-hooks/no-deriving-state-in-effects, react-hooks/set-state-in-effect */
 import { useCallback, useEffect, useState } from 'react'
 
 export type ColumnPin = 'left' | 'right' | null

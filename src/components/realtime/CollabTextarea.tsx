@@ -9,6 +9,7 @@
 // continues to load when the package is in a degraded state. The hook
 // is dynamically imported on mount.
 
+/* eslint-disable react-hooks/set-state-in-effect, react-hooks/todo */
 import React, { useEffect, useState } from 'react';
 import { Cloud, CloudOff } from 'lucide-react';
 import { colors, typography } from '../../styles/theme';

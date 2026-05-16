@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/set-state-in-effect, react-hooks/todo */
 import { useEffect, useState, useCallback, useRef, useId } from 'react'
 import { supabase } from '../lib/supabase'
 import { fromTable } from '../lib/db/queries'

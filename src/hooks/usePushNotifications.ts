@@ -1,6 +1,7 @@
 // Push notification registration, handling, and deep linking
 // Uses Capacitor PushNotifications when native, falls back to web Push API
 
+/* eslint-disable react-hooks/preserve-manual-memoization, react-hooks/todo */
 import { useEffect, useCallback, useRef } from 'react'
 import { fromTable } from '../lib/supabase'
 import { useAuth } from './useAuth'

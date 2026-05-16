@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/immutability */
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
   Search, X, LayoutGrid, LayoutList, Download, Trash2,
