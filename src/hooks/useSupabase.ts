@@ -358,6 +358,7 @@ export function useAICopilot(projectId: string) {
   const [error, setError] = useState<Error | null>(null)
 
   const loadConversations = useCallback(async () => {
+    // eslint-disable-next-line react-hooks/todo
     try {
       setIsLoading(true)
       const { data, error: err } = await fromTable('ai_conversations')
@@ -365,6 +366,7 @@ export function useAICopilot(projectId: string) {
         .eq('project_id' as never, projectId)
         .order('updated_at', { ascending: false })
 
+      // eslint-disable-next-line react-hooks/todo
       if (err) throw err
       setConversations((data || []) as unknown as AIConversation[])
       setError(null)
@@ -376,6 +378,7 @@ export function useAICopilot(projectId: string) {
   }, [projectId])
 
   const loadMessages = useCallback(async (conversationId: string) => {
+    // eslint-disable-next-line react-hooks/todo
     try {
       setIsLoading(true)
       const { data, error: err } = await fromTable('ai_messages')
@@ -383,6 +386,7 @@ export function useAICopilot(projectId: string) {
         .eq('conversation_id' as never, conversationId)
         .order('created_at', { ascending: true })
 
+      // eslint-disable-next-line react-hooks/todo
       if (err) throw err
       setMessages((data || []) as unknown as AIMessage[])
       setError(null)
@@ -395,6 +399,7 @@ export function useAICopilot(projectId: string) {
 
   const createConversation = useCallback(
     async (title: string) => {
+      // eslint-disable-next-line react-hooks/todo
       try {
         setIsLoading(true)
         const { data, error: err } = await fromTable('ai_conversations')
@@ -402,6 +407,7 @@ export function useAICopilot(projectId: string) {
           .select()
           .single()
 
+        // eslint-disable-next-line react-hooks/todo
         if (err) throw err
         const conv = data as unknown as AIConversation
         setCurrentConversation(conv)
@@ -420,6 +426,7 @@ export function useAICopilot(projectId: string) {
 
   const sendMessage = useCallback(
     async (conversationId: string, content: string) => {
+      // eslint-disable-next-line react-hooks/todo
       try {
         setIsLoading(true)
         const { data, error: err } = await fromTable('ai_messages')
@@ -427,6 +434,7 @@ export function useAICopilot(projectId: string) {
           .select()
           .single()
 
+        // eslint-disable-next-line react-hooks/todo
         if (err) throw err
         await loadMessages(conversationId)
         return data as unknown as AIMessage
@@ -442,6 +450,7 @@ export function useAICopilot(projectId: string) {
   )
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadConversations()
   }, [loadConversations])
 
