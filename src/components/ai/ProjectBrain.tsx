@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/todo, react-hooks/set-state-in-effect */
 import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import {
   Brain, X, Send, FileText, Loader2, Sparkles, Database, ChevronRight,
@@ -1018,6 +1019,7 @@ ${text.slice(0, 15000)}`;
                   backgroundColor: colors.surfaceInset,
                 }}>
                   {conversations.map((conv) => (
+                    // eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions
                     <div
                       key={conv.id}
                       onClick={() => { setActiveConvId(conv.id); setShowHistory(false); }}

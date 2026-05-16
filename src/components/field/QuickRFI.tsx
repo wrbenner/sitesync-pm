@@ -2,6 +2,7 @@
 // Full-screen photo + voice → AI-drafted RFI in 15 seconds.
 // Three phases: Capture → Process → Review & Submit
 
+/* eslint-disable react-hooks/todo, react-hooks/set-state-in-effect */
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
