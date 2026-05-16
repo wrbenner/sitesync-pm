@@ -49,7 +49,8 @@
     "frog:B18": "node scripts/audit-money-math.mjs",
     "frog:B18:json": "node scripts/audit-money-math.mjs --json",
     "frog:B18:baseline": "node scripts/audit-money-math.mjs --update-allowlist",
-    "frog:crystalline": "npm run frog:B18",
+    "frog:B19": "vitest run src/test/invariants/B19-invariants.property.test.ts",
+    "frog:crystalline": "npm run frog:B18 && npm run frog:B19",
     "prepare": "husky"
   },
   "dependencies": {

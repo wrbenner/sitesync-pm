@@ -1,0 +1,97 @@
+{
+  "_schema": {
+    "description": "B19 — Cross-feature invariants matrix. Each entry declares a system invariant that must hold across mutations. Pure-function invariants are tested via fast-check property tests in src/test/invariants/. DB-integration invariants require a test Supabase branch and are marked integration:true.",
+    "fields": {
+      "name": "Stable identifier used in test names and audit logs",
+      "category": "money | schedule | resource | safety",
+      "rule": "Plain-language statement of the invariant",
+      "source_tables": "Tables involved in computing this invariant",
+      "mutation_triggers": "Code paths that can violate this invariant if buggy",
+      "pure_function": "Path to the deterministic function expressing this invariant, if extractable",
+      "integration": "true if requires DB/RLS to test end-to-end",
+      "negative_test": "Description of the deliberate-violation case that should be rejected"
+    }
+  },
+  "invariants": [
+    {
+      "name": "budget_rollup_sum",
+      "category": "money",
+      "rule": "For every division: revised_budget_cents = original_budget_cents + sum(approved_change_orders.amount_cents).",
+      "source_tables": ["division_budgets", "change_orders", "budget_items"],
+      "mutation_triggers": [
+        "POST /api/budget (create/update)",
+        "approveChangeOrder mutation",
+        "src/services/changeOrderService.ts:approveChangeOrder"
+      ],
+      "pure_function": "src/lib/invariants/budgetRollup.ts:computeRevisedBudgetCents",
+      "integration": false,
+      "negative_test": "Insert a budget_items row with budget_cents that breaks the sum; expect API rejection or CHECK constraint denial."
+    },
+    {
+      "name": "retainage_release_cap",
+      "category": "money",
+      "rule": "For every pay application: cumulative retainage_released_cents <= cumulative retainage_withheld_cents.",
+      "source_tables": ["pay_applications", "pay_app_line_items"],
+      "mutation_triggers": [
+        "POST /api/pay-apps (release retainage)",
+        "src/lib/payApp/g702Audited.ts"
+      ],
+      "pure_function": "src/lib/invariants/retainageCap.ts:assertRetainageReleaseValid",
+      "integration": false,
+      "negative_test": "Attempt to release more retainage than withheld; expect validation error."
+    },
+    {
+      "name": "schedule_critical_path_monotonic",
+      "category": "schedule",
+      "rule": "For every schedule_activity in the critical path: predecessor.end_date <= activity.start_date.",
+      "source_tables": ["schedule_activities", "activity_dependencies"],
+      "mutation_triggers": [
+        "moveActivity",
+        "shiftSchedule",
+        "src/lib/schedule/dependencyResolver.ts"
+      ],
+      "pure_function": "src/lib/invariants/scheduleMonotonic.ts:assertNoOverlap",
+      "integration": false,
+      "negative_test": "Force-move an activity to overlap its predecessor; expect dependency engine to reject."
+    },
+    {
+      "name": "daily_log_crew_hours_cap",
+      "category": "resource",
+      "rule": "For every (crew_id, work_date) tuple: sum(crew_attendance.hours_worked) <= 24.",
+      "source_tables": ["daily_log_entries", "crew_attendance"],
+      "mutation_triggers": [
+        "POST /api/daily-logs/:id/attendance",
+        "src/hooks/mutations/daily-log-entries.ts"
+      ],
+      "pure_function": "src/lib/invariants/crewHoursCap.ts:assertCrewHoursValid",
+      "integration": false,
+      "negative_test": "Submit attendance entries totaling >24h for one crew on one date; expect rejection."
+    },
+    {
+      "name": "cost_code_total_consistency",
+      "category": "money",
+      "rule": "For every (project_id, cost_code) tuple: budget_items_total_cents = sum(daily_log_costs + change_order_costs) tagged with that code.",
+      "source_tables": ["budget_items", "daily_log_entries", "change_orders"],
+      "mutation_triggers": [
+        "src/lib/dailyLogDrafting/costCodeInferer.ts",
+        "change-order line item updates"
+      ],
+      "pure_function": null,
+      "integration": true,
+      "negative_test": "Tag a daily_log_entry with a cost code that has no budget_item; reconciliation report flags drift."
+    },
+    {
+      "name": "punch_zone_completion",
+      "category": "schedule",
+      "rule": "A punch zone marks `completed_at` only when every punch_item.status = 'verified'.",
+      "source_tables": ["punch_zones", "punch_items"],
+      "mutation_triggers": [
+        "src/lib/crossFeatureWorkflows.ts:runPunchVerifiedChain",
+        "manual punch-zone completion"
+      ],
+      "pure_function": "src/lib/invariants/punchZone.ts:assertCompletionValid",
+      "integration": false,
+      "negative_test": "Set zone.completed_at while one punch_item.status = 'open'; expect domain rule to revert."
+    }
+  ]
+}
