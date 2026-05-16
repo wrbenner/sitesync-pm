@@ -1053,6 +1053,7 @@ export const Safety: React.FC = () => {
         date: talkForm.date,
         attendance_count: talkForm.attendees.length,
       } as never).select('id').single()
+      // eslint-disable-next-line react-hooks/todo
       if (insertError) throw insertError
       const talkId = asRow<{ id: string }>(insertedTalk)?.id
       if (talkId && talkForm.attendees.length > 0) {
@@ -1230,7 +1231,6 @@ export const Safety: React.FC = () => {
               key={tab.key}
               role="tab"
               aria-selected={isActive}
-              aria-pressed={isActive}
               onClick={() => setActiveTab(tab.key)}
               style={{
                 display: 'inline-flex',
@@ -1701,12 +1701,15 @@ export const Safety: React.FC = () => {
               return (
                 <Card key={cl.id} style={{ padding: 0, overflow: 'hidden' }}>
                   {/* Checklist Header */}
-                  <div
+                  <button
+                    type="button"
+                    aria-expanded={isExpanded}
                     style={{
                       display: 'flex', alignItems: 'center', gap: spacing['3'],
                       padding: `${spacing['4']} ${spacing['5']}`,
                       cursor: 'pointer',
                       transition: `background-color ${transitions.instant}`,
+                      width: '100%', background: 'none', border: 'none', textAlign: 'left',
                     }}
                     onClick={() => setExpandedChecklistId(isExpanded ? null : cl.id)}
                   >
@@ -1779,7 +1782,7 @@ export const Safety: React.FC = () => {
                         <Trash2 size={14} />
                       </button>
                     </PermissionGate>
-                  </div>
+                  </button>
 
                   {/* Expanded Items */}
                   {isExpanded && (
@@ -1794,6 +1797,7 @@ export const Safety: React.FC = () => {
 
       {/* Checklist Creation Modal */}
       {showChecklistModal && (
+        // eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-noninteractive-element-interactions
         <div
           role="dialog"
           aria-modal="true"
@@ -1829,10 +1833,11 @@ export const Safety: React.FC = () => {
             </div>
 
             <div style={{ marginBottom: spacing['4'] }}>
-              <label style={{ display: 'block', fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary, marginBottom: spacing['1'] }}>
+              <label htmlFor="checklist-name" style={{ display: 'block', fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary, marginBottom: spacing['1'] }}>
                 Name<span style={{ color: colors.statusCritical, marginLeft: 2 }}>*</span>
               </label>
               <input
+                id="checklist-name"
                 type="text"
                 placeholder="e.g. Weekly Safety Audit - Building A"
                 value={checklistForm.name}
@@ -1849,10 +1854,11 @@ export const Safety: React.FC = () => {
             </div>
 
             <div style={{ marginBottom: spacing['4'] }}>
-              <label style={{ display: 'block', fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary, marginBottom: spacing['1'] }}>
+              <label htmlFor="checklist-category" style={{ display: 'block', fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary, marginBottom: spacing['1'] }}>
                 Category
               </label>
               <select
+                id="checklist-category"
                 value={checklistForm.category}
                 onChange={(e) => setChecklistForm((p) => ({ ...p, category: e.target.value }))}
                 style={{
@@ -1874,11 +1880,12 @@ export const Safety: React.FC = () => {
 
             {(checklistTemplatesData || []).length > 0 && (
               <div style={{ marginBottom: spacing['4'] }}>
-                <label style={{ display: 'block', fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary, marginBottom: spacing['1'] }}>
+                <label htmlFor="checklist-template" style={{ display: 'block', fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary, marginBottom: spacing['1'] }}>
                   Start from Template
                   <span style={{ color: colors.textTertiary, fontSize: typography.fontSize.caption, marginLeft: spacing['2'], fontWeight: typography.fontWeight.normal }}>(optional)</span>
                 </label>
                 <select
+                  id="checklist-template"
                   value={checklistForm.templateId}
                   onChange={(e) => setChecklistForm((p) => ({ ...p, templateId: e.target.value }))}
                   style={{
@@ -1942,6 +1949,7 @@ export const Safety: React.FC = () => {
 
       {/* Incident Creation Modal */}
       {showIncidentModal && (
+        // eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-noninteractive-element-interactions
         <div
           role="dialog"
           aria-modal="true"
@@ -1980,10 +1988,11 @@ export const Safety: React.FC = () => {
             </div>
 
             <div style={{ marginBottom: spacing['4'] }}>
-              <label style={{ display: 'block', fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary, marginBottom: spacing['1'] }}>
+              <label htmlFor="incident-date" style={{ display: 'block', fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary, marginBottom: spacing['1'] }}>
                 Date<span style={{ color: colors.statusCritical, marginLeft: 2 }}>*</span>
               </label>
               <input
+                id="incident-date"
                 ref={dateRef}
                 type="date"
                 value={incidentForm.date}
@@ -2002,10 +2011,11 @@ export const Safety: React.FC = () => {
             </div>
 
             <div style={{ marginBottom: spacing['4'] }}>
-              <label style={{ display: 'block', fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary, marginBottom: spacing['1'] }}>
+              <label htmlFor="incident-type" style={{ display: 'block', fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary, marginBottom: spacing['1'] }}>
                 Incident Type<span style={{ color: colors.statusCritical, marginLeft: 2 }}>*</span>
               </label>
               <select
+                id="incident-type"
                 value={incidentForm.type}
                 onChange={(e) => setIncidentForm((p) => ({ ...p, type: e.target.value }))}
                 onBlur={(e) => setFieldErrors((p) => ({ ...p, type: e.target.value ? '' : 'Incident type is required' }))}
@@ -2028,10 +2038,11 @@ export const Safety: React.FC = () => {
             </div>
 
             <div style={{ marginBottom: spacing['4'] }}>
-              <label style={{ display: 'block', fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary, marginBottom: spacing['1'] }}>
+              <label htmlFor="incident-location" style={{ display: 'block', fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary, marginBottom: spacing['1'] }}>
                 Location<span style={{ color: colors.statusCritical, marginLeft: 2 }}>*</span>
               </label>
               <input
+                id="incident-location"
                 ref={locationRef}
                 type="text"
                 placeholder="e.g. Level 3 stairwell"
@@ -2052,10 +2063,11 @@ export const Safety: React.FC = () => {
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: spacing['4'], marginBottom: spacing['4'] }}>
               <div>
-                <label style={{ display: 'block', fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary, marginBottom: spacing['1'] }}>
+                <label htmlFor="incident-area" style={{ display: 'block', fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary, marginBottom: spacing['1'] }}>
                   Area
                 </label>
                 <input
+                  id="incident-area"
                   type="text"
                   placeholder="e.g. North wing"
                   value={incidentForm.area}
@@ -2071,10 +2083,11 @@ export const Safety: React.FC = () => {
                 />
               </div>
               <div>
-                <label style={{ display: 'block', fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary, marginBottom: spacing['1'] }}>
+                <label htmlFor="incident-floor" style={{ display: 'block', fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary, marginBottom: spacing['1'] }}>
                   Floor
                 </label>
                 <input
+                  id="incident-floor"
                   type="text"
                   placeholder="e.g. 3rd floor"
                   value={incidentForm.floor}
@@ -2092,10 +2105,11 @@ export const Safety: React.FC = () => {
             </div>
 
             <div style={{ marginBottom: spacing['4'] }}>
-              <label style={{ display: 'block', fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary, marginBottom: spacing['1'] }}>
+              <label htmlFor="incident-severity" style={{ display: 'block', fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary, marginBottom: spacing['1'] }}>
                 Severity<span style={{ color: colors.statusCritical, marginLeft: 2 }}>*</span>
               </label>
               <select
+                id="incident-severity"
                 ref={severityRef}
                 value={incidentForm.severity}
                 onChange={(e) => {
@@ -2124,10 +2138,11 @@ export const Safety: React.FC = () => {
             </div>
 
             <div style={{ marginBottom: spacing['4'] }}>
-              <label style={{ display: 'block', fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary, marginBottom: spacing['1'] }}>
+              <label htmlFor="incident-injured-party" style={{ display: 'block', fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary, marginBottom: spacing['1'] }}>
                 Involved Party<span style={{ color: colors.statusCritical, marginLeft: 2 }}>*</span>
               </label>
               <input
+                id="incident-injured-party"
                 ref={injuredPartyRef}
                 type="text"
                 placeholder="Name or crew"
@@ -2148,10 +2163,11 @@ export const Safety: React.FC = () => {
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: spacing['4'], marginBottom: spacing['4'] }}>
               <div>
-                <label style={{ display: 'block', fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary, marginBottom: spacing['1'] }}>
+                <label htmlFor="incident-company" style={{ display: 'block', fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary, marginBottom: spacing['1'] }}>
                   Company
                 </label>
                 <input
+                  id="incident-company"
                   type="text"
                   placeholder="Employer / subcontractor"
                   value={incidentForm.injured_party_company}
@@ -2167,10 +2183,11 @@ export const Safety: React.FC = () => {
                 />
               </div>
               <div>
-                <label style={{ display: 'block', fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary, marginBottom: spacing['1'] }}>
+                <label htmlFor="incident-trade" style={{ display: 'block', fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary, marginBottom: spacing['1'] }}>
                   Trade
                 </label>
                 <input
+                  id="incident-trade"
                   type="text"
                   placeholder="e.g. Electrician, Ironworker"
                   value={incidentForm.injured_party_trade}
@@ -2189,10 +2206,11 @@ export const Safety: React.FC = () => {
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: spacing['4'], marginBottom: spacing['4'] }}>
               <div>
-                <label style={{ display: 'block', fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary, marginBottom: spacing['1'] }}>
+                <label htmlFor="incident-body-part" style={{ display: 'block', fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary, marginBottom: spacing['1'] }}>
                   Body Part Affected
                 </label>
                 <select
+                  id="incident-body-part"
                   value={incidentForm.body_part}
                   onChange={(e) => setIncidentForm((p) => ({ ...p, body_part: e.target.value }))}
                   style={{
@@ -2223,10 +2241,11 @@ export const Safety: React.FC = () => {
                 </select>
               </div>
               <div>
-                <label style={{ display: 'block', fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary, marginBottom: spacing['1'] }}>
+                <label htmlFor="incident-nature-of-injury" style={{ display: 'block', fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary, marginBottom: spacing['1'] }}>
                   Nature of Injury
                 </label>
                 <select
+                  id="incident-nature-of-injury"
                   value={incidentForm.nature_of_injury}
                   onChange={(e) => setIncidentForm((p) => ({ ...p, nature_of_injury: e.target.value }))}
                   style={{
@@ -2257,10 +2276,11 @@ export const Safety: React.FC = () => {
             </div>
 
             <div style={{ marginBottom: spacing['5'] }}>
-              <label style={{ display: 'block', fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary, marginBottom: spacing['1'] }}>
+              <label htmlFor="incident-description" style={{ display: 'block', fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary, marginBottom: spacing['1'] }}>
                 Description<span style={{ color: colors.statusCritical, marginLeft: 2 }}>*</span>
               </label>
               <textarea
+                id="incident-description"
                 ref={descriptionRef}
                 rows={4}
                 placeholder="Describe what happened"
@@ -2280,10 +2300,11 @@ export const Safety: React.FC = () => {
             </div>
 
             <div style={{ marginBottom: spacing['4'] }}>
-              <label style={{ display: 'block', fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary, marginBottom: spacing['1'] }}>
+              <label htmlFor="incident-immediate-actions" style={{ display: 'block', fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary, marginBottom: spacing['1'] }}>
                 Immediate Actions Taken
               </label>
               <textarea
+                id="incident-immediate-actions"
                 rows={2}
                 placeholder="What was done immediately after the incident"
                 value={incidentForm.immediate_actions}
@@ -2323,10 +2344,11 @@ export const Safety: React.FC = () => {
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: spacing['3'] }}>
                 <div>
-                  <label style={{ display: 'block', fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary, marginBottom: spacing['1'] }}>
+                  <label htmlFor="incident-days-away" style={{ display: 'block', fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary, marginBottom: spacing['1'] }}>
                     Days Away From Work
                   </label>
                   <input
+                    id="incident-days-away"
                     type="number"
                     min="0"
                     placeholder="0"
@@ -2343,10 +2365,11 @@ export const Safety: React.FC = () => {
                   />
                 </div>
                 <div>
-                  <label style={{ display: 'block', fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary, marginBottom: spacing['1'] }}>
+                  <label htmlFor="incident-days-restricted" style={{ display: 'block', fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary, marginBottom: spacing['1'] }}>
                     Days Restricted Duty
                   </label>
                   <input
+                    id="incident-days-restricted"
                     type="number"
                     min="0"
                     placeholder="0"
@@ -2367,10 +2390,11 @@ export const Safety: React.FC = () => {
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: spacing['4'], marginBottom: spacing['4'] }}>
               <div>
-                <label style={{ display: 'block', fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary, marginBottom: spacing['1'] }}>
+                <label htmlFor="incident-reported-by" style={{ display: 'block', fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary, marginBottom: spacing['1'] }}>
                   Reported By
                 </label>
                 <input
+                  id="incident-reported-by"
                   type="text"
                   placeholder="Name of person reporting"
                   value={incidentForm.reported_by}
@@ -2386,10 +2410,11 @@ export const Safety: React.FC = () => {
                 />
               </div>
               <div>
-                <label style={{ display: 'block', fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary, marginBottom: spacing['1'] }}>
+                <label htmlFor="incident-witnesses" style={{ display: 'block', fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary, marginBottom: spacing['1'] }}>
                   Witnesses
                 </label>
                 <input
+                  id="incident-witnesses"
                   type="text"
                   placeholder="Comma-separated names"
                   value={incidentForm.witness_names}
@@ -2407,11 +2432,12 @@ export const Safety: React.FC = () => {
             </div>
 
             <div style={{ marginBottom: spacing['4'] }}>
-              <label style={{ display: 'block', fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary, marginBottom: spacing['1'] }}>
+              <label htmlFor="incident-root-cause" style={{ display: 'block', fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary, marginBottom: spacing['1'] }}>
                 Root Cause
                 <span style={{ color: colors.textTertiary, fontSize: typography.fontSize.caption, marginLeft: spacing['2'], fontWeight: typography.fontWeight.normal }}>(required for recordable incidents)</span>
               </label>
               <textarea
+                id="incident-root-cause"
                 rows={3}
                 placeholder="Immediate cause, contributing factors, and root cause analysis"
                 value={incidentForm.root_cause}
@@ -2439,10 +2465,11 @@ export const Safety: React.FC = () => {
                 Corrective Action
               </p>
               <div style={{ marginBottom: spacing['3'] }}>
-                <label style={{ display: 'block', fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary, marginBottom: spacing['1'] }}>
+                <label htmlFor="incident-ca-description" style={{ display: 'block', fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary, marginBottom: spacing['1'] }}>
                   Description
                 </label>
                 <input
+                  id="incident-ca-description"
                   type="text"
                   placeholder="Action to prevent recurrence"
                   value={incidentForm.ca_description}
@@ -2459,10 +2486,11 @@ export const Safety: React.FC = () => {
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: spacing['3'] }}>
                 <div>
-                  <label style={{ display: 'block', fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary, marginBottom: spacing['1'] }}>
+                  <label htmlFor="incident-ca-assignee" style={{ display: 'block', fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary, marginBottom: spacing['1'] }}>
                     Assignee
                   </label>
                   <input
+                    id="incident-ca-assignee"
                     type="text"
                     placeholder="Name or role"
                     value={incidentForm.ca_assignee}
@@ -2478,10 +2506,11 @@ export const Safety: React.FC = () => {
                   />
                 </div>
                 <div>
-                  <label style={{ display: 'block', fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary, marginBottom: spacing['1'] }}>
+                  <label htmlFor="incident-ca-due-date" style={{ display: 'block', fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary, marginBottom: spacing['1'] }}>
                     Due Date
                   </label>
                   <input
+                    id="incident-ca-due-date"
                     type="date"
                     value={incidentForm.ca_due_date}
                     onChange={(e) => setIncidentForm((p) => ({ ...p, ca_due_date: e.target.value }))}
@@ -2500,7 +2529,7 @@ export const Safety: React.FC = () => {
 
             {/* Photo upload — required when severity >= medical treatment */}
             <div style={{ marginBottom: spacing['5'] }}>
-              <label style={{ display: 'block', fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary, marginBottom: spacing['1'] }}>
+              <label htmlFor="incident-photo" style={{ display: 'block', fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary, marginBottom: spacing['1'] }}>
                 Photo Documentation
                 {isPhotoRequired && <span style={{ color: colors.statusCritical, marginLeft: 2 }}>*</span>}
                 {!isPhotoRequired && <span style={{ color: colors.textTertiary, fontSize: typography.fontSize.caption, marginLeft: spacing['2'] }}>(required for medical treatment and above)</span>}
@@ -2511,6 +2540,7 @@ export const Safety: React.FC = () => {
                 </p>
               )}
               <input
+                id="incident-photo"
                 ref={photoRef}
                 type="file"
                 accept="image/*"
@@ -2548,6 +2578,7 @@ export const Safety: React.FC = () => {
       )}
       {/* Toolbox Talk Creation Modal */}
       {showTalkModal && (
+        // eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-noninteractive-element-interactions
         <div
           role="dialog"
           aria-modal="true"
@@ -2586,10 +2617,11 @@ export const Safety: React.FC = () => {
             </div>
 
             <div style={{ marginBottom: spacing['4'] }}>
-              <label style={{ display: 'block', fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary, marginBottom: spacing['1'] }}>
+              <label htmlFor="talk-topic" style={{ display: 'block', fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary, marginBottom: spacing['1'] }}>
                 Topic<span style={{ color: colors.statusCritical, marginLeft: 2 }}>*</span>
               </label>
               <input
+                id="talk-topic"
                 type="text"
                 placeholder="e.g. Fall protection, Lockout tagout"
                 value={talkForm.topic}
@@ -2608,10 +2640,11 @@ export const Safety: React.FC = () => {
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: spacing['4'], marginBottom: spacing['4'] }}>
               <div>
-                <label style={{ display: 'block', fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary, marginBottom: spacing['1'] }}>
+                <label htmlFor="talk-date" style={{ display: 'block', fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary, marginBottom: spacing['1'] }}>
                   Date<span style={{ color: colors.statusCritical, marginLeft: 2 }}>*</span>
                 </label>
                 <input
+                  id="talk-date"
                   type="date"
                   value={talkForm.date}
                   onChange={(e) => setTalkForm((p) => ({ ...p, date: e.target.value }))}
@@ -2627,10 +2660,11 @@ export const Safety: React.FC = () => {
                 {talkErrors.date && <p style={{ color: colors.statusCritical, fontSize: 12, margin: '4px 0 0' }}>{talkErrors.date}</p>}
               </div>
               <div>
-                <label style={{ display: 'block', fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary, marginBottom: spacing['1'] }}>
+                <label htmlFor="talk-presenter" style={{ display: 'block', fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary, marginBottom: spacing['1'] }}>
                   Presenter<span style={{ color: colors.statusCritical, marginLeft: 2 }}>*</span>
                 </label>
                 <input
+                  id="talk-presenter"
                   type="text"
                   placeholder="Name or title"
                   value={talkForm.presenter}
@@ -2650,7 +2684,7 @@ export const Safety: React.FC = () => {
 
             {/* Digital attendance sign-in */}
             <div style={{ marginBottom: spacing['5'] }}>
-              <label style={{ display: 'block', fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary, marginBottom: spacing['1'] }}>
+              <label htmlFor="talk-new-attendee" style={{ display: 'block', fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary, marginBottom: spacing['1'] }}>
                 Attendance Sign-in
                 <span style={{ color: colors.textTertiary, fontSize: typography.fontSize.caption, marginLeft: spacing['2'], fontWeight: typography.fontWeight.normal }}>
                   {talkForm.attendees.length} signed in
@@ -2658,6 +2692,7 @@ export const Safety: React.FC = () => {
               </label>
               <div style={{ display: 'flex', gap: spacing['2'], marginBottom: spacing['2'] }}>
                 <input
+                  id="talk-new-attendee"
                   type="text"
                   placeholder="Enter name and press Add"
                   value={talkForm.newAttendee}

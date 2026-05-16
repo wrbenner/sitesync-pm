@@ -23,6 +23,11 @@ export const Tabs: React.FC<TabsProps> = ({ tabs, activeTab, onChange }) => {
         gap: spacing['6'],
         borderBottom: `1px solid ${colors.borderSubtle}`,
         position: 'relative',
+        overflowX: 'auto',
+        overflowY: 'hidden',
+        WebkitOverflowScrolling: 'touch',
+        scrollbarWidth: 'none',
+        msOverflowStyle: 'none',
       }}
     >
       {tabs.map((tab) => {
@@ -49,6 +54,8 @@ export const Tabs: React.FC<TabsProps> = ({ tabs, activeTab, onChange }) => {
               display: 'flex',
               alignItems: 'center',
               gap: spacing['2'],
+              flexShrink: 0,
+              whiteSpace: 'nowrap',
             }}
           >
             <span>{tab.label}</span>
