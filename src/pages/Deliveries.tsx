@@ -193,7 +193,7 @@ const Deliveries: React.FC = () => {
 
   const analyzeImpact = (d: Delivery) => {
     const daysLate = Math.max(0, Math.round((Date.now() - new Date(d.expected_date).getTime()) / 86400000))
-    toast.info(`Impact Analysis: ${d.vendor} is ${daysLate}d late — check schedule phases that depend on this material (concrete pour, framing, etc.)`, { duration: 6000 })
+    toast.info(`Impact Analysis: ${d.vendor} is ${daysLate}d late. Check schedule phases that depend on this material (concrete pour, framing, etc.).`, { duration: 6000 })
   }
 
   return (
@@ -705,7 +705,7 @@ const Deliveries: React.FC = () => {
             setDamageReports(prev => [...prev, newReport])
             setDamageModalOpen(false)
             setDamageForm({ description: '', severity: 'minor', affectedQty: 0 })
-            toast.success('Damage report filed — back-charge and replacement order created')
+            toast.success('Damage report filed. Back-charge and replacement order created.')
           }}>
             <ShieldAlert size={14} /> File Report
           </Btn>

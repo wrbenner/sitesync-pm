@@ -336,7 +336,7 @@ export const OwnerUpdateGenerator: React.FC<OwnerUpdateGeneratorProps> = ({
       await navigator.clipboard.writeText(body)
       toast.success('Owner update copied to clipboard')
     } catch {
-      toast.error('Could not copy — paste manually from the preview')
+      toast.error('Could not copy. Paste manually from the preview.')
     }
   }, [body])
 
@@ -350,7 +350,7 @@ export const OwnerUpdateGenerator: React.FC<OwnerUpdateGeneratorProps> = ({
       } else {
         // Fallback for the demo path — surface the message via clipboard.
         await navigator.clipboard.writeText(body)
-        toast.success('Owner update copied — paste into your email and send')
+        toast.success('Owner update copied. Paste into your email and send.')
       }
       setOpen(false)
       reset()

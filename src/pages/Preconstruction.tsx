@@ -419,7 +419,7 @@ export const Preconstruction: React.FC = () => {
           status: 'draft',
           created_by: user?.id,
         })
-        toast.success('Awarded — subcontract draft created')
+        toast.success('Awarded. Subcontract draft created.')
       } else {
         toast.success('Bid awarded')
       }

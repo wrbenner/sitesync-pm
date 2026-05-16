@@ -73,7 +73,7 @@ export const BulkActionsMenu: React.FC<BulkActionsMenuProps> = ({
       `This will void ${count} submittal${count === 1 ? '' : 's'}. Type DELETE to confirm.`,
     )
     if (confirmation !== 'DELETE') {
-      toast.info('Delete cancelled — confirmation phrase did not match.')
+      toast.info('Delete cancelled. Confirmation phrase did not match.')
       return
     }
     setBusy('delete')
@@ -147,7 +147,7 @@ export const BulkActionsMenu: React.FC<BulkActionsMenuProps> = ({
           icon={<Package size={12} />}
           onClick={() => {
             if (onOpenCreatePackage) onOpenCreatePackage()
-            else toast.info('Create Package — Phase 4 not wired')
+            else toast.info('Create Package: Phase 4 not wired')
             onClose()
           }}
         >
@@ -157,7 +157,7 @@ export const BulkActionsMenu: React.FC<BulkActionsMenuProps> = ({
           icon={<GitBranch size={12} />}
           onClick={() => {
             if (onOpenApplyWorkflow) onOpenApplyWorkflow()
-            else toast.info('Apply Workflow — coming in Phase 4')
+            else toast.info('Apply Workflow: coming in Phase 4')
             onClose()
           }}
         >

@@ -161,7 +161,7 @@ export function useAuditedMutation<TParams, TResult>(config: AuditedMutationConf
           toast.error(msg)
           throw err
         }
-        toast.info(offlineMessage ?? 'Saved locally — will sync when online')
+        toast.info(offlineMessage ?? 'Saved locally. Will sync when online.')
         return getStubResult(params)
       }
 

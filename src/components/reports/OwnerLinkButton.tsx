@@ -49,7 +49,7 @@ export const OwnerLinkButton: React.FC<OwnerLinkButtonProps> = ({ projectId, ttl
       }
       setShareUrl(result.data.shareUrl)
       setExpiresAt(result.data.expiresAt)
-      toast.success('Share link generated — owner can view without signing in')
+      toast.success('Share link generated. Owner can view without signing in.')
     } finally {
       setLoading(false)
     }
@@ -62,7 +62,7 @@ export const OwnerLinkButton: React.FC<OwnerLinkButtonProps> = ({ projectId, ttl
       setCopied(true)
       window.setTimeout(() => setCopied(false), 2000)
     } catch {
-      toast.error('Could not copy — long-press to select the URL manually')
+      toast.error('Could not copy. Long-press to select the URL manually.')
     }
   }, [shareUrl])
 

@@ -969,7 +969,7 @@ const InsuranceSection: React.FC<{ projectId: string; contract: Contract; onClos
 
   const handleUpload = async () => {
     if (!company) {
-      toast.error('Contract counterparty is missing — cannot attach COI')
+      toast.error('Contract counterparty is missing. Cannot attach COI.')
       return
     }
     if (!form.expiration_date) {

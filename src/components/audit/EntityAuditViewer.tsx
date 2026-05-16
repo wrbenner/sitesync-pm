@@ -113,7 +113,7 @@ export const EntityAuditViewer: React.FC<EntityAuditViewerProps> = ({
     const url = (data?.signed_url as string | undefined) ?? null;
     if (url) {
       window.open(url, '_blank', 'noopener,noreferrer');
-      toast.success('Sealed PDF ready — opened in new tab.');
+      toast.success('Sealed PDF ready. Opened in new tab.');
     } else {
       toast.warning('Export returned no URL.');
     }

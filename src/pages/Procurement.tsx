@@ -1091,10 +1091,10 @@ export const Procurement: React.FC = () => {
                     </div>
                     <div style={{ flex: 1 }} />
                     {!hasMajor && totalVariance > 0 && (
-                      <Btn size="sm" variant="secondary" icon={<CheckCircle size={14} />} onClick={() => toast.success('Variance approved — invoice cleared for payment')}>Approve with Variance</Btn>
+                      <Btn size="sm" variant="secondary" icon={<CheckCircle size={14} />} onClick={() => toast.success('Variance approved. Invoice cleared for payment.')}>Approve with Variance</Btn>
                     )}
                     {hasMajor && (
-                      <Btn size="sm" variant="ghost" icon={<AlertTriangle size={14} />} onClick={() => toast.info('Flagged for review — AP team notified')} style={{ color: colors.statusCritical }}>Flag for Review</Btn>
+                      <Btn size="sm" variant="ghost" icon={<AlertTriangle size={14} />} onClick={() => toast.info('Flagged for review. AP team notified.')} style={{ color: colors.statusCritical }}>Flag for Review</Btn>
                     )}
                   </div>
                   {/* Match Table */}
@@ -1161,7 +1161,7 @@ export const Procurement: React.FC = () => {
                     {req.status === 'open' && (
                       <Btn size="sm" variant="primary" onClick={() => {
                         setRequisitions(prev => prev.map(r => r.id === req.id ? { ...r, status: 'converted' as ReqStatus, converted_po: `PO-${String(req.id).slice(0, 8).toUpperCase()}` } : r))
-                        toast.success(`${req.id} converted to PO — items pre-filled`)
+                        toast.success(`${req.id} converted to PO. Items pre-filled.`)
                       }}>Convert to PO</Btn>
                     )}
                     {req.status === 'converted' && req.converted_po && (

@@ -59,7 +59,7 @@ export const FieldCaptureModal: React.FC<FieldCaptureModalProps> = ({
   const handleCapture = async () => {
     const blob = await capturePhoto();
     if (!blob) {
-      toast.error('Capture failed — try again');
+      toast.error('Capture failed. Try again.');
       return;
     }
     const url = URL.createObjectURL(blob);
@@ -74,7 +74,7 @@ export const FieldCaptureModal: React.FC<FieldCaptureModalProps> = ({
   const handleSave = async () => {
     if (!preview) return;
     if (!dailyLogId) {
-      toast.error('No daily log for today — create one first');
+      toast.error('No daily log for today. Create one first.');
       return;
     }
     try {
@@ -83,7 +83,7 @@ export const FieldCaptureModal: React.FC<FieldCaptureModalProps> = ({
         dailyLogId,
       });
       if (result.queued) {
-        toast.info(`Saved offline — will sync when connected (${pendingCaptures + 1} queued)`);
+        toast.info(`Saved offline. Will sync when connected (${pendingCaptures + 1} queued).`);
       } else {
         toast.success('Photo captured and attached to today\'s log');
       }
