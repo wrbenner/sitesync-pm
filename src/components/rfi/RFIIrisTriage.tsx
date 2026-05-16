@@ -114,6 +114,7 @@ export const RFIIrisTriage: React.FC<RFIIrisTriageProps> = ({ rfiId, projectId, 
     if (!triage || !triage.suggestedType || appliedFor.has(triage.responseId)) return
     if (!shouldAutoApply(triage.band)) return
     if (latestResponse && latestResponse.response_type === triage.suggestedType) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- idempotency guard: mark already-applied response so the mutation is not re-fired on next render
       setAppliedFor((s) => new Set([...s, triage.responseId]))
       return
     }
@@ -201,7 +202,7 @@ export const RFIIrisTriage: React.FC<RFIIrisTriageProps> = ({ rfiId, projectId, 
           afterState: { suggested_action: triage.suggestedAction },
           metadata: { kind: 'iris_triage_action_stub', action: triage.suggestedAction },
         })
-        toast(`Logged "${triage.suggestedAction.replace(/_/g, ' ')}" — wired flow ships in a follow-up.`)
+        toast(`Logged "${triage.suggestedAction.replace(/_/g, ' ')}". Wired flow ships in a follow-up.`)
       }
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Action failed')
