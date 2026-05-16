@@ -3,6 +3,7 @@
 // with quick-action chips, voice input, inline entity cards, and
 // streaming tool-call visualization.
 
+/* eslint-disable react-hooks/todo */
 import React, { useState, useRef, useEffect, useCallback, useMemo, memo } from 'react'
 import {
   Sparkles, Mic, MicOff, Send, Minimize2, Maximize2,

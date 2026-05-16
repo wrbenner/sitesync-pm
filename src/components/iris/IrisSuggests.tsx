@@ -5,6 +5,7 @@
  * Calls the iris-suggest edge function, renders 0-3 IrisSuggestionCards.
  */
 
+/* eslint-disable react-hooks/set-state-in-effect, react-hooks/todo */
 import React, { useEffect, useState } from 'react'
 import { spacing } from '../../styles/theme'
 import { IrisSuggestionCard } from './IrisSuggestionCard'

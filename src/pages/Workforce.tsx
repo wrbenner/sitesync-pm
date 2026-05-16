@@ -529,6 +529,7 @@ function TradeTable({ rows, showLabor, highlightTrade, onTradeClick }: TradeTabl
             <div
               key={r.trade}
               role="row"
+              tabIndex={0}
               data-trade={r.trade}
               onClick={() => onTradeClick(r.trade)}
               style={{

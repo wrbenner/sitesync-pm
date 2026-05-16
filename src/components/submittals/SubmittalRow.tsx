@@ -53,6 +53,7 @@ const SubmittalRowImpl: React.FC<SubmittalRowProps> = ({
   return (
     <div
       role="row"
+      tabIndex={0}
       aria-rowindex={index + 2}
       onDoubleClick={() => onOpen(id)}
       style={{

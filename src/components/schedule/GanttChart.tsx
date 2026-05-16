@@ -644,6 +644,7 @@ const GanttRow: React.FC<GanttRowProps> = React.memo(({ phase, chartStart, pxPer
   return (
     <div
       role="row"
+      tabIndex={0}
       aria-label={`${phase.name}: ${phase.status ?? 'upcoming'}, ${progress}% complete`}
       onClick={() => onSelect(phase.id)}
       onMouseEnter={() => setHovered(true)}
@@ -929,6 +930,7 @@ function TablePanel({ phases, selectedId, onSelect, risks, width }: { phases: Ga
             <div
               key={p.id}
               role="row"
+              tabIndex={0}
               onClick={() => onSelect(p.id)}
               style={{
                 height: ROW_H, display: 'flex', alignItems: 'center',

@@ -69,7 +69,6 @@ export const IrisPreflightInline: React.FC<IrisPreflightInlineProps> = ({ findin
         </p>
       ) : (
         <ul
-          role="list"
           style={{
             listStyle: 'none',
             padding: 0,

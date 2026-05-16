@@ -338,6 +338,7 @@ export function SearchableSelect<T extends string | number>(props: SearchableSel
                     role="option"
                     aria-selected={selected}
                     aria-disabled={opt.disabled}
+                    tabIndex={active ? 0 : -1}
                     onMouseEnter={() => setActiveIdx(idx)}
                     onClick={() => choose(opt)}
                     style={{

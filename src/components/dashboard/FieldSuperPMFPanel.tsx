@@ -45,7 +45,6 @@ export const FieldSuperPMFPanel: React.FC<FieldSuperPMFPanelProps> = ({ projectI
 
   return (
     <section
-      role="region"
       aria-label="Field-super PMF signal"
       style={{
         backgroundColor: colors.surfaceRaised,

@@ -182,4 +182,37 @@ export default defineConfig([
       'jsx-a11y/no-noninteractive-element-interactions': 'off',
     },
   },
+  {
+    // IrisApprovalGate exports ACTION_LABELS (a plain object) alongside
+    // components. react-refresh fires because the file isn't pure-components.
+    // Moving ACTION_LABELS is a separate refactor; suppress here until then.
+    files: ['src/components/iris/IrisApprovalGate.tsx'],
+    rules: {
+      'react-refresh/only-export-components': 'off',
+    },
+  },
+  {
+    // ChangeOrders.tsx uses try/finally without catch in a local async
+    // wrapper — a pattern the React Compiler's HIR builder doesn't yet
+    // handle. The react-hooks/todo signal is a compiler todo, not a
+    // bug; suppress at file scope until the compiler lifts the limit.
+    files: ['src/pages/ChangeOrders.tsx'],
+    rules: {
+      'react-hooks/todo': 'off',
+    },
+  },
+  {
+    // SavedViewsSidebar's SaveViewDialog uses div overlay + inner div
+    // click handlers (pre-dates the a11y tightening) and intentional
+    // autoFocus on the name input (dialog best-practice). Suppress the
+    // three legacy a11y signals until the dialog is refactored to use
+    // a native <dialog> element or a headless accessible primitive.
+    files: ['src/components/submittals/SavedViews/SavedViewsSidebar.tsx'],
+    rules: {
+      'jsx-a11y/click-events-have-key-events': 'off',
+      'jsx-a11y/no-noninteractive-element-interactions': 'off',
+      'jsx-a11y/no-static-element-interactions': 'off',
+      'jsx-a11y/no-autofocus': 'off',
+    },
+  },
 ])

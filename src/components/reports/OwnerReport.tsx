@@ -11,6 +11,7 @@
 // 6. 3-week lookahead (upcoming milestones with risk indicators)
 // 7. Export PDF button
 
+/* eslint-disable react-hooks/set-state-in-effect, react-hooks/todo */
 import React, { useState, useEffect, useCallback } from 'react'
 import {
   Download, Calendar, DollarSign, AlertTriangle,

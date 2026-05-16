@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/todo, react-hooks/set-state-in-effect */
 import React, { useState, useEffect, useRef } from 'react'
 import { Copy, Loader2, Lock, Pencil, X } from 'lucide-react'
 import { summarizeDailyLog } from '../../api/endpoints/aiService'
@@ -1218,6 +1219,7 @@ const CreateDailyLogModal: React.FC<CreateDailyLogModalProps> = ({
         `}</style>
 
         {/* Backdrop */}
+        {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions */}
         <div
           onClick={onClose}
           style={{

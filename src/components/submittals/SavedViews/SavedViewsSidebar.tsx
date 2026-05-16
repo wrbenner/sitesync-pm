@@ -68,7 +68,6 @@ export const SavedViewsSidebar: React.FC<SavedViewsSidebarProps> = ({ projectId 
 
   return (
     <aside
-      role="complementary"
       aria-label="Saved views"
       style={{
         flex: open ? '0 0 240px' : '0 0 36px',

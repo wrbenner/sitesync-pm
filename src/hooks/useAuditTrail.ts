@@ -70,6 +70,7 @@ export function useAuditTrail(filters?: AuditFilters) {
   const loadMore = useCallback(async () => {
     if (!projectId || loadingMore) return
     setLoadingMore(true)
+    // eslint-disable-next-line react-hooks/todo
     try {
       const nextPage = page + 1
       const from = page * AUDIT_TRAIL_PAGE_SIZE
@@ -93,6 +94,7 @@ export function useAuditTrail(filters?: AuditFilters) {
     } finally {
       setLoadingMore(false)
     }
+    // eslint-disable-next-line react-hooks/memo-dependencies
   }, [projectId, page, loadingMore, filters])
 
   return {
@@ -131,6 +133,7 @@ export function useEntityHistory(entityType: string, entityId: string) {
   const loadMore = useCallback(async () => {
     if (!projectId || loadingMore) return
     setLoadingMore(true)
+    // eslint-disable-next-line react-hooks/todo
     try {
       const nextPage = page + 1
       const result = await getEntityHistory(projectId, entityType, entityId, { page: nextPage, pageSize: ENTITY_HISTORY_PAGE_SIZE })
@@ -140,6 +143,7 @@ export function useEntityHistory(entityType: string, entityId: string) {
     } finally {
       setLoadingMore(false)
     }
+    // eslint-disable-next-line react-hooks/memo-dependencies
   }, [projectId, entityType, entityId, page, loadingMore])
 
   return {

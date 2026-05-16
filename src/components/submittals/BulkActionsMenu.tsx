@@ -107,6 +107,7 @@ export const BulkActionsMenu: React.FC<BulkActionsMenuProps> = ({
   return (
     <div
       role="menu"
+      tabIndex={-1}
       aria-label={`Bulk actions for ${count} submittal${count === 1 ? '' : 's'}`}
       style={{
         position: 'absolute',

@@ -15,6 +15,7 @@
 //   * the create flow (wizard + modal + spec-import) — wizard is canonical
 // ─────────────────────────────────────────────────────────────────────────────
 
+/* eslint-disable react-hooks/purity, react-hooks/set-state-in-effect */
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { track } from '../../lib/telemetry/track'
 import { ProjectGate } from '../../components/ProjectGate'

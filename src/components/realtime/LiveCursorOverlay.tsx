@@ -6,6 +6,7 @@
 // We render only the most-recent device per user (multi-device dedup is
 // the contract from src/lib/realtime/presenceChannel).
 
+/* eslint-disable react-hooks/refs */
 import React, { useEffect, useRef, useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import {

@@ -1,4 +1,5 @@
 import { fromTable } from '../lib/db/queries'
+import { toCents, dollarsToCents, addCents, multiplyCents, applyRateCents, centsToDisplay } from '../types/money'
 import React, { useMemo, useState } from 'react'
 import { Clock, Plus, Download, Sparkles, CheckCircle2, FileText, DollarSign, Briefcase, Upload, Users } from 'lucide-react'
 import { generateWH347PDF, exportPayrollCSV, type WH347Employee } from '../lib/reports/wh347Pdf'
@@ -42,6 +43,10 @@ function addDays(d: Date, n: number): Date {
 }
 
 const DAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+
+function totalHours(e: TimeEntry): number {
+  return Number(e.regular_hours || 0) + Number(e.overtime_hours || 0) + Number(e.double_time_hours || 0)
+}
 
 const TimeTracking: React.FC = () => {
   const projectId = useProjectId()
@@ -305,8 +310,6 @@ const TimeTracking: React.FC = () => {
     { trade: 'Sheet Metal Worker', local: 'SMART Local 104', base: 51.85, hw: 10.60, pension: 8.80, training: 1.15, other: 2.70, otMult: 1.5, effective: '2026-01-01', expires: '2026-12-31' },
   ]
 
-  const totalHours = (e: TimeEntry) => Number(e.regular_hours || 0) + Number(e.overtime_hours || 0) + Number(e.double_time_hours || 0)
-
   const grid = useMemo(() => {
     const map = new Map<string, Map<string, number>>()
     ;(entries ?? []).forEach((e) => {
@@ -431,30 +434,38 @@ const TimeTracking: React.FC = () => {
       }
     >
       {/* Tab Navigation */}
-      <div style={{ display: 'flex', gap: spacing['1'], marginBottom: spacing['4'], borderBottom: `1px solid ${colors.borderSubtle}`, paddingBottom: spacing['1'], overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
-        {([
-          { key: 'timesheet', label: 'Timesheet', icon: Clock },
-          { key: 'payroll', label: 'Certified Payroll', icon: FileText },
-          { key: 'tm', label: 'T&M Tickets', icon: Briefcase },
-          { key: 'rates', label: 'Rates', icon: DollarSign },
-          { key: 'export', label: 'Payroll Export', icon: Upload },
-        ] as const).map((tab) => (
-          <button
-            key={tab.key}
-            onClick={() => setActiveTab(tab.key)}
-            style={{
-              display: 'flex', alignItems: 'center', gap: spacing['1'],
-              padding: `${spacing['2']} ${spacing['3']}`,
-              fontSize: typography.fontSize.sm, fontWeight: activeTab === tab.key ? typography.fontWeight.semibold : typography.fontWeight.medium,
-              color: activeTab === tab.key ? colors.primaryOrange : colors.textSecondary,
-              background: activeTab === tab.key ? colors.surfaceInset : 'transparent',
-              border: 'none', borderRadius: borderRadius.md, cursor: 'pointer',
-              whiteSpace: 'nowrap', flexShrink: 0,
-            }}
-          >
-            <tab.icon size={14} /> {tab.label}
-          </button>
-        ))}
+      <div style={{ position: 'relative', marginBottom: spacing['4'] }}>
+        <div style={{ display: 'flex', gap: spacing['1'], borderBottom: `1px solid ${colors.borderSubtle}`, paddingBottom: spacing['1'], overflowX: 'auto', WebkitOverflowScrolling: 'touch', scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+          {([
+            { key: 'timesheet', label: 'Timesheet', icon: Clock },
+            { key: 'payroll', label: 'Certified Payroll', icon: FileText },
+            { key: 'tm', label: 'T&M Tickets', icon: Briefcase },
+            { key: 'rates', label: 'Rates', icon: DollarSign },
+            { key: 'export', label: 'Payroll Export', icon: Upload },
+          ] as const).map((tab) => (
+            <button
+              key={tab.key}
+              onClick={() => setActiveTab(tab.key)}
+              style={{
+                display: 'flex', alignItems: 'center', gap: spacing['1'],
+                padding: `${spacing['2']} ${spacing['3']}`,
+                fontSize: typography.fontSize.sm, fontWeight: activeTab === tab.key ? typography.fontWeight.semibold : typography.fontWeight.medium,
+                color: activeTab === tab.key ? colors.primaryOrange : colors.textSecondary,
+                background: activeTab === tab.key ? colors.surfaceInset : 'transparent',
+                border: 'none', borderRadius: borderRadius.md, cursor: 'pointer',
+                whiteSpace: 'nowrap', flexShrink: 0,
+              }}
+            >
+              <tab.icon size={14} /> {tab.label}
+            </button>
+          ))}
+        </div>
+        {/* Right-edge gradient hints more tabs are scrollable on narrow viewports */}
+        <div aria-hidden style={{
+          position: 'absolute', top: 0, right: 0, bottom: 0, width: 32,
+          background: `linear-gradient(to left, ${colors.surfacePage}, transparent)`,
+          pointerEvents: 'none',
+        }} />
       </div>
 
       {activeTab === 'timesheet' && (<>
@@ -819,12 +830,15 @@ const TimeTracking: React.FC = () => {
             </Btn>
           </div>
           {tmTickets.map((ticket) => {
-            const laborTotal = ticket.labor.reduce((s, l) => s + l.st * l.rate + l.ot * l.rate * 1.5 + l.dt * l.rate * 2, 0)
-            const materialTotal = ticket.materials.reduce((s, m) => s + m.qty * m.unitCost, 0)
-            const equipmentTotal = ticket.equipment.reduce((s, eq) => s + eq.hours * eq.rate, 0)
-            const subtotal = laborTotal + materialTotal + equipmentTotal
-            const markup = subtotal * (tmMarkup / 100)
-            const ticketTotal = subtotal + markup
+            const laborTotalCents = toCents(Math.round(ticket.labor.reduce((s, l) => s + l.st * l.rate + l.ot * l.rate * 1.5 + l.dt * l.rate * 2, 0) * 100))
+            const materialTotalCents = ticket.materials.reduce(
+              (s, m) => addCents(s, multiplyCents(dollarsToCents(m.unitCost), m.qty)),
+              toCents(0)
+            )
+            const equipmentTotalCents = toCents(Math.round(ticket.equipment.reduce((s, eq) => s + eq.hours * eq.rate, 0) * 100))
+            const subtotalCents = addCents(addCents(laborTotalCents, materialTotalCents), equipmentTotalCents)
+            const markupCents = applyRateCents(subtotalCents, tmMarkup / 100)
+            const ticketTotalCents = addCents(subtotalCents, markupCents)
             const statusColors: Record<string, string> = { Draft: colors.textTertiary, Submitted: '#D97706', Approved: '#059669', Billed: colors.primaryOrange }
             return (
               <Card key={ticket.id} padding={spacing['4']} style={{ marginBottom: spacing['3'] }}>
@@ -855,7 +869,7 @@ const TimeTracking: React.FC = () => {
                       </tr>
                     ))}</tbody>
                   </table>
-                  <div style={{ textAlign: 'right', fontSize: typography.fontSize.xs, fontWeight: typography.fontWeight.semibold, marginTop: spacing['1'] }}>Labor Subtotal: ${laborTotal.toFixed(2)}</div>
+                  <div style={{ textAlign: 'right', fontSize: typography.fontSize.xs, fontWeight: typography.fontWeight.semibold, marginTop: spacing['1'] }}>Labor Subtotal: {centsToDisplay(laborTotalCents)}</div>
                 </div>
                 {/* Materials */}
                 <div style={{ marginBottom: spacing['3'] }}>
@@ -869,11 +883,11 @@ const TimeTracking: React.FC = () => {
                       <tr key={i} style={{ borderBottom: `1px solid ${colors.borderSubtle}` }}>
                         <td style={{ padding: spacing['1'] }}>{m.desc}</td><td style={{ textAlign: 'center', padding: spacing['1'] }}>{m.qty}</td><td style={{ textAlign: 'center', padding: spacing['1'] }}>{m.unit}</td>
                         <td style={{ textAlign: 'right', padding: spacing['1'] }}>${m.unitCost.toFixed(2)}</td>
-                        <td style={{ textAlign: 'right', padding: spacing['1'], fontWeight: typography.fontWeight.semibold }}>${(m.qty * m.unitCost).toFixed(2)}</td>
+                        <td style={{ textAlign: 'right', padding: spacing['1'], fontWeight: typography.fontWeight.semibold }}>{centsToDisplay(multiplyCents(dollarsToCents(m.unitCost), m.qty))}</td>
                       </tr>
                     ))}</tbody>
                   </table>
-                  <div style={{ textAlign: 'right', fontSize: typography.fontSize.xs, fontWeight: typography.fontWeight.semibold, marginTop: spacing['1'] }}>Material Subtotal: ${materialTotal.toFixed(2)}</div>
+                  <div style={{ textAlign: 'right', fontSize: typography.fontSize.xs, fontWeight: typography.fontWeight.semibold, marginTop: spacing['1'] }}>Material Subtotal: {centsToDisplay(materialTotalCents)}</div>
                 </div>
                 {/* Equipment */}
                 <div style={{ marginBottom: spacing['3'] }}>
@@ -891,13 +905,13 @@ const TimeTracking: React.FC = () => {
                       </tr>
                     ))}</tbody>
                   </table>
-                  <div style={{ textAlign: 'right', fontSize: typography.fontSize.xs, fontWeight: typography.fontWeight.semibold, marginTop: spacing['1'] }}>Equipment Subtotal: ${equipmentTotal.toFixed(2)}</div>
+                  <div style={{ textAlign: 'right', fontSize: typography.fontSize.xs, fontWeight: typography.fontWeight.semibold, marginTop: spacing['1'] }}>Equipment Subtotal: {centsToDisplay(equipmentTotalCents)}</div>
                 </div>
                 {/* Ticket Total */}
                 <div style={{ borderTop: `2px solid ${colors.borderSubtle}`, paddingTop: spacing['2'], display: 'flex', justifyContent: 'flex-end', gap: spacing['4'], fontSize: typography.fontSize.sm }}>
-                  <span style={{ color: colors.textTertiary }}>Subtotal: ${subtotal.toFixed(2)}</span>
-                  <span style={{ color: colors.textTertiary }}>Markup ({tmMarkup}%): ${markup.toFixed(2)}</span>
-                  <span style={{ fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, fontSize: typography.fontSize.base }}>Total: ${ticketTotal.toFixed(2)}</span>
+                  <span style={{ color: colors.textTertiary }}>Subtotal: {centsToDisplay(subtotalCents)}</span>
+                  <span style={{ color: colors.textTertiary }}>Markup ({tmMarkup}%): {centsToDisplay(markupCents)}</span>
+                  <span style={{ fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, fontSize: typography.fontSize.base }}>Total: {centsToDisplay(ticketTotalCents)}</span>
                 </div>
               </Card>
             )
@@ -965,16 +979,16 @@ const TimeTracking: React.FC = () => {
             <SectionHeader title="Export to Payroll System" />
             <div style={{ display: 'flex', gap: spacing['4'], marginBottom: spacing['4'], alignItems: 'flex-end' }}>
               <div>
-                <label style={{ fontSize: typography.fontSize.xs, color: colors.textSecondary, display: 'block', marginBottom: spacing['1'] }}>Period</label>
-                <select value={exportPeriod} onChange={(e) => setExportPeriod(e.target.value)} style={{ padding: spacing['2'], borderRadius: borderRadius.md, border: `1px solid ${colors.borderSubtle}`, background: colors.surfaceInset, color: colors.textPrimary, minWidth: 160 }}>
+                <label htmlFor="export-period" style={{ fontSize: typography.fontSize.xs, color: colors.textSecondary, display: 'block', marginBottom: spacing['1'] }}>Period</label>
+                <select id="export-period" value={exportPeriod} onChange={(e) => setExportPeriod(e.target.value)} style={{ padding: spacing['2'], borderRadius: borderRadius.md, border: `1px solid ${colors.borderSubtle}`, background: colors.surfaceInset, color: colors.textPrimary, minWidth: 160 }}>
                   <option value="this_week">This Week ({toISODate(weekStart)})</option>
                   <option value="last_week">Last Week</option>
                   <option value="custom">Custom Range</option>
                 </select>
               </div>
               <div>
-                <label style={{ fontSize: typography.fontSize.xs, color: colors.textSecondary, display: 'block', marginBottom: spacing['1'] }}>Format</label>
-                <select value={exportFormat} onChange={(e) => setExportFormat(e.target.value)} style={{ padding: spacing['2'], borderRadius: borderRadius.md, border: `1px solid ${colors.borderSubtle}`, background: colors.surfaceInset, color: colors.textPrimary, minWidth: 160 }}>
+                <label htmlFor="export-format" style={{ fontSize: typography.fontSize.xs, color: colors.textSecondary, display: 'block', marginBottom: spacing['1'] }}>Format</label>
+                <select id="export-format" value={exportFormat} onChange={(e) => setExportFormat(e.target.value)} style={{ padding: spacing['2'], borderRadius: borderRadius.md, border: `1px solid ${colors.borderSubtle}`, background: colors.surfaceInset, color: colors.textPrimary, minWidth: 160 }}>
                   <option value="csv">CSV (Generic)</option>
                   <option value="adp">ADP Workforce Now</option>
                   <option value="viewpoint">Viewpoint Vista</option>
@@ -1065,8 +1079,9 @@ const TimeTracking: React.FC = () => {
       <Modal open={tsModalOpen} onClose={() => setTsModalOpen(false)} title="Enter Hours">
         <div style={{ display: 'flex', flexDirection: 'column', gap: spacing['3'] }}>
           <div>
-            <label style={{ fontSize: typography.fontSize.xs, color: colors.textSecondary, display: 'block', marginBottom: spacing['1'] }}>Worker *</label>
+            <label htmlFor="ts-worker" style={{ fontSize: typography.fontSize.xs, color: colors.textSecondary, display: 'block', marginBottom: spacing['1'] }}>Worker *</label>
             <select
+              id="ts-worker"
               value={tsForm.worker_id}
               onChange={(e) => setTsForm((p) => ({ ...p, worker_id: e.target.value }))}
               style={{ width: '100%', padding: spacing['3'], borderRadius: borderRadius.md, border: `1px solid ${colors.borderSubtle}`, background: colors.surfaceInset, color: colors.textPrimary, minHeight: 56 }}
@@ -1095,8 +1110,9 @@ const TimeTracking: React.FC = () => {
         <InputField label="Overtime Hours" value={form.overtime_hours} onChange={(v) => setForm({ ...form, overtime_hours: v })} type="number" />
         <InputField label="Double Time Hours" value={form.double_time_hours} onChange={(v) => setForm({ ...form, double_time_hours: v })} type="number" />
         <div style={{ marginBottom: spacing['3'] }}>
-          <label style={{ fontSize: typography.fontSize.xs, color: colors.textSecondary, display: 'block', marginBottom: spacing['1'] }}>Cost Code</label>
+          <label htmlFor="log-cost-code" style={{ fontSize: typography.fontSize.xs, color: colors.textSecondary, display: 'block', marginBottom: spacing['1'] }}>Cost Code</label>
           <select
+            id="log-cost-code"
             value={form.cost_code}
             onChange={(e) => setForm({ ...form, cost_code: e.target.value })}
             style={{ width: '100%', padding: spacing['3'], borderRadius: borderRadius.md, border: `1px solid ${colors.borderSubtle}`, background: colors.surfaceInset, color: colors.textPrimary, minHeight: 56 }}
@@ -1162,6 +1178,7 @@ const TimeTracking: React.FC = () => {
                 status: 'draft',
                 created_by: user?.id ?? null,
               } as never)
+              // eslint-disable-next-line react-hooks/todo
               if (error) throw error
               toast.success('T&M ticket created')
               setTmModalOpen(false)

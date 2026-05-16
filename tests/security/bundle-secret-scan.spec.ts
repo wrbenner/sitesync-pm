@@ -49,13 +49,13 @@ const PATTERNS: SecretPattern[] = [
   { name: 'stripe-live-secret', re: /\bsk_live_[A-Za-z0-9]{16,}\b/g },
   { name: 'stripe-test-secret', re: /\bsk_test_[A-Za-z0-9]{16,}\b/g },
   { name: 'stripe-restricted', re: /\brk_live_[A-Za-z0-9]{16,}\b/g },
-  { name: 'anthropic-prefix', re: /\bsk-ant-[A-Za-z0-9_\-]{20,}\b/g },
+  { name: 'anthropic-prefix', re: /\bsk-ant-[A-Za-z0-9_-]{20,}\b/g },
   { name: 'env-var-anthropic', re: /\bANTHROPIC_API_KEY\s*=\s*['"]?sk[-_]?[A-Za-z0-9]/g },
   { name: 'env-var-openai', re: /\bOPENAI_API_KEY\s*=\s*['"]?sk[-_]?[A-Za-z0-9]/g },
   { name: 'env-var-resend', re: /\bRESEND_API_KEY\s*=\s*['"]?re_[A-Za-z0-9]/g },
   {
     name: 'service-role-jwt',
-    re: /\beyJ[A-Za-z0-9_\-]{20,}\.[A-Za-z0-9_\-]{20,}\.[A-Za-z0-9_\-]{20,}\b/g,
+    re: /\beyJ[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{20,}\b/g,
     inspect: (match: string) => {
       // Decode middle segment; if `role: service_role`, leak.
       const parts = match.split('.')

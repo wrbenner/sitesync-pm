@@ -108,7 +108,6 @@ export const IrisApprovalGate: React.FC<IrisApprovalGateProps> = ({
   return (
     <article
       ref={recordViewRef}
-      role="article"
       aria-label={`Iris drafted ${actionLabel}: ${draft.title}`}
       style={{
         backgroundColor: colors.surfaceRaised,

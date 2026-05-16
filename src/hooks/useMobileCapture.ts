@@ -1,6 +1,7 @@
 // Mobile capture utilities: camera, geolocation, haptics
 // Uses Capacitor plugins when running as native app, falls back to web APIs
 
+/* eslint-disable react-hooks/todo */
 import { useState, useCallback } from 'react'
 
 interface CaptureResult {

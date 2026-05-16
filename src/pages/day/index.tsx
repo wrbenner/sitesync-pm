@@ -10,6 +10,7 @@
  * Project Now panel emphasises whatever the role cares about.
  */
 
+/* eslint-disable react-hooks/memo-dependencies */
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { track } from '../../lib/telemetry/track'

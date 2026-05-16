@@ -100,7 +100,6 @@ describe('routeInvocationSync — 50-case accuracy', () => {
     })
     const accuracy = correct / CASES.length
     if (accuracy < 0.95) {
-      // eslint-disable-next-line no-console
       console.error('Router misses:', misses)
     }
     expect(accuracy).toBeGreaterThanOrEqual(0.95)

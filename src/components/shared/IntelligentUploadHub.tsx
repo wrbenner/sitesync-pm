@@ -3,6 +3,7 @@
 // file type, shows per-file + overall progress, detects ZIPs and
 // duplicates, and renders PDF thumbnail previews.
 
+/* eslint-disable react-hooks/todo */
 import React, { useCallback, useRef, useState, useEffect, useMemo, memo } from 'react'
 import {
   Upload, FileText, Image as ImageIcon, FileSpreadsheet, FileArchive,

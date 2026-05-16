@@ -86,6 +86,7 @@ export const IncidentForm: React.FC<IncidentFormProps> = ({ projectId, onClose, 
 
     setSubmitting(true);
     setSubmitError(null);
+    // eslint-disable-next-line react-hooks/todo
     try {
       let photoUrl: string | null = null;
       if (form.photo) {
@@ -107,6 +108,7 @@ export const IncidentForm: React.FC<IncidentFormProps> = ({ projectId, onClose, 
         root_cause: form.root_cause || null,
         photos: photoUrl ? [photoUrl] : null,
       } as never);
+      // eslint-disable-next-line react-hooks/todo
       if (error) throw error;
 
       if (form.ca_description.trim()) {
@@ -137,6 +139,7 @@ export const IncidentForm: React.FC<IncidentFormProps> = ({ projectId, onClose, 
   });
 
   return (
+    // eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-noninteractive-element-interactions
     <div
       role="dialog" aria-modal="true" aria-label="Report Incident"
       style={{ position: 'fixed', inset: 0, zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.45)' }}
@@ -150,15 +153,15 @@ export const IncidentForm: React.FC<IncidentFormProps> = ({ projectId, onClose, 
 
         {/* Date */}
         <div style={{ marginBottom: spacing['4'] }}>
-          <label style={{ display: 'block', fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary, marginBottom: spacing['1'] }}>Date<span style={{ color: colors.statusCritical, marginLeft: 2 }}>*</span></label>
-          <input ref={dateRef} type="date" value={form.date} onChange={(e) => setForm((p) => ({ ...p, date: e.target.value }))} onBlur={(e) => handleFieldBlur('date', e.target.value)} style={inputStyle(!!fieldErrors.date)} />
+          <label htmlFor="incident-date" style={{ display: 'block', fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary, marginBottom: spacing['1'] }}>Date<span style={{ color: colors.statusCritical, marginLeft: 2 }}>*</span></label>
+          <input id="incident-date" ref={dateRef} type="date" value={form.date} onChange={(e) => setForm((p) => ({ ...p, date: e.target.value }))} onBlur={(e) => handleFieldBlur('date', e.target.value)} style={inputStyle(!!fieldErrors.date)} />
           {fieldErrors.date && <p style={{ color: colors.statusCritical, fontSize: 12, margin: '4px 0 0' }}>{fieldErrors.date}</p>}
         </div>
 
         {/* Incident Type */}
         <div style={{ marginBottom: spacing['4'] }}>
-          <label style={{ display: 'block', fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary, marginBottom: spacing['1'] }}>Incident Type<span style={{ color: colors.statusCritical, marginLeft: 2 }}>*</span></label>
-          <select value={form.type} onChange={(e) => setForm((p) => ({ ...p, type: e.target.value }))} onBlur={(e) => setFieldErrors((p) => ({ ...p, type: e.target.value ? '' : 'Incident type is required' }))} style={{ ...inputStyle(!!fieldErrors.type), backgroundColor: '#fff' }}>
+          <label htmlFor="incident-type" style={{ display: 'block', fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary, marginBottom: spacing['1'] }}>Incident Type<span style={{ color: colors.statusCritical, marginLeft: 2 }}>*</span></label>
+          <select id="incident-type" value={form.type} onChange={(e) => setForm((p) => ({ ...p, type: e.target.value }))} onBlur={(e) => setFieldErrors((p) => ({ ...p, type: e.target.value ? '' : 'Incident type is required' }))} style={{ ...inputStyle(!!fieldErrors.type), backgroundColor: '#fff' }}>
             <option value="">Select type...</option>
             <option value="near_miss">Near Miss</option>
             <option value="injury">Injury</option>
@@ -170,15 +173,15 @@ export const IncidentForm: React.FC<IncidentFormProps> = ({ projectId, onClose, 
 
         {/* Location */}
         <div style={{ marginBottom: spacing['4'] }}>
-          <label style={{ display: 'block', fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary, marginBottom: spacing['1'] }}>Location<span style={{ color: colors.statusCritical, marginLeft: 2 }}>*</span></label>
-          <input ref={locationRef} type="text" placeholder="e.g. Level 3 stairwell" value={form.location} onChange={(e) => setForm((p) => ({ ...p, location: e.target.value }))} onBlur={(e) => handleFieldBlur('location', e.target.value)} style={inputStyle(!!fieldErrors.location)} />
+          <label htmlFor="incident-location" style={{ display: 'block', fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary, marginBottom: spacing['1'] }}>Location<span style={{ color: colors.statusCritical, marginLeft: 2 }}>*</span></label>
+          <input id="incident-location" ref={locationRef} type="text" placeholder="e.g. Level 3 stairwell" value={form.location} onChange={(e) => setForm((p) => ({ ...p, location: e.target.value }))} onBlur={(e) => handleFieldBlur('location', e.target.value)} style={inputStyle(!!fieldErrors.location)} />
           {fieldErrors.location && <p style={{ color: colors.statusCritical, fontSize: 12, margin: '4px 0 0' }}>{fieldErrors.location}</p>}
         </div>
 
         {/* Severity */}
         <div style={{ marginBottom: spacing['4'] }}>
-          <label style={{ display: 'block', fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary, marginBottom: spacing['1'] }}>Severity<span style={{ color: colors.statusCritical, marginLeft: 2 }}>*</span></label>
-          <select ref={severityRef} value={form.severity} onChange={(e) => setForm((p) => ({ ...p, severity: e.target.value }))} onBlur={(e) => handleFieldBlur('severity', e.target.value)} style={{ ...inputStyle(!!fieldErrors.severity), backgroundColor: '#fff' }}>
+          <label htmlFor="incident-severity" style={{ display: 'block', fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary, marginBottom: spacing['1'] }}>Severity<span style={{ color: colors.statusCritical, marginLeft: 2 }}>*</span></label>
+          <select id="incident-severity" ref={severityRef} value={form.severity} onChange={(e) => setForm((p) => ({ ...p, severity: e.target.value }))} onBlur={(e) => handleFieldBlur('severity', e.target.value)} style={{ ...inputStyle(!!fieldErrors.severity), backgroundColor: '#fff' }}>
             <option value="">Select severity...</option>
             <option value="first_aid">First Aid</option>
             <option value="medical_treatment">Medical Treatment</option>
@@ -190,42 +193,42 @@ export const IncidentForm: React.FC<IncidentFormProps> = ({ projectId, onClose, 
 
         {/* Involved Party */}
         <div style={{ marginBottom: spacing['4'] }}>
-          <label style={{ display: 'block', fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary, marginBottom: spacing['1'] }}>Involved Party<span style={{ color: colors.statusCritical, marginLeft: 2 }}>*</span></label>
-          <input ref={injuredPartyRef} type="text" placeholder="Name or crew" value={form.injured_party_name} onChange={(e) => setForm((p) => ({ ...p, injured_party_name: e.target.value }))} onBlur={(e) => handleFieldBlur('injured_party_name', e.target.value)} style={inputStyle(!!fieldErrors.injured_party_name)} />
+          <label htmlFor="incident-involved-party" style={{ display: 'block', fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary, marginBottom: spacing['1'] }}>Involved Party<span style={{ color: colors.statusCritical, marginLeft: 2 }}>*</span></label>
+          <input id="incident-involved-party" ref={injuredPartyRef} type="text" placeholder="Name or crew" value={form.injured_party_name} onChange={(e) => setForm((p) => ({ ...p, injured_party_name: e.target.value }))} onBlur={(e) => handleFieldBlur('injured_party_name', e.target.value)} style={inputStyle(!!fieldErrors.injured_party_name)} />
           {fieldErrors.injured_party_name && <p style={{ color: colors.statusCritical, fontSize: 12, margin: '4px 0 0' }}>{fieldErrors.injured_party_name}</p>}
         </div>
 
         {/* Description */}
         <div style={{ marginBottom: spacing['5'] }}>
-          <label style={{ display: 'block', fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary, marginBottom: spacing['1'] }}>Description<span style={{ color: colors.statusCritical, marginLeft: 2 }}>*</span></label>
-          <textarea ref={descriptionRef} rows={4} placeholder="Describe what happened" value={form.description} onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))} onBlur={(e) => handleFieldBlur('description', e.target.value)} style={{ ...inputStyle(!!fieldErrors.description), resize: 'vertical' }} />
+          <label htmlFor="incident-description" style={{ display: 'block', fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary, marginBottom: spacing['1'] }}>Description<span style={{ color: colors.statusCritical, marginLeft: 2 }}>*</span></label>
+          <textarea id="incident-description" ref={descriptionRef} rows={4} placeholder="Describe what happened" value={form.description} onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))} onBlur={(e) => handleFieldBlur('description', e.target.value)} style={{ ...inputStyle(!!fieldErrors.description), resize: 'vertical' }} />
           {fieldErrors.description && <p style={{ color: colors.statusCritical, fontSize: 12, margin: '4px 0 0' }}>{fieldErrors.description}</p>}
         </div>
 
         {/* Root Cause */}
         <div style={{ marginBottom: spacing['4'] }}>
-          <label style={{ display: 'block', fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary, marginBottom: spacing['1'] }}>
+          <label htmlFor="incident-root-cause" style={{ display: 'block', fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary, marginBottom: spacing['1'] }}>
             Root Cause
             <span style={{ color: colors.textTertiary, fontSize: typography.fontSize.caption, marginLeft: spacing['2'], fontWeight: typography.fontWeight.normal }}>(required for recordable incidents)</span>
           </label>
-          <textarea rows={3} placeholder="Immediate cause, contributing factors, and root cause analysis" value={form.root_cause} onChange={(e) => setForm((p) => ({ ...p, root_cause: e.target.value }))} style={{ ...inputStyle(false), resize: 'vertical' }} />
+          <textarea id="incident-root-cause" rows={3} placeholder="Immediate cause, contributing factors, and root cause analysis" value={form.root_cause} onChange={(e) => setForm((p) => ({ ...p, root_cause: e.target.value }))} style={{ ...inputStyle(false), resize: 'vertical' }} />
         </div>
 
         {/* Corrective Action */}
         <div style={{ marginBottom: spacing['5'], border: `1px solid ${colors.borderDefault}`, borderRadius: borderRadius.md, padding: spacing['4'], backgroundColor: colors.surfaceInset }}>
           <p style={{ margin: `0 0 ${spacing['3']} 0`, fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary }}>Corrective Action</p>
           <div style={{ marginBottom: spacing['3'] }}>
-            <label style={{ display: 'block', fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary, marginBottom: spacing['1'] }}>Description</label>
-            <input type="text" placeholder="Action to prevent recurrence" value={form.ca_description} onChange={(e) => setForm((p) => ({ ...p, ca_description: e.target.value }))} style={{ ...inputStyle(false), backgroundColor: '#fff' }} />
+            <label htmlFor="ca-description" style={{ display: 'block', fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary, marginBottom: spacing['1'] }}>Description</label>
+            <input id="ca-description" type="text" placeholder="Action to prevent recurrence" value={form.ca_description} onChange={(e) => setForm((p) => ({ ...p, ca_description: e.target.value }))} style={{ ...inputStyle(false), backgroundColor: '#fff' }} />
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: spacing['3'] }}>
             <div>
-              <label style={{ display: 'block', fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary, marginBottom: spacing['1'] }}>Assignee</label>
-              <input type="text" placeholder="Name or role" value={form.ca_assignee} onChange={(e) => setForm((p) => ({ ...p, ca_assignee: e.target.value }))} style={{ ...inputStyle(false), backgroundColor: '#fff' }} />
+              <label htmlFor="ca-assignee" style={{ display: 'block', fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary, marginBottom: spacing['1'] }}>Assignee</label>
+              <input id="ca-assignee" type="text" placeholder="Name or role" value={form.ca_assignee} onChange={(e) => setForm((p) => ({ ...p, ca_assignee: e.target.value }))} style={{ ...inputStyle(false), backgroundColor: '#fff' }} />
             </div>
             <div>
-              <label style={{ display: 'block', fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary, marginBottom: spacing['1'] }}>Due Date</label>
-              <input type="date" value={form.ca_due_date} onChange={(e) => setForm((p) => ({ ...p, ca_due_date: e.target.value }))} style={{ ...inputStyle(false), backgroundColor: '#fff' }} />
+              <label htmlFor="ca-due-date" style={{ display: 'block', fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary, marginBottom: spacing['1'] }}>Due Date</label>
+              <input id="ca-due-date" type="date" value={form.ca_due_date} onChange={(e) => setForm((p) => ({ ...p, ca_due_date: e.target.value }))} style={{ ...inputStyle(false), backgroundColor: '#fff' }} />
             </div>
           </div>
         </div>

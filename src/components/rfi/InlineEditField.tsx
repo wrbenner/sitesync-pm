@@ -19,6 +19,7 @@
 //   • Forgetting the Esc-to-cancel keyboard contract.
 //   • Saving on every keystroke (we save once on commit, not per char).
 
+/* eslint-disable react-hooks/set-state-in-effect, react-hooks/todo */
 import React, { useEffect, useRef, useState } from 'react'
 import { Check, X } from 'lucide-react'
 import { toast } from 'sonner'

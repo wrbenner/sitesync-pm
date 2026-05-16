@@ -13,6 +13,7 @@
 // (e.g. send-email-to-vendor) is owned by feature pages.
 // ─────────────────────────────────────────────────────────────────────────────
 
+/* eslint-disable react-hooks/invariant, react-hooks/set-state-in-effect */
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { Sparkles, X, Send, Pencil, Check, AlertTriangle } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'

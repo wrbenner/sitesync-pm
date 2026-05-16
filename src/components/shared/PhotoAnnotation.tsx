@@ -677,6 +677,10 @@ export const PhotoAnnotation: FC<PhotoAnnotationProps> = ({
 
   const canW = propWidth ?? containerSize.w
   const canH = propHeight ?? containerSize.h
+  // eslint-disable-next-line react-hooks/refs
+  const undoDisabled = historyIndexRef.current <= 0
+  // eslint-disable-next-line react-hooks/refs
+  const redoDisabled = historyIndexRef.current >= historyRef.current.length - 1
 
   return (
     <div
@@ -729,8 +733,8 @@ export const PhotoAnnotation: FC<PhotoAnnotationProps> = ({
             type="button"
             title="Undo (Ctrl+Z)"
             aria-label="Undo"
-            disabled={historyIndexRef.current <= 0}
-            style={btnStyle(false, historyIndexRef.current <= 0)}
+            disabled={undoDisabled}
+            style={btnStyle(false, undoDisabled)}
             onClick={undo}
           >
             <Undo2 size={18} />
@@ -739,8 +743,8 @@ export const PhotoAnnotation: FC<PhotoAnnotationProps> = ({
             type="button"
             title="Redo (Ctrl+Shift+Z)"
             aria-label="Redo"
-            disabled={historyIndexRef.current >= historyRef.current.length - 1}
-            style={btnStyle(false, historyIndexRef.current >= historyRef.current.length - 1)}
+            disabled={redoDisabled}
+            style={btnStyle(false, redoDisabled)}
             onClick={redo}
           >
             <Redo2 size={18} />

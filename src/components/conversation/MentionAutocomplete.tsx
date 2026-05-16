@@ -56,6 +56,7 @@ export const MentionAutocomplete: React.FC<MentionAutocompleteProps> = ({
             key={c.contact.id}
             role="option"
             aria-selected={active}
+            tabIndex={active ? 0 : -1}
             onClick={() => onSelect(c)}
             onMouseEnter={() => onHover?.(i)}
             style={{

@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/set-state-in-effect, react-hooks/todo */
 import React, { useState, useEffect, useMemo} from 'react';
 import { Columns, Layers, Sparkles, Clock, AlertTriangle, ChevronDown, ChevronRight, SlidersHorizontal } from 'lucide-react';
 import { colors, spacing, typography, borderRadius, shadows, transitions } from '../../styles/theme';

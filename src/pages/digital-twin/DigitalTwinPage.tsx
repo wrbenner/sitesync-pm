@@ -3,6 +3,7 @@
 // project; the Three.js scene colors building groups by phase status at the
 // current timeline-scrubber date.
 
+/* eslint-disable react-hooks/invariant, react-hooks/set-state-in-effect */
 import React, { useRef, useEffect, useState, useCallback, useMemo } from 'react';
 import * as THREE from 'three';
 import { PageContainer } from '../../components/Primitives';

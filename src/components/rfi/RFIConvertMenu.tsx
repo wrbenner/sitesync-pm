@@ -8,6 +8,7 @@
 //   • Leaves the original RFI open. The PM closes it manually if/when
 //     the converted entity supersedes it.
 
+/* eslint-disable react-hooks/todo */
 import React, { useState } from 'react'
 import { ChevronDown, FilePlus2, Wrench, Hammer, ClipboardCheck } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'

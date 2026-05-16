@@ -45,7 +45,6 @@ export const IrisInsightsLane: React.FC<IrisInsightsLaneProps> = ({
 
   return (
     <section
-      role="region"
       aria-label="Iris insights"
       style={{
         display: 'flex',

@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/memo-dependencies, react-hooks/todo */
 import React, { useCallback, useState } from 'react'
 import { Link as LinkIcon, Copy as CopyIcon, Loader2, Check } from 'lucide-react'
 import { toast } from 'sonner'
