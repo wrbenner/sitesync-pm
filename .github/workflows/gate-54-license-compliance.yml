@@ -1,0 +1,44 @@
+# Gate 54 - License Compliance (B41 Supply Chain, Crystalline Tier 6)
+#
+# Runs scripts/check-licenses.mjs on every PR + nightly. Fails CI if any
+# production-reachable dep has a disallowed or unknown license per
+# ops/coverage/license-allowlist.json.
+#
+# Initial findings (2026-05-15): 5 packages flagged. wx-react-gantt@1.3.1
+# carries GPLv3 -- potential incompatibility with proprietary distribution.
+# Requires legal review before promotion to required-blocking.
+#
+# Promotion path: informational -> required non-blocking (14d) -> blocking (30d).
+#
+# SECURITY: only repo-committed inputs read.
+
+name: Gate 54 - License Compliance
+
+on:
+  pull_request:
+    paths:
+      - 'package.json'
+      - 'package-lock.json'
+      - 'scripts/check-licenses.mjs'
+      - 'ops/coverage/license-allowlist.json'
+      - '.github/workflows/gate-54-license-compliance.yml'
+  push:
+    branches: [main]
+  schedule:
+    # Nightly at 14:00 UTC (catches transitive-dep license changes after Dependabot updates)
+    - cron: '0 14 * * *'
+
+jobs:
+  licenses:
+    name: License compliance
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: npm
+      - run: npm ci
+      - run: node scripts/check-licenses.mjs

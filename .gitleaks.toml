@@ -1,0 +1,31 @@
+title = "SiteSync — gitleaks config"
+# Extends the default gitleaks ruleset with an allowlist for known
+# safe occurrences (example env files, generated fixtures, etc.).
+# See: https://github.com/gitleaks/gitleaks
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Allowlisted paths and patterns"
+
+paths = [
+  '''\.env\.example$''',
+  '''\.env\.scale-test\.example$''',
+  '''\.env\.scale-test$''',
+  '''tests/fixtures/.*''',
+  '''tests/cassettes/.*''',
+  '''docs/audits/.*''',
+  '''package-lock\.json$''',
+  '''ios/App/.*''',
+]
+
+regexes = [
+  # Stripe test-mode keys are non-secret by design.
+  '''sk_test_[A-Za-z0-9]+''',
+  '''pk_test_[A-Za-z0-9]+''',
+  # Supabase anon keys are public per project docs.
+  '''SUPABASE_ANON_KEY''',
+  # JWT example tokens in docs.
+  '''eyJ[A-Za-z0-9_-]{20,}\.eyJ[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{20,}''',
+]

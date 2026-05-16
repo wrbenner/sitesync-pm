@@ -46,6 +46,8 @@
     "eval:iris:expand": "tsx scripts/build-iris-corpus.ts",
     "doctor": "tsx scripts/doctor.ts",
     "doctor:fix": "tsx scripts/doctor.ts --fix",
+    "frog:B41:licenses": "node scripts/check-licenses.mjs",
+    "frog:B41:secrets": "gitleaks detect --config .gitleaks.toml --verbose",
     "prepare": "husky"
   },
   "dependencies": {
