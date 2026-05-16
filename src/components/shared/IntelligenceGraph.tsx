@@ -248,6 +248,7 @@ export function IntelligenceGraph({
   const [hoveredEdge, setHoveredEdge] = useState<SimEdge | null>(null)
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(highlightedNodeId ?? null)
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 })
+  const [isPanning, setIsPanning] = useState(false)
 
   // Transform state
   const transformRef = useRef({ offsetX: 0, offsetY: 0, scale: 1 })
@@ -292,8 +293,8 @@ export function IntelligenceGraph({
 
       return {
         ...n,
-        x: existing?.x ?? Math.cos(angle) * spread + (Math.random() - 0.5) * 40,
-        y: existing?.y ?? Math.sin(angle) * spread + (Math.random() - 0.5) * 40,
+        x: existing?.x ?? Math.cos(angle) * spread + (Math.random() - 0.5) * 40, // immune-ok: physics jitter
+        y: existing?.y ?? Math.sin(angle) * spread + (Math.random() - 0.5) * 40, // immune-ok: physics jitter
         vx: existing?.vx ?? 0,
         vy: existing?.vy ?? 0,
         fx: 0,
@@ -378,8 +379,9 @@ export function IntelligenceGraph({
     const nodes = simNodesRef.current
     const edges = simEdgesRef.current
 
-    // Reset forces
+    // Reset forces — physics engine mutates force vectors in place (intentional)
     for (const n of nodes) {
+      // eslint-disable-next-line react-hooks/immutability
       n.fx = 0
       n.fy = 0
     }
@@ -392,7 +394,7 @@ export function IntelligenceGraph({
         let dx = b.x - a.x
         let dy = b.y - a.y
         let dist = Math.sqrt(dx * dx + dy * dy)
-        if (dist < 1) { dist = 1; dx = Math.random() - 0.5; dy = Math.random() - 0.5 }
+        if (dist < 1) { dist = 1; dx = Math.random() - 0.5; dy = Math.random() - 0.5 } // immune-ok: physics jitter
         const force = REPULSION_STRENGTH / (dist * dist)
         const fx = (dx / dist) * force
         const fy = (dy / dist) * force
@@ -413,6 +415,7 @@ export function IntelligenceGraph({
       const force = SPRING_STRENGTH * displacement
       const fx = (dx / dist) * force
       const fy = (dy / dist) * force
+      // eslint-disable-next-line react-hooks/immutability
       e.source.fx += fx
       e.source.fy += fy
       e.target.fx -= fx
@@ -644,6 +647,7 @@ export function IntelligenceGraph({
       drag.startY = wy
     } else {
       drag.isPanning = true
+      setIsPanning(true)
       drag.startX = e.clientX
       drag.startY = e.clientY
     }
@@ -702,6 +706,7 @@ export function IntelligenceGraph({
     }
     drag.isDragging = false
     drag.isPanning = false
+    setIsPanning(false)
     drag.dragNode = null
     settledRef.current = false
   }, [screenToWorld])
@@ -844,7 +849,7 @@ export function IntelligenceGraph({
         background: '#0F1629',
         borderRadius: borderRadius.lg,
         overflow: 'hidden',
-        cursor: hoveredNode ? 'grab' : dragRef.current.isPanning ? 'grabbing' : 'default',
+        cursor: hoveredNode ? 'grab' : isPanning ? 'grabbing' : 'default',
       }}
     >
       {/* Search box */}
