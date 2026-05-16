@@ -179,7 +179,6 @@ TEST_SCOPED('submittal phase 4 migration smoke', () => {
     `
     if (!exists[0].exists) {
       // Skip cleanly — log so it's visible in the smoke report.
-      // eslint-disable-next-line no-console
       console.info('[phase4-smoke] skipping package round-trip: submittal_packages not present in this DB')
       return
     }
