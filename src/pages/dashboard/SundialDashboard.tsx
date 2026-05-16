@@ -49,7 +49,7 @@ function handleDecisionAnswer(
   if (!answer.primary) {
     // "Not yet" → toast + tell the user the marginalia below explains. Keep
     // them on the dashboard so they can see the supporting data.
-    toast.message('Not yet — see the supporting context below.');
+    toast.message('Not yet. See the supporting context below.');
     return;
   }
 
@@ -174,7 +174,7 @@ function QuestionHeadline({
         color: INK,
         margin: 0,
         maxWidth: mobile ? undefined : 1100,
-        textWrap: 'balance' as any,
+        textWrap: 'balance',
       }}
     >
       {segments.map((seg, i) => {
@@ -757,24 +757,27 @@ function SundialDesktop({ data }: { data: SundialData }) {
             color: INK_3,
           }}
         >
-          <span
-            style={{ cursor: 'pointer' }}
+          <button
+            type="button"
+            style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', font: 'inherit', color: 'inherit', letterSpacing: 'inherit', textTransform: 'inherit' }}
             onClick={() => navigate('/drawings')}
           >
             Plans
-          </span>
-          <span
-            style={{ cursor: 'pointer' }}
+          </button>
+          <button
+            type="button"
+            style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', font: 'inherit', color: 'inherit', letterSpacing: 'inherit', textTransform: 'inherit' }}
             onClick={() => navigate('/daily-log')}
           >
             Day book
-          </span>
-          <span
-            style={{ cursor: 'pointer' }}
+          </button>
+          <button
+            type="button"
+            style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', font: 'inherit', color: 'inherit', letterSpacing: 'inherit', textTransform: 'inherit' }}
             onClick={() => navigate('/projects')}
           >
             Portfolio
-          </span>
+          </button>
         </div>
       </div>
 
@@ -795,7 +798,7 @@ function SundialDesktop({ data }: { data: SundialData }) {
                 color: INK,
                 margin: 0,
                 maxWidth: 1100,
-                textWrap: 'balance' as any,
+                textWrap: 'balance',
               }}
             >
               The day is <span style={{ fontStyle: 'italic' }}>yours</span>
