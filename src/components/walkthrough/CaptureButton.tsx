@@ -266,7 +266,7 @@ export const CaptureButton: React.FC<CaptureButtonProps> = ({
         color: colors.ink3,
       }}>
         {isRecording && <OrangeDot size={8} haloSpread={3} />}
-        <span>{isRecording ? 'Speak — release to save' : label}</span>
+        <span>{isRecording ? 'Speak. Release to save.' : label}</span>
       </div>
 
       {state.kind === 'error' && (

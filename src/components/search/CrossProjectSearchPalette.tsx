@@ -117,7 +117,7 @@ export const CrossProjectSearchPalette: React.FC<Props> = ({
               else if (e.key === 'ArrowUp')   { e.preventDefault(); setActiveIdx(i => Math.max(0, i - 1)) }
               else if (e.key === 'Enter' && flatOrdered[activeIdx]) onSelect(flatOrdered[activeIdx])
             }}
-            placeholder="Search across all projects — RFIs, submittals, punch, drawings…"
+            placeholder="Search across all projects: RFIs, submittals, punch, drawings…"
             style={{
               flex: 1, border: 'none', outline: 'none',
               fontFamily: typography.fontFamily, fontSize: 16, color: colors.ink,
