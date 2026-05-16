@@ -46,8 +46,12 @@
     "eval:iris:expand": "tsx scripts/build-iris-corpus.ts",
     "doctor": "tsx scripts/doctor.ts",
     "doctor:fix": "tsx scripts/doctor.ts --fix",
+    "frog:B18": "node scripts/audit-money-math.mjs",
+    "frog:B18:json": "node scripts/audit-money-math.mjs --json",
+    "frog:B18:baseline": "node scripts/audit-money-math.mjs --update-allowlist",
     "frog:B41:licenses": "node scripts/check-licenses.mjs",
     "frog:B41:secrets": "gitleaks detect --config .gitleaks.toml --verbose",
+    "frog:crystalline": "npm run frog:B18 && npm run frog:B41:licenses",
     "prepare": "husky"
   },
   "dependencies": {
