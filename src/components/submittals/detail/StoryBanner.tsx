@@ -116,7 +116,7 @@ export function buildStoryBanner(inputs: StoryBannerInputs): StoryBannerOutput |
       tone,
       headline: overdue
         ? `${inputs.current_reviewer_name}${role} is ${days} days late.`
-        : `Awaiting ${inputs.current_reviewer_name}${role} — ${days} day${days === 1 ? '' : 's'} in court.`,
+        : `Awaiting ${inputs.current_reviewer_name}${role}. ${days} day${days === 1 ? '' : 's'} in court.`,
     }
   }
 

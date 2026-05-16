@@ -116,7 +116,7 @@ const ToolHint: React.FC<{ tool: MarkupTool; onDismiss: () => void }> = ({ tool,
     calibrate: { title: 'Calibrate scale', body: 'Click two points of a known distance' },
     pin: { title: 'Pin', body: 'Click to drop a pin' },
     highlight: { title: 'Highlight', body: 'Drag to paint a translucent band' },
-    text: { title: 'Text', body: 'Click to place text — Enter commits · Esc cancels' },
+    text: { title: 'Text', body: 'Click to place text. Enter commits, Esc cancels.' },
     draw: { title: 'Draw', body: 'Drag for a freehand stroke' },
   };
   const h = hints[tool];
@@ -1755,7 +1755,7 @@ export const DrawingTiledViewer: React.FC<DrawingTiledViewerProps> = ({
       } else {
         toast.error(
           `${failedAnnotations.length} markup${failedAnnotations.length === 1 ? '' : 's'} failed to save`,
-          { description: succeeded > 0 ? `${succeeded} saved successfully — retry the rest with Save.` : 'Check drawing_markups RLS policy in Supabase.' },
+          { description: succeeded > 0 ? `${succeeded} saved successfully. Retry the rest with Save.` : 'Check drawing_markups RLS policy in Supabase.' },
         );
       }
     } finally {

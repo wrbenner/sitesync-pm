@@ -231,7 +231,7 @@ async function signInWithPasswordWithTimeout(email: string, password: string) {
     if (result === SIGN_IN_TIMEOUT_SENTINEL) {
       return {
         data: null,
-        error: { message: 'Request timed out — please try again.', name: 'TimeoutError' } as { message: string; name: string },
+        error: { message: 'Request timed out. Please try again.', name: 'TimeoutError' } as { message: string; name: string },
       }
     }
     return result

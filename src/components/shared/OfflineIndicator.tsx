@@ -153,7 +153,7 @@ export function OfflineIndicator({ onConflictClick }: OfflineIndicatorProps) {
     content = (
       <>
         <span style={dotStyle} />
-        <span>Offline — changes will sync when reconnected</span>
+        <span>Offline. Changes will sync when reconnected.</span>
         {pendingCount > 0 && (
           <span
             style={{
@@ -181,7 +181,7 @@ export function OfflineIndicator({ onConflictClick }: OfflineIndicatorProps) {
     content = (
       <>
         <span style={dotStyle} />
-        <span>Sync error — will retry automatically</span>
+        <span>Sync error. Retrying automatically.</span>
       </>
     )
   }

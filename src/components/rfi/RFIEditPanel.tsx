@@ -300,7 +300,7 @@ export const RFIEditPanel: React.FC<RFIEditPanelProps> = ({ open, onClose, rfiId
             />
           </FieldRow>
 
-          <FieldRow label="Question" hint="Rich-text — paste screenshots, format with lists, links.">
+          <FieldRow label="Question" hint="Rich text. Paste screenshots, format with lists and links.">
             <RFIRichTextEditor
               value={draft.question}
               onChange={(html) => setField('question', html)}
@@ -483,7 +483,7 @@ export const RFIEditPanel: React.FC<RFIEditPanelProps> = ({ open, onClose, rfiId
               aria-label="Private"
               style={{ width: 14, height: 14, cursor: 'pointer' }}
             />
-            <span>Private — only owner / admin / RFI manager can read</span>
+            <span>Private: only owner, admin, or RFI manager can read</span>
           </label>
 
           {/* Required-field legend (May-7 audit item D3 / Procore parity).
@@ -501,7 +501,7 @@ export const RFIEditPanel: React.FC<RFIEditPanelProps> = ({ open, onClose, rfiId
             }}
           >
             <span style={{ color: colors.statusCritical, fontWeight: 700 }}>*</span>
-            <span>required fields — Subject must be filled before save</span>
+            <span>required fields. Subject must be filled before saving.</span>
           </div>
 
           {/* Save bar */}
