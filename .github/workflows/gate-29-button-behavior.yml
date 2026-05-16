@@ -1,0 +1,52 @@
+name: Gate 29 - Button Behavior (B17 Mutation Audit)
+
+on:
+  pull_request:
+    paths:
+      - 'src/**/*.ts'
+      - 'src/**/*.tsx'
+      - 'scripts/audit-mutations.mjs'
+      - 'ops/coverage/mutation-audit-allowlist.json'
+      - 'ops/coverage/buttons-actions.json'
+      - '.github/workflows/gate-29-button-behavior.yml'
+  push:
+    branches: [main]
+
+jobs:
+  audit:
+    name: B17 mutation audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: npm
+      - run: npm ci
+      - name: Run B17 audit
+        run: |
+          NODE_OPTIONS=--max-old-space-size=4096 node scripts/audit-mutations.mjs --json > /tmp/audit.json
+          cat /tmp/audit.json
+          AUDITED=$(jq -r '.total_audited_mutations' /tmp/audit.json)
+          RAW=$(jq -r '.raw_useMutation_total' /tmp/audit.json)
+          ALLOWED=$(jq -r '.allowed' /tmp/audit.json)
+          LIVE=$(jq -r '.live' /tmp/audit.json)
+          {
+            echo "## B17 Mutation Audit"
+            echo ""
+            echo "| metric | count |"
+            echo "|---|---|"
+            echo "| audited mutations (useAuditedMutation) | $AUDITED |"
+            echo "| raw useMutation calls (total) | $RAW |"
+            echo "| allowlisted | $ALLOWED |"
+            echo "| **live violations** | **$LIVE** |"
+            echo ""
+            if [ "$LIVE" -gt 0 ]; then
+              echo "FAILED - new raw useMutation calls introduced. Every mutation must flow through useAuditedMutation so audit trail, permission check, optimistic update, invalidation, and Sentry capture happen uniformly."
+            else
+              echo "PASS - no new raw useMutation calls. Existing baseline of $ALLOWED entries expires 2026-08-14 per migration window."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+          exit $LIVE

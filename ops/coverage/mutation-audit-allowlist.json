@@ -1,0 +1,2279 @@
+{
+  "_schema": {
+    "description": "B17 mutation audit allowlist. Each entry exempts one raw useMutation() call site for a documented reason, scoped to the file/line. Entries expire 90 days from added."
+  },
+  "entries": [
+    {
+      "file": "src/components/dailylog/IrisDailySummaryButton.tsx",
+      "line": 37,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/components/drawings/IrisConflictScanButton.tsx",
+      "line": 51,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/components/rfi/RFIAssigneeStatusList.tsx",
+      "line": 79,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/components/rfi/RFIDistributeDialog.tsx",
+      "line": 90,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/components/rfi/RFIEmailReviewBanner.tsx",
+      "line": 82,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/components/rfi/RFIEmailReviewBanner.tsx",
+      "line": 141,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/mutations/activity-feed.ts",
+      "line": 16,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/mutations/agent-tasks.ts",
+      "line": 31,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/mutations/agent-tasks.ts",
+      "line": 69,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/mutations/agent-tasks.ts",
+      "line": 138,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/mutations/ai-agents.ts",
+      "line": 16,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/mutations/ai-agents.ts",
+      "line": 38,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/mutations/ai-agents.ts",
+      "line": 58,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/mutations/ai-agents.ts",
+      "line": 74,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/mutations/ai-insights.ts",
+      "line": 16,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/mutations/ai-insights.ts",
+      "line": 32,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/mutations/audit-trail.ts",
+      "line": 14,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/mutations/closeout.ts",
+      "line": 23,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/mutations/closeout.ts",
+      "line": 58,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/mutations/closeout.ts",
+      "line": 107,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/mutations/contracts.ts",
+      "line": 9,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/mutations/contracts.ts",
+      "line": 26,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/mutations/contracts.ts",
+      "line": 45,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/mutations/crew-schedules.ts",
+      "line": 16,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/mutations/crew-schedules.ts",
+      "line": 41,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/mutations/crew-schedules.ts",
+      "line": 58,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/mutations/daily-log-entries.ts",
+      "line": 19,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/mutations/daily-log-entries.ts",
+      "line": 60,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/mutations/daily-log-entries.ts",
+      "line": 77,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/mutations/directory.ts",
+      "line": 33,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/mutations/directory.ts",
+      "line": 80,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/mutations/directory.ts",
+      "line": 118,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/mutations/documents.ts",
+      "line": 27,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/mutations/documents.ts",
+      "line": 51,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/mutations/documents.ts",
+      "line": 68,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/mutations/draw-reports.ts",
+      "line": 126,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/mutations/draw-reports.ts",
+      "line": 268,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/mutations/equipment.ts",
+      "line": 14,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/mutations/equipment.ts",
+      "line": 37,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/mutations/equipment.ts",
+      "line": 61,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/mutations/estimating.ts",
+      "line": 30,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/mutations/estimating.ts",
+      "line": 50,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/mutations/estimating.ts",
+      "line": 78,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/mutations/estimating.ts",
+      "line": 106,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/mutations/estimating.ts",
+      "line": 130,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/mutations/estimating.ts",
+      "line": 157,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/mutations/estimating.ts",
+      "line": 183,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/mutations/estimating.ts",
+      "line": 213,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/mutations/estimating.ts",
+      "line": 246,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/mutations/field-captures.ts",
+      "line": 16,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/mutations/files.ts",
+      "line": 16,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/mutations/files.ts",
+      "line": 32,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/mutations/financial-periods.ts",
+      "line": 28,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/mutations/financial-periods.ts",
+      "line": 66,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/mutations/financial-periods.ts",
+      "line": 109,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/mutations/inspection-checklists.ts",
+      "line": 15,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/mutations/inspection-checklists.ts",
+      "line": 32,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/mutations/inspection-checklists.ts",
+      "line": 102,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/mutations/inspection-checklists.ts",
+      "line": 158,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/mutations/insurance-certificates.ts",
+      "line": 29,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/mutations/insurance-certificates.ts",
+      "line": 46,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/mutations/insurance-certificates.ts",
+      "line": 72,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/mutations/insurance-certificates.ts",
+      "line": 90,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/mutations/integrations.ts",
+      "line": 36,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/mutations/integrations.ts",
+      "line": 68,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/mutations/integrations.ts",
+      "line": 96,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/mutations/integrations.ts",
+      "line": 130,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/mutations/integrations.ts",
+      "line": 158,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/mutations/integrations.ts",
+      "line": 191,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/mutations/integrations.ts",
+      "line": 223,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/mutations/lien-waivers.ts",
+      "line": 92,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/mutations/lien-waivers.ts",
+      "line": 137,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/mutations/meetings.ts",
+      "line": 63,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/mutations/meetings.ts",
+      "line": 87,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/mutations/meetings.ts",
+      "line": 104,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/mutations/notification-preferences.ts",
+      "line": 16,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/mutations/notifications.ts",
+      "line": 16,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/mutations/notifications.ts",
+      "line": 33,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/mutations/onboarding.ts",
+      "line": 17,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/mutations/onboarding.ts",
+      "line": 50,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/mutations/onboarding.ts",
+      "line": 74,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/mutations/owner-updates.ts",
+      "line": 16,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/mutations/owner-updates.ts",
+      "line": 68,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/mutations/permits.ts",
+      "line": 15,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/mutations/permits.ts",
+      "line": 38,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/mutations/permits.ts",
+      "line": 75,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/mutations/purchase-orders.ts",
+      "line": 10,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/mutations/purchase-orders.ts",
+      "line": 34,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/mutations/purchase-orders.ts",
+      "line": 53,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/mutations/retainage.ts",
+      "line": 26,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/mutations/retainage.ts",
+      "line": 78,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/mutations/retainage.ts",
+      "line": 137,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/mutations/rfi-watchers.ts",
+      "line": 15,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/mutations/rfi-watchers.ts",
+      "line": 30,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/mutations/rfis.ts",
+      "line": 138,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/mutations/safety.ts",
+      "line": 16,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/mutations/safety.ts",
+      "line": 34,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/mutations/safety.ts",
+      "line": 50,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/mutations/safety.ts",
+      "line": 68,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/mutations/task-bulk-operations.ts",
+      "line": 17,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/mutations/task-bulk-operations.ts",
+      "line": 32,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/mutations/task-bulk-operations.ts",
+      "line": 48,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/mutations/task-bulk-operations.ts",
+      "line": 96,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/mutations/task-bulk-operations.ts",
+      "line": 112,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/mutations/timesheets.ts",
+      "line": 15,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/mutations/timesheets.ts",
+      "line": 40,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/mutations/timesheets.ts",
+      "line": 58,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/mutations/warranties.ts",
+      "line": 28,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/mutations/warranties.ts",
+      "line": 51,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/mutations/warranties.ts",
+      "line": 69,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/queries/closeout.ts",
+      "line": 129,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/queries/closeout.ts",
+      "line": 157,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/queries/closeout.ts",
+      "line": 198,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/queries/closeout.ts",
+      "line": 225,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/queries/closeout.ts",
+      "line": 253,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/queries/closeout.ts",
+      "line": 269,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/queries/conversations.ts",
+      "line": 38,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/queries/conversations.ts",
+      "line": 63,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/queries/draftedActions.ts",
+      "line": 194,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/queries/draftedActions.ts",
+      "line": 310,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/queries/drawing-annotations.ts",
+      "line": 101,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/queries/drawing-annotations.ts",
+      "line": 120,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/queries/drawing-annotations.ts",
+      "line": 140,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/queries/enterprise-capabilities.ts",
+      "line": 36,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/queries/enterprise-capabilities.ts",
+      "line": 78,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/queries/enterprise-capabilities.ts",
+      "line": 131,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/queries/enterprise-capabilities.ts",
+      "line": 145,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/queries/enterprise-capabilities.ts",
+      "line": 196,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/queries/enterprise-capabilities.ts",
+      "line": 210,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/queries/enterprise-capabilities.ts",
+      "line": 256,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/queries/enterprise-capabilities.ts",
+      "line": 270,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/queries/enterprise-capabilities.ts",
+      "line": 288,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/queries/enterprise-modules.ts",
+      "line": 91,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/queries/enterprise-modules.ts",
+      "line": 122,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/queries/enterprise-modules.ts",
+      "line": 136,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/queries/enterprise-modules.ts",
+      "line": 154,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/queries/enterprise-modules.ts",
+      "line": 204,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/queries/file-versions.ts",
+      "line": 103,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/queries/invitations.ts",
+      "line": 23,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/queries/invitations.ts",
+      "line": 53,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/queries/invitations.ts",
+      "line": 76,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/queries/lien-waivers.ts",
+      "line": 36,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/queries/lien-waivers.ts",
+      "line": 65,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/queries/lookahead-tasks.ts",
+      "line": 78,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/queries/meter-readings.ts",
+      "line": 73,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/queries/precon-enterprise.ts",
+      "line": 52,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/queries/precon-enterprise.ts",
+      "line": 66,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/queries/precon-enterprise.ts",
+      "line": 116,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/queries/precon-extended.ts",
+      "line": 94,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/queries/precon-extended.ts",
+      "line": 108,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/queries/precon-extended.ts",
+      "line": 122,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/queries/precon-extended.ts",
+      "line": 173,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/queries/precon-extended.ts",
+      "line": 188,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/queries/precon-extended.ts",
+      "line": 203,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/queries/precon-extended.ts",
+      "line": 234,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/queries/precon-extended.ts",
+      "line": 248,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/queries/precon-extended.ts",
+      "line": 262,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/queries/precon-extended.ts",
+      "line": 275,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/queries/precon-extended.ts",
+      "line": 314,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/queries/precon-extended.ts",
+      "line": 333,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/queries/precon-extended.ts",
+      "line": 348,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/queries/precon-extended.ts",
+      "line": 363,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/queries/preconstruction.ts",
+      "line": 88,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/queries/preconstruction.ts",
+      "line": 102,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/queries/preconstruction.ts",
+      "line": 115,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/queries/preconstruction.ts",
+      "line": 129,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/queries/preventive-maintenance.ts",
+      "line": 73,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/queries/preventive-maintenance.ts",
+      "line": 91,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/queries/preventive-maintenance.ts",
+      "line": 110,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/queries/procurement-equipment.ts",
+      "line": 90,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/queries/procurement-equipment.ts",
+      "line": 110,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/queries/procurement-equipment.ts",
+      "line": 123,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/queries/procurement-equipment.ts",
+      "line": 137,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/queries/procurement-equipment.ts",
+      "line": 150,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/queries/resources.ts",
+      "line": 59,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/queries/resources.ts",
+      "line": 83,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/queries/scheduling.ts",
+      "line": 37,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/queries/scheduling.ts",
+      "line": 54,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/queries/scheduling.ts",
+      "line": 107,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/queries/scheduling.ts",
+      "line": 136,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/queries/signatures.ts",
+      "line": 180,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/queries/signatures.ts",
+      "line": 206,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/queries/signatures.ts",
+      "line": 236,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/queries/signatures.ts",
+      "line": 254,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/queries/signatures.ts",
+      "line": 285,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/queries/signatures.ts",
+      "line": 310,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/queries/signatures.ts",
+      "line": 338,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/queries/signatures.ts",
+      "line": 404,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/queries/specifications.ts",
+      "line": 60,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/queries/specifications.ts",
+      "line": 83,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/queries/specifications.ts",
+      "line": 101,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/queries/useDeletedRFIs.ts",
+      "line": 40,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/queries/useDeletedRFIs.ts",
+      "line": 64,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/queries/useIrisRFIDraftV2.ts",
+      "line": 62,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/queries/useIrisRFIDraftV2.ts",
+      "line": 100,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/queries/useIrisRFIDraftV2.ts",
+      "line": 142,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/queries/useRFIAssignees.ts",
+      "line": 53,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/queries/useRFIAssignees.ts",
+      "line": 84,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/queries/useRFIAssignees.ts",
+      "line": 111,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/queries/useRFIAttachments.ts",
+      "line": 91,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/queries/useRFIAttachments.ts",
+      "line": 158,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/queries/useRFIAttachments.ts",
+      "line": 191,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/queries/useRFIAttachments.ts",
+      "line": 226,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/queries/useRFIAttachments.ts",
+      "line": 265,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/queries/useRFIClockEvents.ts",
+      "line": 46,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/queries/useRFIClockEvents.ts",
+      "line": 81,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/queries/useRFIColumnPrefs.ts",
+      "line": 46,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/queries/useRFIDistributions.ts",
+      "line": 50,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/queries/useRFIDrawingPins.ts",
+      "line": 62,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/queries/useRFIDrawingPins.ts",
+      "line": 102,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/queries/useRFILinks.ts",
+      "line": 83,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/queries/useRFILinks.ts",
+      "line": 119,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/queries/useRFIResponses.ts",
+      "line": 107,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/queries/useRFIResponses.ts",
+      "line": 156,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/queries/useRFIResponses.ts",
+      "line": 192,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/queries/useRFISavedViews.ts",
+      "line": 65,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/queries/useRFISavedViews.ts",
+      "line": 104,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/queries/useRFISavedViews.ts",
+      "line": 125,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/queries/useRFISettings.ts",
+      "line": 50,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/queries/useRFISettings.ts",
+      "line": 139,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/queries/useRFISettings.ts",
+      "line": 203,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/queries/useRFISettings.ts",
+      "line": 280,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/queries/useRFISettings.ts",
+      "line": 329,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/queries/useRFISettings.ts",
+      "line": 377,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/queries/useRFIWatchers.ts",
+      "line": 31,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/queries/useRFIWatchers.ts",
+      "line": 58,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/queries/useSpecBook.ts",
+      "line": 45,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/queries/vendors.ts",
+      "line": 155,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/queries/workflow-rules.ts",
+      "line": 65,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/queries/workflow-rules.ts",
+      "line": 88,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/queries/workflow-rules.ts",
+      "line": 106,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/queries/workflow-rules.ts",
+      "line": 124,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/queries/workforce.ts",
+      "line": 40,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/queries/workforce.ts",
+      "line": 55,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/queries/workforce.ts",
+      "line": 68,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/queries/workforce.ts",
+      "line": 83,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/useAITrainingCorrections.ts",
+      "line": 44,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/useApprovalWorkflow.ts",
+      "line": 107,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/useApprovalWorkflow.ts",
+      "line": 156,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/useApprovalWorkflow.ts",
+      "line": 189,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/useAuditTrail.ts",
+      "line": 161,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/useCOLineItems.ts",
+      "line": 30,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/useCOLineItems.ts",
+      "line": 43,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/useCOLineItems.ts",
+      "line": 57,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/useCheckIn.ts",
+      "line": 159,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/useCheckIn.ts",
+      "line": 249,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/useCheckIn.ts",
+      "line": 383,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/useDrawingIntelligence.ts",
+      "line": 160,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/useDrawingIntelligence.ts",
+      "line": 181,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/useDrawingProcessing.ts",
+      "line": 60,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/useDrawingProcessing.ts",
+      "line": 103,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/useOfflineMutation.ts",
+      "line": 32,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/useSavedViews.ts",
+      "line": 77,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/useSavedViews.ts",
+      "line": 86,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/useSavedViews.ts",
+      "line": 94,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/useSubmittalPackages.ts",
+      "line": 42,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/useSubmittalPackages.ts",
+      "line": 63,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/useSubmittalPackages.ts",
+      "line": 79,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/useSubmittalPackages.ts",
+      "line": 93,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/useSupabase.ts",
+      "line": 322,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/hooks/useZipUpload.ts",
+      "line": 109,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/pages/Contracts.tsx",
+      "line": 50,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/pages/Contracts.tsx",
+      "line": 64,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/pages/Contracts.tsx",
+      "line": 80,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/pages/Crews.tsx",
+      "line": 245,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/pages/Equipment.tsx",
+      "line": 129,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/pages/Equipment.tsx",
+      "line": 151,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/pages/Meetings.tsx",
+      "line": 225,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/pages/Meetings.tsx",
+      "line": 249,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/pages/Meetings.tsx",
+      "line": 281,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/pages/Meetings.tsx",
+      "line": 304,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/pages/Meetings.tsx",
+      "line": 1237,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/pages/payment-applications/PayAppDetail.tsx",
+      "line": 187,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/pages/payment-applications/PayAppList.tsx",
+      "line": 35,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/pages/payment-applications/PayAppList.tsx",
+      "line": 47,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/pages/payment-applications/SOVEditor.tsx",
+      "line": 133,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/pages/payment-applications/SOVEditor.tsx",
+      "line": 524,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/pages/payment-applications/index.tsx",
+      "line": 310,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/pages/payment-applications/index.tsx",
+      "line": 326,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/pages/payment-applications/index.tsx",
+      "line": 339,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/pages/payment-applications/index.tsx",
+      "line": 352,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/pages/payment-applications/index.tsx",
+      "line": 368,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/pages/rfis/RFIDetail.tsx",
+      "line": 129,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    },
+    {
+      "file": "src/pages/rfis/RFIReportsPage.tsx",
+      "line": 57,
+      "reason": "baselined via --update-allowlist",
+      "owner": "walker@sitesyncai.com",
+      "added": "2026-05-16",
+      "expires": "2026-08-14"
+    }
+  ]
+}

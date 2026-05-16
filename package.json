@@ -46,10 +46,13 @@
     "eval:iris:expand": "tsx scripts/build-iris-corpus.ts",
     "doctor": "tsx scripts/doctor.ts",
     "doctor:fix": "tsx scripts/doctor.ts --fix",
+    "frog:B17": "node scripts/audit-mutations.mjs",
+    "frog:B17:json": "node scripts/audit-mutations.mjs --json",
+    "frog:B17:baseline": "node scripts/audit-mutations.mjs --update-allowlist",
     "frog:B18": "node scripts/audit-money-math.mjs",
     "frog:B18:json": "node scripts/audit-money-math.mjs --json",
     "frog:B18:baseline": "node scripts/audit-money-math.mjs --update-allowlist",
-    "frog:crystalline": "npm run frog:B18",
+    "frog:crystalline": "npm run frog:B17 && npm run frog:B18",
     "prepare": "husky"
   },
   "dependencies": {
