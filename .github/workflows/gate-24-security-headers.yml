@@ -1,0 +1,24 @@
+name: Gate 24 - Security Headers (B24)
+
+on:
+  pull_request:
+    paths:
+      - vercel.json
+      - scripts/audit-security-headers.mjs
+      - .github/workflows/gate-24-security-headers.yml
+  push:
+    branches: [main]
+
+jobs:
+  headers:
+    name: Security headers static audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+      - name: Run audit
+        run: node scripts/audit-security-headers.mjs

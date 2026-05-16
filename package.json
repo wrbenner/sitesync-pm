@@ -50,9 +50,10 @@
     "frog:B18:json": "node scripts/audit-money-math.mjs --json",
     "frog:B18:baseline": "node scripts/audit-money-math.mjs --update-allowlist",
     "frog:B19": "vitest run src/test/invariants/B19-invariants.property.test.ts",
+    "frog:B24:headers": "node scripts/audit-security-headers.mjs",
     "frog:B41:licenses": "node scripts/check-licenses.mjs",
     "frog:B41:secrets": "gitleaks detect --config .gitleaks.toml --verbose",
-    "frog:crystalline": "npm run frog:B18 && npm run frog:B19 && npm run frog:B41:licenses",
+    "frog:crystalline": "npm run frog:B18 && npm run frog:B19 && npm run frog:B24:headers && npm run frog:B41:licenses",
     "prepare": "husky"
   },
   "dependencies": {
