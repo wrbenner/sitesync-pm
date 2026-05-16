@@ -1,4 +1,5 @@
 import { fromTable } from '../lib/db/queries'
+import { toCents, dollarsToCents, addCents, multiplyCents, applyRateCents, centsToDisplay } from '../types/money'
 import React, { useMemo, useState } from 'react'
 import { Clock, Plus, Download, Sparkles, CheckCircle2, FileText, DollarSign, Briefcase, Upload, Users } from 'lucide-react'
 import { generateWH347PDF, exportPayrollCSV, type WH347Employee } from '../lib/reports/wh347Pdf'
@@ -829,12 +830,15 @@ const TimeTracking: React.FC = () => {
             </Btn>
           </div>
           {tmTickets.map((ticket) => {
-            const laborTotal = ticket.labor.reduce((s, l) => s + l.st * l.rate + l.ot * l.rate * 1.5 + l.dt * l.rate * 2, 0)
-            const materialTotal = ticket.materials.reduce((s, m) => s + m.qty * m.unitCost, 0)
-            const equipmentTotal = ticket.equipment.reduce((s, eq) => s + eq.hours * eq.rate, 0)
-            const subtotal = laborTotal + materialTotal + equipmentTotal
-            const markup = subtotal * (tmMarkup / 100)
-            const ticketTotal = subtotal + markup
+            const laborTotalCents = toCents(Math.round(ticket.labor.reduce((s, l) => s + l.st * l.rate + l.ot * l.rate * 1.5 + l.dt * l.rate * 2, 0) * 100))
+            const materialTotalCents = ticket.materials.reduce(
+              (s, m) => addCents(s, multiplyCents(dollarsToCents(m.unitCost), m.qty)),
+              toCents(0)
+            )
+            const equipmentTotalCents = toCents(Math.round(ticket.equipment.reduce((s, eq) => s + eq.hours * eq.rate, 0) * 100))
+            const subtotalCents = addCents(addCents(laborTotalCents, materialTotalCents), equipmentTotalCents)
+            const markupCents = applyRateCents(subtotalCents, tmMarkup / 100)
+            const ticketTotalCents = addCents(subtotalCents, markupCents)
             const statusColors: Record<string, string> = { Draft: colors.textTertiary, Submitted: '#D97706', Approved: '#059669', Billed: colors.primaryOrange }
             return (
               <Card key={ticket.id} padding={spacing['4']} style={{ marginBottom: spacing['3'] }}>
@@ -865,7 +869,7 @@ const TimeTracking: React.FC = () => {
                       </tr>
                     ))}</tbody>
                   </table>
-                  <div style={{ textAlign: 'right', fontSize: typography.fontSize.xs, fontWeight: typography.fontWeight.semibold, marginTop: spacing['1'] }}>Labor Subtotal: ${laborTotal.toFixed(2)}</div>
+                  <div style={{ textAlign: 'right', fontSize: typography.fontSize.xs, fontWeight: typography.fontWeight.semibold, marginTop: spacing['1'] }}>Labor Subtotal: {centsToDisplay(laborTotalCents)}</div>
                 </div>
                 {/* Materials */}
                 <div style={{ marginBottom: spacing['3'] }}>
@@ -879,11 +883,11 @@ const TimeTracking: React.FC = () => {
                       <tr key={i} style={{ borderBottom: `1px solid ${colors.borderSubtle}` }}>
                         <td style={{ padding: spacing['1'] }}>{m.desc}</td><td style={{ textAlign: 'center', padding: spacing['1'] }}>{m.qty}</td><td style={{ textAlign: 'center', padding: spacing['1'] }}>{m.unit}</td>
                         <td style={{ textAlign: 'right', padding: spacing['1'] }}>${m.unitCost.toFixed(2)}</td>
-                        <td style={{ textAlign: 'right', padding: spacing['1'], fontWeight: typography.fontWeight.semibold }}>${(m.qty * m.unitCost).toFixed(2)}</td>
+                        <td style={{ textAlign: 'right', padding: spacing['1'], fontWeight: typography.fontWeight.semibold }}>{centsToDisplay(multiplyCents(dollarsToCents(m.unitCost), m.qty))}</td>
                       </tr>
                     ))}</tbody>
                   </table>
-                  <div style={{ textAlign: 'right', fontSize: typography.fontSize.xs, fontWeight: typography.fontWeight.semibold, marginTop: spacing['1'] }}>Material Subtotal: ${materialTotal.toFixed(2)}</div>
+                  <div style={{ textAlign: 'right', fontSize: typography.fontSize.xs, fontWeight: typography.fontWeight.semibold, marginTop: spacing['1'] }}>Material Subtotal: {centsToDisplay(materialTotalCents)}</div>
                 </div>
                 {/* Equipment */}
                 <div style={{ marginBottom: spacing['3'] }}>
@@ -901,13 +905,13 @@ const TimeTracking: React.FC = () => {
                       </tr>
                     ))}</tbody>
                   </table>
-                  <div style={{ textAlign: 'right', fontSize: typography.fontSize.xs, fontWeight: typography.fontWeight.semibold, marginTop: spacing['1'] }}>Equipment Subtotal: ${equipmentTotal.toFixed(2)}</div>
+                  <div style={{ textAlign: 'right', fontSize: typography.fontSize.xs, fontWeight: typography.fontWeight.semibold, marginTop: spacing['1'] }}>Equipment Subtotal: {centsToDisplay(equipmentTotalCents)}</div>
                 </div>
                 {/* Ticket Total */}
                 <div style={{ borderTop: `2px solid ${colors.borderSubtle}`, paddingTop: spacing['2'], display: 'flex', justifyContent: 'flex-end', gap: spacing['4'], fontSize: typography.fontSize.sm }}>
-                  <span style={{ color: colors.textTertiary }}>Subtotal: ${subtotal.toFixed(2)}</span>
-                  <span style={{ color: colors.textTertiary }}>Markup ({tmMarkup}%): ${markup.toFixed(2)}</span>
-                  <span style={{ fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, fontSize: typography.fontSize.base }}>Total: ${ticketTotal.toFixed(2)}</span>
+                  <span style={{ color: colors.textTertiary }}>Subtotal: {centsToDisplay(subtotalCents)}</span>
+                  <span style={{ color: colors.textTertiary }}>Markup ({tmMarkup}%): {centsToDisplay(markupCents)}</span>
+                  <span style={{ fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, fontSize: typography.fontSize.base }}>Total: {centsToDisplay(ticketTotalCents)}</span>
                 </div>
               </Card>
             )
