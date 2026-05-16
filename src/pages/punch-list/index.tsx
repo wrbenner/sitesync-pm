@@ -236,7 +236,7 @@ const PunchListPage: React.FC = () => {
         toast.warning(
           `AI detected ${violations} safety concern${violations > 1 ? 's' : ''}`,
         );
-      else toast.success('AI photo analysis complete — no safety issues');
+      else toast.success('AI photo analysis complete. No safety issues.');
     } else if (photoAnalysisState === 'error' && photoAnalysisError) {
       toast.error(`Photo analysis failed: ${photoAnalysisError}`);
     }
@@ -269,7 +269,7 @@ const PunchListPage: React.FC = () => {
         },
         projectId: projectId!,
       });
-      toast.success(`${selected.itemNumber} marked complete — pending verification`);
+      toast.success(`${selected.itemNumber} marked complete. Pending verification.`);
       setSelectedId(null);
     } catch {
       toast.error('Failed to update');
@@ -305,7 +305,7 @@ const PunchListPage: React.FC = () => {
         },
         projectId: projectId!,
       });
-      toast.error(`${selected.itemNumber} rejected — returned to sub for rework`);
+      toast.error(`${selected.itemNumber} rejected. Returned to sub for rework.`);
       setRejectNote('');
       setShowRejectNote(false);
       setSelectedId(null);
