@@ -1,0 +1,34 @@
+{
+  "_schema": {
+    "description": "License compliance allowlist for B41 supply chain (scripts/check-licenses.mjs). allowed_licenses lists SPDX identifiers cleared for production use. allowed_packages lists specific packages that may carry an unusual or unknown license, with documented reason.",
+    "fields": {
+      "allowed_licenses": "SPDX identifiers (lowercase) cleared for production",
+      "allowed_packages": "Map of package-name -> reason/owner/expires for exceptions"
+    }
+  },
+  "allowed_licenses": [
+    "mit",
+    "isc",
+    "bsd",
+    "bsd-2-clause",
+    "bsd-3-clause",
+    "bsd-3-clause-clear",
+    "apache-2.0",
+    "apache 2.0",
+    "mpl-2.0",
+    "cc0-1.0",
+    "unlicense",
+    "0bsd",
+    "wtfpl",
+    "python-2.0",
+    "zlib"
+  ],
+  "allowed_packages": [
+    {
+      "name": "posthog-js",
+      "reason": "License is MIT — declared as 'SEE LICENSE IN LICENSE' in package.json. Verified upstream.",
+      "added": "2026-05-15",
+      "expires": "2026-08-13"
+    }
+  ]
+}
