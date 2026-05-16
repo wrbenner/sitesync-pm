@@ -9,9 +9,10 @@
  * functional. Detail view is captured by clicking an existing RFI if
  * one is present.
  */
-import { test, expect, Page } from '@playwright/test'
+import { test, expect } from '@playwright/test'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { settle, signIn } from './_helpers'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const OUT_DIR = path.resolve(__dirname, '..', 'polish-review', 'pages', 'rfis')
@@ -19,34 +20,12 @@ const OUT_DIR = path.resolve(__dirname, '..', 'polish-review', 'pages', 'rfis')
 const USER = process.env.POLISH_USER!
 const PASS = process.env.POLISH_PASS!
 
-async function settle(page: Page, ms = 250) {
-  await page.addStyleTag({
-    content: `*, *::before, *::after {
-      animation-duration: 0s !important;
-      animation-delay: 0s !important;
-      transition-duration: 0s !important;
-      transition-delay: 0s !important;
-    }`,
-  }).catch(() => undefined)
-  await page.waitForLoadState('networkidle', { timeout: 8_000 }).catch(() => undefined)
-  await page.waitForTimeout(ms)
-}
-
-async function shot(page: Page, viewport: string, n: number, name: string) {
+async function shot(page: import('@playwright/test').Page, viewport: string, n: number, name: string) {
   const filename = `${viewport}-${String(n).padStart(2, '0')}-${name}.png`
   await page.screenshot({
     path: path.join(OUT_DIR, filename),
     fullPage: true,
   }).catch(() => undefined)
-}
-
-async function signIn(page: Page) {
-  await page.goto('#/login')
-  await page.getByPlaceholder('you@company.com').fill(USER)
-  await page.getByPlaceholder('Enter your password').fill(PASS)
-  await page.locator('button[type="submit"]').first().click()
-  await page.waitForURL(/#\/(dashboard|onboarding|profile|$)/, { timeout: 20_000 })
-  await settle(page, 1500)
 }
 
 const VIEWPORTS = [
@@ -63,7 +42,7 @@ for (const vp of VIEWPORTS) {
     })
 
     test('rfis workflow', async ({ page }) => {
-      await signIn(page)
+      await signIn(page, USER, PASS)
 
       // ───────────────────────────────────────
       // STATE 01 — Land on /rfis
