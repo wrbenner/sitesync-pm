@@ -86,7 +86,7 @@ export const SpecSectionsView: React.FC<SpecSectionsViewProps> = ({
       }
       const lookup = byNumber[key]
       const title = lookup?.title ?? null
-      const division = lookup ? `Division ${String(lookup.division).padStart(2, '0')} — ${lookup.division_title}` : null
+      const division = lookup ? `Division ${String(lookup.division).padStart(2, '0')}: ${lookup.division_title}` : null
 
       return {
         id: key,

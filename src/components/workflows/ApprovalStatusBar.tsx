@@ -172,7 +172,7 @@ export const ApprovalStatusBar: React.FC<Props> = ({ entityType, entityId }) => 
       <Modal
         open={activeStep !== null}
         onClose={() => setActiveStep(null)}
-        title={activeStep ? `Step ${activeStep} — ${steps[activeStep - 1]?.role ?? ''}` : ''}
+        title={activeStep ? `Step ${activeStep}: ${steps[activeStep - 1]?.role ?? ''}` : ''}
       >
         <div style={{ display: 'flex', flexDirection: 'column', gap: spacing['3'] }}>
           {(activeStep !== null ? actionsByStep[activeStep] ?? [] : []).map((a) => (

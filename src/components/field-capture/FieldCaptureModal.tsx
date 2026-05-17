@@ -158,7 +158,7 @@ export const FieldCaptureModal: React.FC<FieldCaptureModalProps> = ({
                 {isOnline ? (
                   <>
                     <CloudUpload size={12} />
-                    <span>Online — photos upload immediately</span>
+                    <span>Online. Photos upload immediately.</span>
                   </>
                 ) : (
                   <>

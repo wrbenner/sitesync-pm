@@ -1217,7 +1217,7 @@ const BodyRow: React.FC<{
             role="button"
             tabIndex={0}
             onMouseDown={(e) => handleBarMouseDown(seg, e)}
-            aria-label={`${row.name} — ${seg.startDate} to ${seg.endDate} — ${seg.percentComplete}%`}
+            aria-label={`${row.name}: ${seg.startDate} to ${seg.endDate}, ${seg.percentComplete}% complete`}
             onMouseEnter={(e) => {
               const el = e.currentTarget as HTMLDivElement;
               el.style.filter = 'brightness(0.96)';
