@@ -68,7 +68,7 @@ export interface StoryBannerOutput {
   chips?: { label: string; onClick?: () => void; href?: string }[]
 }
 
-/** Pure-function banner builder — exported for tests. */
+// eslint-disable-next-line react-refresh/only-export-components
 export function buildStoryBanner(inputs: StoryBannerInputs): StoryBannerOutput | null {
   const status = (inputs.status ?? '').toLowerCase()
   if (inputs.iris_narrative) {
@@ -101,8 +101,8 @@ export function buildStoryBanner(inputs: StoryBannerInputs): StoryBannerOutput |
     return {
       tone: 'critical',
       headline: reviewer
-        ? `Returned by ${reviewer}${inputs.current_reviewer_role ? ` (${inputs.current_reviewer_role})` : ''} — review comments and resubmit.`
-        : 'Returned — review comments and resubmit.',
+        ? `Returned by ${reviewer}${inputs.current_reviewer_role ? ` (${inputs.current_reviewer_role})` : ''}. Review comments and resubmit.`
+        : 'Returned. Review comments and resubmit.',
     }
   }
 
@@ -116,7 +116,7 @@ export function buildStoryBanner(inputs: StoryBannerInputs): StoryBannerOutput |
       tone,
       headline: overdue
         ? `${inputs.current_reviewer_name}${role} is ${days} days late.`
-        : `Awaiting ${inputs.current_reviewer_name}${role} — ${days} day${days === 1 ? '' : 's'} in court.`,
+        : `Awaiting ${inputs.current_reviewer_name}${role}: ${days} day${days === 1 ? '' : 's'} in court.`,
     }
   }
 
