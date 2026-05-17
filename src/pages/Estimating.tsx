@@ -630,7 +630,7 @@ const BidPackagesTab: React.FC<BidPackagesTabProps> = ({ packages, loading, allS
         <div style={{ padding: spacing['8'] }}>
           <EmptyState
             title="No bid packages"
-            description="Bid packages are created from the Preconstruction workflow — this view drills into their vendor submissions."
+            description="Bid packages are created from the Preconstruction workflow. This view drills into their vendor submissions."
           />
         </div>
       ) : (

@@ -166,7 +166,7 @@ export const PhotoOverlay: React.FC<PhotoOverlayProps> = ({ dataUrl, location, i
             <button
               type="button"
               disabled
-              aria-label="Voice to text — coming soon"
+              aria-label="Voice to text (coming soon)"
               title="Voice-to-text not yet wired. Use the keyboard for now."
               style={{
                 position: 'absolute',

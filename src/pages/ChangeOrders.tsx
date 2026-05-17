@@ -580,7 +580,7 @@ const ChangeOrdersPage: React.FC = () => {
       >
         <PageEmpty
           title="No change orders yet"
-          body="Track every dollar in motion — pending, approved, rejected, and margin impact."
+          body="Track every dollar in motion: pending, approved, rejected, and margin impact."
         />
         {createOpen && projectId && (
           <CreateChangeOrderModal
