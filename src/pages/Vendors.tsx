@@ -160,7 +160,7 @@ export const Vendors: React.FC = () => {
     e?.stopPropagation()
     const ok = await confirmDeleteVendor({
       title: 'Delete vendor?',
-      description: `"${vendor.company_name}" — historical contracts and POs referencing this vendor will be preserved as orphaned records.`,
+      description: `"${vendor.company_name}". Historical contracts and POs referencing this vendor will be preserved as orphaned records.`,
       destructiveLabel: 'Delete vendor',
     })
     if (!ok) return

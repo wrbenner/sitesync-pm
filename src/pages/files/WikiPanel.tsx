@@ -62,7 +62,7 @@ export const WikiPanel: React.FC = () => {
     if (!projectId) return
     const ok = await confirmDeleteWiki({
       title: 'Delete wiki page?',
-      description: `"${page.title}" — page content and history will be removed. Cross-references from other entities will become orphaned.`,
+      description: `"${page.title}". Page content and history will be removed. Cross-references from other entities will become orphaned.`,
       destructiveLabel: 'Delete page',
     })
     if (!ok) return

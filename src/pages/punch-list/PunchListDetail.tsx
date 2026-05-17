@@ -207,7 +207,7 @@ export const PunchListDetail: React.FC<PunchListDetailProps> = ({
     const label = selected.description || `Punch item ${selected.itemNumber}`;
     const ok = await confirmDeletePunch({
       title: 'Delete punch item?',
-      description: `"${label}" — closeout reports reference this item. Deletion removes it from the closeout PDF.`,
+      description: `"${label}". Closeout reports reference this item. Deletion removes it from the closeout PDF.`,
       destructiveLabel: 'Delete punch item',
     });
     if (!ok) return;
