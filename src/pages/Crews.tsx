@@ -292,7 +292,7 @@ export const Crews: React.FC = () => {
       if (!projectId) return;
       const ok = await confirmDeleteCrew({
         title: 'Delete crew?',
-        description: `"${crew.name}" — schedule assignments and historical timesheets remain attached to the project for payroll integrity.`,
+        description: `"${crew.name}". Schedule assignments and historical timesheets remain attached to the project for payroll integrity.`,
         destructiveLabel: 'Delete crew',
       });
       if (!ok) return;

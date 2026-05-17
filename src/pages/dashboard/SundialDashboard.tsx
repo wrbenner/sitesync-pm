@@ -49,7 +49,7 @@ function handleDecisionAnswer(
   if (!answer.primary) {
     // "Not yet" → toast + tell the user the marginalia below explains. Keep
     // them on the dashboard so they can see the supporting data.
-    toast.message('Not yet — see the supporting context below.');
+    toast.message('Not yet. See the supporting context below.');
     return;
   }
 

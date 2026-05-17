@@ -1006,7 +1006,7 @@ const InsuranceSection: React.FC<{ projectId: string; contract: Contract; onClos
   const handleDelete = async (cert: InsuranceCertificate) => {
     const ok = await confirmDeleteCert({
       title: 'Delete insurance certificate?',
-      description: `${POLICY_TYPE_LABELS[cert.policy_type ?? ''] ?? 'Certificate'} for ${cert.company} — pay-app audit will flag this sub as non-compliant if work continues.`,
+      description: `${POLICY_TYPE_LABELS[cert.policy_type ?? ''] ?? 'Certificate'} for ${cert.company}. The pay-app audit will flag this sub as non-compliant if work continues.`,
       destructiveLabel: 'Delete certificate',
     })
     if (!ok) return
@@ -1974,7 +1974,7 @@ export const Contracts: React.FC = () => {
     if (!projectId) return
     const ok = await confirmDeleteContract({
       title: 'Delete contract?',
-      description: `"${contract.title}" — pay applications, lien waivers, and insurance certificates referencing this contract will become orphaned. Consider terminating instead of deleting.`,
+      description: `"${contract.title}". Pay applications, lien waivers, and insurance certificates referencing this contract will become orphaned. Consider terminating instead of deleting.`,
       destructiveLabel: 'Delete contract',
       typeToConfirm: 'DELETE',
     })

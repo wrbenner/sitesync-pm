@@ -670,7 +670,7 @@ const RFIsPage: React.FC = () => {
     const rfiLabel = (selectedRfi.title as string) || `RFI ${rfiId.slice(0, 8)}`;
     const ok = await confirmDeleteRfi({
       title: 'Delete RFI?',
-      description: `"${rfiLabel}" — this is a contractual artifact. Deleting it removes it from the dispute record. Consider voiding instead.`,
+      description: `"${rfiLabel}". This is a contractual artifact. Deleting it removes it from the dispute record. Consider voiding instead.`,
       destructiveLabel: 'Delete RFI',
       typeToConfirm: 'DELETE',
     });
