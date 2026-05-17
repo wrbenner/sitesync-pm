@@ -164,7 +164,7 @@ export const FieldCaptureModal: React.FC<FieldCaptureModalProps> = ({
                   <>
                     <WifiOff size={12} color={colors.statusPending} />
                     <span style={{ color: colors.statusPending }}>
-                      Offline — photos queue for sync
+                      Offline. Photos queue for sync.
                     </span>
                   </>
                 )}

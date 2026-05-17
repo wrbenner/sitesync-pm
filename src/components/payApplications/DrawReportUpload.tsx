@@ -409,7 +409,7 @@ export function DrawReportUpload({ open, onClose, projectId, onSuccess }: DrawRe
                   Drop your draw report here
                 </p>
                 <p style={{ margin: 0, fontSize: typography.fontSize.sm, color: colors.textTertiary }}>
-                  AIA G702/G703 (PDF) or Excel (.xlsx) — any format, any layout
+                  AIA G702/G703 (PDF) or Excel (.xlsx). Any format, any layout.
                 </p>
               </div>
 
@@ -457,7 +457,7 @@ export function DrawReportUpload({ open, onClose, projectId, onSuccess }: DrawRe
               <p style={{
                 margin: `${spacing['2']} 0 0`, fontSize: typography.fontSize.sm, color: colors.textTertiary,
               }}>
-                AI is reading every line item. Takes 20–60 seconds for a typical G702/G703.
+                AI is reading every line item. Takes 20 to 60 seconds for a typical G702/G703.
               </p>
               <p style={{
                 marginTop: spacing['3'],
@@ -563,8 +563,8 @@ export function DrawReportUpload({ open, onClose, projectId, onSuccess }: DrawRe
                 }}>
                   <AlertTriangle size={12} />
                   <span>
-                    {lowConfidenceCount} row{lowConfidenceCount !== 1 ? 's' : ''} flagged as low confidence —
-                    verify the numbers in rows marked with an amber dot.
+                    {lowConfidenceCount} row{lowConfidenceCount !== 1 ? 's' : ''} flagged as low confidence.
+                    Verify the numbers in rows marked with an amber dot.
                   </span>
                 </div>
               )}
@@ -822,7 +822,7 @@ export function DrawReportUpload({ open, onClose, projectId, onSuccess }: DrawRe
                     style={{ cursor: 'pointer', width: 16, height: 16 }}
                   />
                   <label htmlFor="recon-override" style={{ cursor: 'pointer' }}>
-                    Save anyway — I've verified the numbers are correct despite the mismatch
+                    Save anyway (I've verified the numbers are correct despite the mismatch)
                   </label>
                 </div>
               )}

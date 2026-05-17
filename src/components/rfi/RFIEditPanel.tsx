@@ -542,7 +542,7 @@ export const RFIEditPanel: React.FC<RFIEditPanelProps> = ({ open, onClose, rfiId
               permission="rfis.edit"
               fallback={
                 <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>
-                  Read-only — you don&apos;t have edit permission for this {entityLabel('rfi')}.
+                  Read-only. You don&apos;t have edit permission for this {entityLabel('rfi')}.
                 </span>
               }
             >
