@@ -1341,7 +1341,7 @@ const DailyLogPage: React.FC = () => {
                   <th style={thStyle}>Company</th>
                   <th style={thStyleNum}>Headcount</th>
                   <th style={thStyleNum}>Hours</th>
-                  <th style={{ ...thStyle, width: 36 }} aria-label="" />
+                  <th style={{ ...thStyle, width: 36 }} aria-hidden="true" scope="col" />
                 </tr>
               </thead>
               <tbody>
@@ -1409,7 +1409,7 @@ const DailyLogPage: React.FC = () => {
                   <th style={thStyle}>Type</th>
                   <th style={thStyleNum}>Hours</th>
                   <th style={thStyle}>Operator</th>
-                  <th style={{ ...thStyle, width: 36 }} aria-label="" />
+                  <th style={{ ...thStyle, width: 36 }} aria-hidden="true" scope="col" />
                 </tr>
               </thead>
               <tbody>
@@ -1467,7 +1467,7 @@ const DailyLogPage: React.FC = () => {
                   <th style={{ ...thStyle, width: 110 }}>Time</th>
                   <th style={{ ...thStyle, width: 130 }}>Type</th>
                   <th style={thStyle}>Description</th>
-                  <th style={{ ...thStyle, width: 36 }} aria-label="" />
+                  <th style={{ ...thStyle, width: 36 }} aria-hidden="true" scope="col" />
                 </tr>
               </thead>
               <tbody>
@@ -1565,7 +1565,7 @@ const DailyLogPage: React.FC = () => {
                     <th style={thStyle}>Purpose</th>
                     <th style={{ ...thStyle, width: 70 }}>In</th>
                     <th style={{ ...thStyle, width: 70 }}>Out</th>
-                    <th style={{ ...thStyle, width: 36 }} aria-label="" />
+                    <th style={{ ...thStyle, width: 36 }} aria-hidden="true" scope="col" />
                   </tr>
                 </thead>
                 <tbody>
@@ -1629,7 +1629,7 @@ const DailyLogPage: React.FC = () => {
                     <th style={thStyle}>Description</th>
                     <th style={thStyleNum}>Qty</th>
                     <th style={thStyle}>PO #</th>
-                    <th style={{ ...thStyle, width: 36 }} aria-label="" />
+                    <th style={{ ...thStyle, width: 36 }} aria-hidden="true" scope="col" />
                   </tr>
                 </thead>
                 <tbody>

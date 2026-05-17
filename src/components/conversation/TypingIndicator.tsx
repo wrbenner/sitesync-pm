@@ -37,9 +37,8 @@ export const TypingIndicator: React.FC<TypingIndicatorProps> = ({
 
     const refresh = async () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const sb = supabase as any;
-      const cutoff = new Date(Date.now() - ACTIVE_WINDOW_MS).toISOString();
-      const { data } = await sb
+        const cutoff = new Date(Date.now() - ACTIVE_WINDOW_MS).toISOString();
+      const { data } = await supabase
         .from('typing_indicators')
         .select('user_id, user_name, last_seen_at')
         .eq('entity_type', entityType)
@@ -58,8 +57,7 @@ export const TypingIndicator: React.FC<TypingIndicatorProps> = ({
 
     // Realtime for instant updates between polls.
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const sb = supabase as any;
-    const channel = sb
+    const channel = supabase
       .channel(`typing:${entityType}:${entityId}`)
       .on(
         'postgres_changes',
@@ -76,7 +74,7 @@ export const TypingIndicator: React.FC<TypingIndicatorProps> = ({
     return () => {
       cancelled = true;
       if (timer) clearInterval(timer);
-      try { sb.removeChannel(channel); } catch { /* idempotent */ }
+      try { supabase.removeChannel(channel); } catch { /* idempotent */ }
     };
   }, [entityType, entityId, ignoreUserId]);
 
