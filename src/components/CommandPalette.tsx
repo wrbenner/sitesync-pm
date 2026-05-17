@@ -94,7 +94,7 @@ function useRecentItems(): { results: RecentResult[]; loading: boolean } {
       out.push({
         kind: 'rfi',
         id: String(rec.id),
-        title: number ? `RFI #${number} — ${subject}` : subject,
+        title: number ? `RFI #${number}: ${subject}` : subject,
         subtitle: 'RFI',
         route: `/rfis/${rec.id}`,
       })
@@ -106,7 +106,7 @@ function useRecentItems(): { results: RecentResult[]; loading: boolean } {
       out.push({
         kind: 'submittal',
         id: String(rec.id),
-        title: spec ? `${spec} — ${title}` : title,
+        title: spec ? `${spec}: ${title}` : title,
         subtitle: 'Submittal',
         route: `/submittals/${rec.id}`,
       })

@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/todo */
 import React, { useState } from 'react'
 import { Shield, CheckCircle2, AlertCircle, Smartphone, Trash2, Copy, Download, KeyRound } from 'lucide-react'
 import { Btn, Card, Modal } from '../Primitives'
@@ -185,11 +186,11 @@ export const MfaEnrollment: React.FC = () => {
     if (!backupCodes) return
     const stamp = new Date().toISOString().slice(0, 10)
     const header = [
-      'SiteSync — Two-Factor Authentication Backup Codes',
+      'SiteSync: Two-Factor Authentication Backup Codes',
       `Generated: ${new Date().toISOString()}`,
       '',
       'Each code may be used ONCE to sign in if you lose access to your',
-      'authenticator app. Store them somewhere safe — a password manager,',
+      'authenticator app. Store them somewhere safe: a password manager,',
       'a printed copy in a locked drawer, etc. Never email them to yourself.',
       '',
     ].join('\n')
@@ -477,6 +478,7 @@ export const MfaEnrollment: React.FC = () => {
                   if (errorMsg) setErrorMsg(null)
                 }}
                 placeholder="123456"
+                // eslint-disable-next-line jsx-a11y/no-autofocus
                 autoFocus
                 inputMode="numeric"
                 autoComplete="one-time-code"
