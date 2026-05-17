@@ -541,7 +541,7 @@ const UserStrip: React.FC<{ collapsed: boolean; streamRole: StreamRole }> = ({
     >
       <button
         onClick={() => setMenuOpen((v) => !v)}
-        aria-label={`Account menu — ${displayName}, ${roleLabel}`}
+        aria-label={`Account menu: ${displayName} (${roleLabel})`}
         aria-haspopup="menu"
         aria-expanded={menuOpen}
         title={collapsed ? `${displayName} · ${roleLabel}` : undefined}

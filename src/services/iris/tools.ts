@@ -198,7 +198,7 @@ async function draftDailyLogFromTool(
   const result = await draftAction<DraftedActionType & 'daily_log.draft'>({
     project_id: ctx.projectId,
     action_type: 'daily_log.draft' as const,
-    title: `Daily log — ${a.date}`,
+    title: `Daily log: ${a.date}`,
     summary: a.notes.slice(0, 280),
     payload: {
       date: a.date,

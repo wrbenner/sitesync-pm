@@ -274,7 +274,7 @@ export function useCommitDrawReport() {
       const recon = extraction.reconciliation
       if (!overrideReconciliationGuard && recon && !recon.reconciled && recon.deviation_pct > COMMIT_GUARD_THRESHOLD_PCT) {
         throw new Error(
-          `Line items ($${recon.sum_of_lines.toLocaleString()}) don't reconcile with contract sum ($${recon.stated_contract_sum.toLocaleString()}) — off by ${recon.deviation_pct.toFixed(1)}%. Fix rows or check the "Save anyway" override to proceed.`,
+          `Line items ($${recon.sum_of_lines.toLocaleString()}) don't reconcile with contract sum ($${recon.stated_contract_sum.toLocaleString()}): off by ${recon.deviation_pct.toFixed(1)}%. Fix the rows or check the "Save anyway" override to proceed.`,
         )
       }
       const contractId = await ensureContractId(projectId)
