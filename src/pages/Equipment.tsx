@@ -168,7 +168,7 @@ export const EquipmentPage: React.FC = () => {
   const handleDelete = async (eq: Equipment) => {
     const ok = await confirmDelete({
       title: 'Delete equipment?',
-      description: `"${eq.name}" — maintenance history and meter readings will remain as orphaned records for audit.`,
+      description: `"${eq.name}". Maintenance history and meter readings will remain as orphaned records for audit.`,
       destructiveLabel: 'Delete equipment',
     });
     if (!ok) return;

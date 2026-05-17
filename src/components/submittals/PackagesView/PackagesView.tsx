@@ -116,7 +116,7 @@ export const PackagesView: React.FC<PackagesViewProps> = ({
       buckets.push({
         id: '__unpackaged__',
         label: 'Unpackaged',
-        subtitle: 'Submittals not assigned to any package — select rows on the Items view to bundle them.',
+        subtitle: 'Submittals not assigned to any package. Select rows on the Items view to bundle them.',
         rows: unpackaged,
       })
     }

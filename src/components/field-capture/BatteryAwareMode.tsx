@@ -105,7 +105,7 @@ export const BatteryAwareBanner: React.FC<{ onDismiss?: () => void }> = ({ onDis
       <OrangeDot size={6} haloSpread={2} label={`Battery ${pct}%`} />
       <BatteryLow size={14} style={{ color: colors.primaryOrange, flexShrink: 0 }} />
       <span style={{ flex: 1 }}>
-        Low battery ({pct}%) — saving for the field. Photos compressed; non-essential syncs paused.
+        Low battery ({pct}%). Saving for the field. Photos compressed; non-essential syncs paused.
       </span>
       <button
         type="button"

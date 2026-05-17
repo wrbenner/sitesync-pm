@@ -138,7 +138,7 @@ export const CrossProjectSearchPalette: React.FC<Props> = ({
           )}
           {parsed.tooShort && (
             <p style={{ padding: spacing['4'], fontFamily: typography.fontFamily, fontSize: 12, color: colors.ink3, textAlign: 'center' }}>
-              Keep typing — at least 2 characters.
+              Keep typing. At least 2 characters needed.
             </p>
           )}
           {!parsed.empty && !parsed.tooShort && loading && results.length === 0 && (

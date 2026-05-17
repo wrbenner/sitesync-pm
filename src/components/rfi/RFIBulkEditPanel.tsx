@@ -151,7 +151,7 @@ export const RFIBulkEditPanel: React.FC<RFIBulkEditPanelProps> = ({
         toast.success(`Updated ${selectedIds.length} RFI${selectedIds.length > 1 ? 's' : ''}`)
       } else {
         toast.warning(
-          `Applied with ${totalFailed} error${totalFailed > 1 ? 's' : ''} — check the History panel for the failed rows.`,
+          `Applied with ${totalFailed} error${totalFailed > 1 ? 's' : ''}. Check the History panel for the failed rows.`,
         )
       }
       reset()
