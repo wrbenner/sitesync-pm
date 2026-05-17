@@ -35,7 +35,7 @@ export const BrandingAdminPage: React.FC<Props> = ({ organizationId }) => {
   const { data: row } = useQuery({
     queryKey: ['org_branding', organizationId],
     queryFn: async () => {
-      const { data } = await (supabase as any)
+      const { data } = await supabase
         .from('org_branding')
         .select('*')
         .eq('organization_id', organizationId)
@@ -54,7 +54,7 @@ export const BrandingAdminPage: React.FC<Props> = ({ organizationId }) => {
   const save = async () => {
     if (Object.keys(errs).length > 0) { toast.error('Fix the highlighted fields'); return; }
     const payload = { ...draft, organization_id: organizationId };
-    const { error } = await (supabase as any).from('org_branding').upsert(payload, { onConflict: 'organization_id' });
+    const { error } = await supabase.from('org_branding').upsert(payload, { onConflict: 'organization_id' });
     if (error) { toast.error(error.message); return; }
     toast.success('Branding saved');
     qc.invalidateQueries({ queryKey: ['org_branding', organizationId] });

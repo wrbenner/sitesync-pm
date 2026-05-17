@@ -155,7 +155,7 @@ export function LienWaivers() {
       const label = WAIVER_TYPE_LABELS[waiverState as WaiverStateValue] ?? waiverState;
       const request = await createSignatureRequest.mutateAsync({
         project_id: projectId,
-        title: `Lien Waiver — ${label} — ${vendor}`,
+        title: `Lien Waiver: ${label}, ${vendor}`,
         source_file_url: `lien-waiver://${w.id}`,
         signing_order: 'parallel',
         metadata: { lien_waiver_id: w.id, signer_count: 1 },

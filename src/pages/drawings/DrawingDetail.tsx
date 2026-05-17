@@ -772,7 +772,7 @@ const LinkedTab: React.FC<{ drawingId: string; projectId?: string }> = ({ drawin
         const rows = (data ?? []) as unknown as Array<Record<string, unknown>>;
         return rows.map((r) => ({
           id: String(r.id),
-          label: `RFI #${r.number ?? '?'} — ${String(r.subject ?? r.title ?? 'Untitled')}`,
+          label: `RFI #${r.number ?? '?'}: ${String(r.subject ?? r.title ?? 'Untitled')}`,
           sub: String(r.status ?? ''),
         }));
       }
@@ -785,7 +785,7 @@ const LinkedTab: React.FC<{ drawingId: string; projectId?: string }> = ({ drawin
       const rows = (data ?? []) as unknown as Array<Record<string, unknown>>;
       return rows.map((r) => ({
         id: String(r.id),
-        label: `Punch #${r.item_number ?? '?'} — ${String(r.description ?? 'No description')}`,
+        label: `Punch #${r.item_number ?? '?'}: ${String(r.description ?? 'No description')}`,
         sub: String(r.status ?? ''),
       }));
     },
@@ -975,7 +975,7 @@ const LinkedTab: React.FC<{ drawingId: string; projectId?: string }> = ({ drawin
             <p style={{ margin: 0, fontSize: '11px', fontWeight: 600, color: colors.textPrimary, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {item.type === 'rfi' ? `RFI #${item.number}` :
                item.type === 'punch_item' ? `Punch #${item.number}` :
-               `${item.type} ${item.number}`} — {item.title}
+               `${item.type} ${item.number}`}: {item.title}
             </p>
             <p style={{ margin: '2px 0 0', fontSize: '10px', color: colors.textTertiary }}>{item.status}</p>
           </div>

@@ -30,7 +30,7 @@ export const AuditPosturePage: React.FC<Props> = ({ organizationId }) => {
   const { data, isPending } = useQuery({
     queryKey: ['audit-posture', organizationId],
     queryFn: async (): Promise<PostureBlob | null> => {
-      const { data: blob, error } = await (supabase as any).functions.invoke('audit-posture-snapshot', {
+      const { data: blob, error } = await supabase.functions.invoke('audit-posture-snapshot', {
         body: { organization_id: organizationId },
       });
       if (error) throw error;

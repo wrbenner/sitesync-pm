@@ -474,7 +474,7 @@ const OperandInput: React.FC<{
         <MultiSelect
           value={(value as string[]) ?? []}
           onChange={(v) => onChange(v.length ? v : undefined)}
-          options={CSI_DIVISIONS.map((d) => ({ value: d.code, label: `${d.code} — ${d.name}` }))}
+          options={CSI_DIVISIONS.map((d) => ({ value: d.code, label: `${d.code}: ${d.name}` }))}
         />
       )
     case 'disposition-multi':
@@ -483,12 +483,12 @@ const OperandInput: React.FC<{
           value={(value as string[]) ?? []}
           onChange={(v) => onChange(v.length ? v : undefined)}
           options={[
-            { value: 'A_no_exceptions_taken', label: 'A — No Exceptions Taken (EJCDC)' },
-            { value: 'B_make_corrections_noted', label: 'B — Make Corrections Noted (EJCDC)' },
-            { value: 'C_revise_and_resubmit', label: 'C — Revise & Resubmit (EJCDC)' },
-            { value: 'D_rejected', label: 'D — Rejected (EJCDC)' },
-            { value: 'E_for_reference_only', label: 'E — For Reference Only (EJCDC)' },
-            { value: 'F_submit_specified_item', label: 'F — Submit Specified Item (EJCDC)' },
+            { value: 'A_no_exceptions_taken', label: 'A: No Exceptions Taken (EJCDC)' },
+            { value: 'B_make_corrections_noted', label: 'B: Make Corrections Noted (EJCDC)' },
+            { value: 'C_revise_and_resubmit', label: 'C: Revise & Resubmit (EJCDC)' },
+            { value: 'D_rejected', label: 'D: Rejected (EJCDC)' },
+            { value: 'E_for_reference_only', label: 'E: For Reference Only (EJCDC)' },
+            { value: 'F_submit_specified_item', label: 'F: Submit Specified Item (EJCDC)' },
             { value: 'approved', label: 'Approved (AIA)' },
             { value: 'approved_as_noted', label: 'Approved as Noted (AIA)' },
             { value: 'revise_and_resubmit', label: 'Revise & Resubmit (AIA)' },

@@ -174,7 +174,7 @@ function QuestionHeadline({
         color: INK,
         margin: 0,
         maxWidth: mobile ? undefined : 1100,
-        textWrap: 'balance' as any,
+        textWrap: 'balance' as string,
       }}
     >
       {segments.map((seg, i) => {
@@ -795,7 +795,7 @@ function SundialDesktop({ data }: { data: SundialData }) {
                 color: INK,
                 margin: 0,
                 maxWidth: 1100,
-                textWrap: 'balance' as any,
+                textWrap: 'balance' as string,
               }}
             >
               The day is <span style={{ fontStyle: 'italic' }}>yours</span>

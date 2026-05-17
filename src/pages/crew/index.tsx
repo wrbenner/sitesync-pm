@@ -26,7 +26,7 @@ import {
 } from '../../components/atoms';
 import { ChevronRight, Users, Layers } from 'lucide-react';
 import { QuickCreateFAB } from '../../components/QuickCreateFAB';
-import CreateCrewModal from '../../components/forms/CreateCrewModal';
+import CreateCrewModal, { type CrewFormData } from '../../components/forms/CreateCrewModal';
 import { useCreateCrew } from '../../hooks/mutations/crews';
 
 // ── Status badge helpers ──────────────────────────────────
@@ -488,11 +488,11 @@ const CrewPage: React.FC = () => {
 
 const CreateCrewModalWrapper: React.FC<{ open: boolean; onClose: () => void; projectId: string }> = ({ open, onClose, projectId }) => {
   const createCrew = useCreateCrew();
-  const handleSubmit = (data: Record<string, unknown>) => {
+  const handleSubmit = (data: CrewFormData) => {
     createCrew.mutate({ data: { ...data, project_id: projectId }, projectId });
     onClose();
   };
-  return <CreateCrewModal open={open} onClose={onClose} onSubmit={handleSubmit as any} />;
+  return <CreateCrewModal open={open} onClose={onClose} onSubmit={handleSubmit} />;
 };
 
 // ── Export ────────────────────────────────────────────────

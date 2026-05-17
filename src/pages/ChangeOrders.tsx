@@ -197,14 +197,14 @@ const InlineApprovalChain: React.FC<{ chain: ChainStep[] }> = ({ chain }) => {
   if (chain.length === 0) return <span style={{ color: C.ink4 }}>—</span>
   const visible = chain.length > 5 ? [...chain.slice(0, 4), { status: 'pending', role: `+${chain.length - 4} more` } as ChainStep] : chain
   return (
-    <span aria-label={`Approval chain — ${chain.length} steps`} style={{ display: 'inline-flex', alignItems: 'center', gap: 3 }}>
+    <span aria-label={`Approval chain: ${chain.length} step${chain.length === 1 ? '' : 's'}`} style={{ display: 'inline-flex', alignItems: 'center', gap: 3 }}>
       {visible.map((step, i) => {
         const color = STEP_TONE[String(step.status ?? 'pending')] ?? STEP_TONE.pending
         return (
           <React.Fragment key={`${step.role ?? 'step'}-${i}`}>
             {i > 0 && <span aria-hidden style={{ width: 6, height: 1, backgroundColor: C.border }} />}
             <span
-              title={`${step.role ?? `Step ${i + 1}`} — ${step.status ?? 'pending'}`}
+              title={`${step.role ?? `Step ${i + 1}`}: ${step.status ?? 'pending'}`}
               style={{
                 width: 8,
                 height: 8,
@@ -580,7 +580,7 @@ const ChangeOrdersPage: React.FC = () => {
       >
         <PageEmpty
           title="No change orders yet"
-          body="Track every dollar in motion — pending, approved, rejected, and margin impact."
+          body="Track every dollar in motion: pending, approved, rejected, and margin impact."
         />
         {createOpen && projectId && (
           <CreateChangeOrderModal

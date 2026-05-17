@@ -49,7 +49,7 @@ export const CoiGapsPanel: React.FC<{ projectId: string | undefined }> = ({ proj
     <div style={{ display: 'flex', flexDirection: 'column', gap: spacing['4'] }}>
       {/* Graceful-degrade banner when the table itself errors (missing column / RLS). */}
       {error && (
-        <DegradedBanner message="Could not load insurance_certificates — showing cached data if any. Verify RLS policy + table presence." />
+        <DegradedBanner message="Could not load insurance_certificates. Showing cached data if any. Verify RLS policy + table presence." />
       )}
 
       {/* KPIs */}

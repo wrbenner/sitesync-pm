@@ -122,7 +122,7 @@ export const FullTierProgressive: React.FC<FullTierProgressiveProps> = ({
       <Field
         label="Spec section paragraph"
         autoFromIris={autoSrc(draft, 'spec_section_paragraph')}
-        hint="e.g. §2.04.B.3 — feeds the citation backref."
+        hint="e.g. §2.04.B.3 (feeds the citation backref.)"
       >
         <input
           type="text"
@@ -160,7 +160,7 @@ export const FullTierProgressive: React.FC<FullTierProgressiveProps> = ({
             type="text"
             value={draft.schedule_activity_id ?? ''}
             onChange={(e) => onPatch({ schedule_activity_id: e.target.value || null })}
-            placeholder="Pick activity — Phase 6 typeahead"
+            placeholder="Pick activity"
             style={inputStyle}
             aria-label="Schedule activity (placeholder picker)"
           />
@@ -247,7 +247,7 @@ export const FullTierProgressive: React.FC<FullTierProgressiveProps> = ({
             type="text"
             value={draft.responsible_sub_id ?? ''}
             onChange={(e) => onPatch({ responsible_sub_id: e.target.value || null })}
-            placeholder="Pick org — Phase 6 typeahead"
+            placeholder="Pick org"
             style={inputStyle}
             aria-label="Responsible sub (placeholder picker)"
           />

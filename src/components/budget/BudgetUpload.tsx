@@ -290,7 +290,7 @@ export function BudgetUpload({ open, onClose, onSuccess }: BudgetUploadProps) {
                   <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary }}>Handles real-world budgets</span>
                 </div>
                 <div style={{ fontSize: typography.fontSize.caption, color: colors.textSecondary, lineHeight: 1.6 }}>
-                  <p style={{ margin: `0 0 ${spacing['1']}` }}>Works with messy spreadsheets — the kind GCs actually use. Multi-sheet workbooks, custom cost codes, merged cells, section totals, NIC values, metadata rows, subcontractor notes.</p>
+                  <p style={{ margin: `0 0 ${spacing['1']}` }}>Works with messy spreadsheets, the kind GCs actually use. Multi-sheet workbooks, custom cost codes, merged cells, section totals, NIC values, metadata rows, subcontractor notes.</p>
                   <p style={{ margin: 0 }}>Auto-detects the budget sheet, finds headers wherever they are, maps your cost codes to CSI divisions, and skips the noise.</p>
                 </div>
               </div>
@@ -383,8 +383,8 @@ export function BudgetUpload({ open, onClose, onSuccess }: BudgetUploadProps) {
                   <span>
                     Spreadsheet total: {fmtFull(parseResult.grandTotal)}
                     {Math.abs(totalBudget - parseResult.grandTotal) < 2
-                      ? ' — matches parsed total'
-                      : ` — parsed total: ${fmtFull(totalBudget)} (${parseResult.sectionTotals.length} section totals excluded)`}
+                      ? ': matches parsed total'
+                      : `: parsed total ${fmtFull(totalBudget)} (${parseResult.sectionTotals.length} section totals excluded)`}
                   </span>
                 </div>
               )}

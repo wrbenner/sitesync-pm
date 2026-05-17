@@ -315,7 +315,7 @@ const WarrantiesTab: React.FC<{ projectId: string; warranties: WarrantyWithStatu
     const ok = await confirmWarranty({
       title: 'Delete warranty?',
       description: target
-        ? `"${target.item}"${target.manufacturer ? ` from ${target.manufacturer}` : ''} — closeout coverage will be removed.`
+        ? `"${target.item}"${target.manufacturer ? ` from ${target.manufacturer}` : ''}: closeout coverage will be removed.`
         : 'This warranty record will be removed from the project closeout package.',
       destructiveLabel: 'Delete warranty',
     })

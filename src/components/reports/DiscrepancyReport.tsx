@@ -336,7 +336,7 @@ const DiscrepancyCard: React.FC<{ item: DiscrepancyItem; index: number }> = ({ i
 // ── Main component ────────────────────────────────────────
 
 export const DiscrepancyReport: React.FC<{ data: DiscrepancyReportData }> = ({ data }) => (
-  <Document title={`Discrepancy Report — ${data.projectName}`}>
+  <Document title={`Discrepancy Report: ${data.projectName}`}>
     <CoverPage data={data} />
     <TableOfContentsPage items={data.discrepancies} />
     <SummaryStatsPage data={data} />

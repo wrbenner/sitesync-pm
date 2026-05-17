@@ -165,12 +165,12 @@ export function DrawReportUpload({ open, onClose, projectId, onSuccess }: DrawRe
       setStep('done')
       if (result.budgetRowsUpdated > 0) {
         toast.success(
-          `Draw report saved — ${result.lineItemCount} line items, ${result.budgetRowsUpdated} budget row${result.budgetRowsUpdated !== 1 ? 's' : ''} updated.`,
+          `Draw report saved. ${result.lineItemCount} line items, ${result.budgetRowsUpdated} budget row${result.budgetRowsUpdated !== 1 ? 's' : ''} updated.`,
           { duration: 5000 },
         )
       } else {
         toast.success(
-          `Draw report saved — ${result.lineItemCount} line items. Budget actuals unchanged (no CSI-division match in the current budget). Pay app + Construction Brain updated.`,
+          `Draw report saved. ${result.lineItemCount} line items. Budget actuals unchanged (no CSI-division match in the current budget). Pay app + Construction Brain updated.`,
           { duration: 7000 },
         )
       }
@@ -409,7 +409,7 @@ export function DrawReportUpload({ open, onClose, projectId, onSuccess }: DrawRe
                   Drop your draw report here
                 </p>
                 <p style={{ margin: 0, fontSize: typography.fontSize.sm, color: colors.textTertiary }}>
-                  AIA G702/G703 (PDF) or Excel (.xlsx) — any format, any layout
+                  AIA G702/G703 (PDF) or Excel (.xlsx). Any format, any layout.
                 </p>
               </div>
 
@@ -457,7 +457,7 @@ export function DrawReportUpload({ open, onClose, projectId, onSuccess }: DrawRe
               <p style={{
                 margin: `${spacing['2']} 0 0`, fontSize: typography.fontSize.sm, color: colors.textTertiary,
               }}>
-                AI is reading every line item. Takes 20–60 seconds for a typical G702/G703.
+                AI is reading every line item. Takes 20 to 60 seconds for a typical G702/G703.
               </p>
               <p style={{
                 marginTop: spacing['3'],
@@ -563,8 +563,8 @@ export function DrawReportUpload({ open, onClose, projectId, onSuccess }: DrawRe
                 }}>
                   <AlertTriangle size={12} />
                   <span>
-                    {lowConfidenceCount} row{lowConfidenceCount !== 1 ? 's' : ''} flagged as low confidence —
-                    verify the numbers in rows marked with an amber dot.
+                    {lowConfidenceCount} row{lowConfidenceCount !== 1 ? 's' : ''} flagged as low confidence.
+                    Verify the numbers in rows marked with an amber dot.
                   </span>
                 </div>
               )}
@@ -761,7 +761,7 @@ export function DrawReportUpload({ open, onClose, projectId, onSuccess }: DrawRe
                           numeric
                         />
                         <div
-                          title={low ? `Low confidence (${Math.round(line.confidence * 100)}%) — verify values` : `Confidence ${Math.round(line.confidence * 100)}%`}
+                          title={low ? `Low confidence (${Math.round(line.confidence * 100)}%). Verify values.` : `Confidence ${Math.round(line.confidence * 100)}%`}
                           style={{
                             width: 10, height: 10, borderRadius: '50%',
                             backgroundColor: low ? colors.statusPending : colors.statusActive,
@@ -822,7 +822,7 @@ export function DrawReportUpload({ open, onClose, projectId, onSuccess }: DrawRe
                     style={{ cursor: 'pointer', width: 16, height: 16 }}
                   />
                   <label htmlFor="recon-override" style={{ cursor: 'pointer' }}>
-                    Save anyway — I've verified the numbers are correct despite the mismatch
+                    Save anyway (I've verified the numbers are correct despite the mismatch)
                   </label>
                 </div>
               )}

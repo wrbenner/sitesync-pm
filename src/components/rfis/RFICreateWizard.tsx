@@ -379,7 +379,7 @@ const RFIProcoreFieldsRow: React.FC<RFIProcoreFieldsRowProps> = ({
             boxSizing: 'border-box',
           }}
         >
-          <option value="">— Select —</option>
+          <option value="">Select…</option>
           {memberOptions.map((m) => (
             <option key={m.value} value={m.value}>
               {m.label}
@@ -850,7 +850,7 @@ const RFICreateWizard: React.FC<RFICreateWizardProps> = ({ open, onClose, onSubm
           }}
         >
           <strong style={{ color: colors.textPrimary }}>Save as Draft</strong> to refine
-          later — Number and Due Date are suggested values until you{' '}
+          later. Number and Due Date are suggested values until you{' '}
           <strong style={{ color: colors.textPrimary }}>Create as Open</strong> (or promote
           via the detail-page state-machine).
         </div>
@@ -885,7 +885,7 @@ const RFICreateWizard: React.FC<RFICreateWizardProps> = ({ open, onClose, onSubm
             />
             {question.length > 0 && question.trim().length < 5 && (
               <div style={{ fontSize: '11px', color: colors.statusCritical, marginTop: 4, display: 'flex', alignItems: 'center', gap: 4 }}>
-                <AlertCircle size={11} /> Be specific — a clear question gets a faster answer
+                <AlertCircle size={11} /> Be specific. A clear question gets a faster answer.
               </div>
             )}
 

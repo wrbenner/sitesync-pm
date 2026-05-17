@@ -115,10 +115,10 @@ export const Osha300Panel: React.FC<{ projectId: string | undefined }> = ({ proj
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: spacing['4'] }}>
       {error && !data?.partial && (
-        <DegradedBanner message="Could not load incidents — check RLS + table presence." />
+        <DegradedBanner message="Could not load incidents. Check RLS + table presence." />
       )}
       {data?.partial && (
-        <DegradedBanner message="Older deployment — incidents missing days_away / days_restricted / case_classification. Builder treats as zero / 'other recordable'." />
+        <DegradedBanner message="Older deployment: incidents missing days_away / days_restricted / case_classification. Builder treats as zero / 'other recordable'." />
       )}
 
       {/* Header row: year + ITA inputs + export */}

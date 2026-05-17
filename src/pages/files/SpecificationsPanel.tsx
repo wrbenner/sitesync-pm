@@ -139,7 +139,7 @@ export const SpecificationsPanel: React.FC = () => {
               </div>
             </Card>
             <Card padding={spacing['4']}>
-              <SectionHeader title={selectedDivision !== null ? `Division ${String(selectedDivision).padStart(2, '0')} — ${CSI_DIVISIONS[selectedDivision] || ''}` : 'All Sections'} />
+              <SectionHeader title={selectedDivision !== null ? `Division ${String(selectedDivision).padStart(2, '0')}: ${CSI_DIVISIONS[selectedDivision] || ''}` : 'All Sections'} />
               {filtered.length > 0 ? (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: spacing['2'], marginTop: spacing['3'] }}>
                   {filtered.map((spec) => {

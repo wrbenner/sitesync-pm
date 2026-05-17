@@ -264,7 +264,7 @@ const Deliveries: React.FC = () => {
                   style={{ display: 'flex', justifyContent: 'space-between', padding: spacing['3'], border: `1px solid ${colors.borderSubtle}`, borderRadius: borderRadius.md, marginBottom: spacing['2'], cursor: 'pointer', background: colors.surfaceRaised }}
                 >
                   <div>
-                    <div style={{ color: colors.textPrimary, fontWeight: typography.fontWeight.semibold }}>{d.vendor}{d.po_number ? ` — PO ${d.po_number}` : ''}</div>
+                    <div style={{ color: colors.textPrimary, fontWeight: typography.fontWeight.semibold }}>{d.vendor}{d.po_number ? ` (PO ${d.po_number})` : ''}</div>
                     <div style={{ fontSize: typography.fontSize.xs, color: colors.textTertiary }}>
                       {d.description || 'No description'}{d.location ? ` · ${d.location}` : ''}
                     </div>
@@ -295,7 +295,7 @@ const Deliveries: React.FC = () => {
         </div>
       </Modal>
 
-      <Modal open={!!selected} onClose={() => { setSelected(null); setDetailTab('details'); setChecklist(DEFAULT_CHECKLIST.map(i => ({ ...i }))); setInspectionResult(null); setInspectorName(''); setExceptionNotes(''); setDelayNotes('') }} title={selected ? `${selected.vendor}${selected.po_number ? ` — PO ${selected.po_number}` : ''}` : ''} width="780px">
+      <Modal open={!!selected} onClose={() => { setSelected(null); setDetailTab('details'); setChecklist(DEFAULT_CHECKLIST.map(i => ({ ...i }))); setInspectionResult(null); setInspectorName(''); setExceptionNotes(''); setDelayNotes('') }} title={selected ? `${selected.vendor}${selected.po_number ? ` (PO ${selected.po_number})` : ''}` : ''} width="780px">
         {selected && (() => {
           const daysLate = getDaysLate(selected)
           const schedColor = getScheduleColor(daysLate)

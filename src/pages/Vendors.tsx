@@ -816,7 +816,7 @@ export const Vendors: React.FC = () => {
                 {selectedPrequal.references.map((ref, i) => (
                   <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: spacing['2'], border: `1px solid ${colors.borderLight}`, borderRadius: borderRadius.base, fontSize: typography.fontSize.sm }}>
                     <span style={{ color: colors.textPrimary }}>{ref.project}</span>
-                    <span style={{ color: colors.textSecondary }}>{ref.contact} — {ref.phone}</span>
+                    <span style={{ color: colors.textSecondary }}>{ref.contact}, {ref.phone}</span>
                   </div>
                 ))}
               </>

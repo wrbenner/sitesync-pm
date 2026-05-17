@@ -1,6 +1,12 @@
 import React, { useRef, useEffect, useCallback, useState, useMemo } from 'react'
 import { spacing, typography, borderRadius, zIndex } from '../../styles/theme'
 
+function cryptoRand(): number {
+  const buf = new Uint32Array(1)
+  crypto.getRandomValues(buf)
+  return buf[0] / 0x1_0000_0000
+}
+
 // ── Types ────────────────────────────────────────────────
 
 export interface GraphNode {
@@ -292,8 +298,8 @@ export function IntelligenceGraph({
 
       return {
         ...n,
-        x: existing?.x ?? Math.cos(angle) * spread + (Math.random() - 0.5) * 40,
-        y: existing?.y ?? Math.sin(angle) * spread + (Math.random() - 0.5) * 40,
+        x: existing?.x ?? Math.cos(angle) * spread + (cryptoRand() - 0.5) * 40,
+        y: existing?.y ?? Math.sin(angle) * spread + (cryptoRand() - 0.5) * 40,
         vx: existing?.vx ?? 0,
         vy: existing?.vy ?? 0,
         fx: 0,
@@ -392,7 +398,7 @@ export function IntelligenceGraph({
         let dx = b.x - a.x
         let dy = b.y - a.y
         let dist = Math.sqrt(dx * dx + dy * dy)
-        if (dist < 1) { dist = 1; dx = Math.random() - 0.5; dy = Math.random() - 0.5 }
+        if (dist < 1) { dist = 1; dx = cryptoRand() - 0.5; dy = cryptoRand() - 0.5 }
         const force = REPULSION_STRENGTH / (dist * dist)
         const fx = (dx / dist) * force
         const fy = (dy / dist) * force

@@ -285,7 +285,7 @@ function formatCostRange(minCents: number | null, maxCents: number | null): stri
   const max = maxCents != null ? fromCents(maxCents as never) : 0
   if (min === 0 && max === 0) return '$0'
   if (min === max) return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0 }).format(max)
-  return `${formatUsd(min)} – ${formatUsd(max)}`
+  return `${formatUsd(min)} to ${formatUsd(max)}`
 }
 
 function formatUsd(n: number): string {

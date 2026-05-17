@@ -93,7 +93,7 @@ function emptyArrayQuery() {
 
 function rfi(over: Partial<Record<string, unknown>> = {}) {
   return {
-    id: over.id ?? `rfi-${Math.random().toString(36).slice(2, 8)}`,
+    id: over.id ?? `rfi-${crypto.randomUUID().slice(0, 8)}`,
     number: over.number ?? 1,
     title: over.title ?? 'Curtain wall flashing',
     status: over.status ?? 'open',
@@ -111,7 +111,7 @@ function rfi(over: Partial<Record<string, unknown>> = {}) {
 
 function task(over: Partial<Record<string, unknown>> = {}) {
   return {
-    id: over.id ?? `task-${Math.random().toString(36).slice(2, 8)}`,
+    id: over.id ?? `task-${crypto.randomUUID().slice(0, 8)}`,
     title: over.title ?? 'Order trim',
     status: over.status ?? 'todo',
     due_date: over.due_date ?? null,
@@ -122,7 +122,7 @@ function task(over: Partial<Record<string, unknown>> = {}) {
 
 function punch(over: Partial<Record<string, unknown>> = {}) {
   return {
-    id: over.id ?? `punch-${Math.random().toString(36).slice(2, 8)}`,
+    id: over.id ?? `punch-${crypto.randomUUID().slice(0, 8)}`,
     number: over.number ?? 1,
     title: over.title ?? 'Touch-up paint',
     status: over.status ?? 'open',

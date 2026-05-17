@@ -410,7 +410,7 @@ const Empty: React.FC<{ label: string }> = ({ label }) => (
 const ScheduleForm: React.FC<{ projectId: string; reportKey: CannedReportKey; onClose: () => void }> = ({ projectId, reportKey, onClose }) => {
   const [recipients, setRecipients] = useState('')
   const [cadence, setCadence] = useState<'daily' | 'weekly' | 'monthly'>('weekly')
-  const [subject, setSubject] = useState(`SiteSync RFI report — ${CANNED_REPORT_LABELS[reportKey]}`)
+  const [subject, setSubject] = useState(`SiteSync RFI report: ${CANNED_REPORT_LABELS[reportKey]}`)
   const schedule = useScheduleReport()
 
   return (

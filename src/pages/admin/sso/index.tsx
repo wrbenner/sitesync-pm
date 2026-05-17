@@ -42,7 +42,7 @@ export const SsoAdminPage: React.FC<SsoAdminProps> = ({ organizationId }) => {
   const { data: cfg } = useQuery({
     queryKey: ['org_sso_config', organizationId],
     queryFn: async () => {
-      const { data } = await (supabase as any)
+      const { data } = await supabase
         .from('org_sso_config')
         .select('*')
         .eq('organization_id', organizationId)
@@ -62,9 +62,10 @@ export const SsoAdminPage: React.FC<SsoAdminProps> = ({ organizationId }) => {
 
   const save = async () => {
     const payload = { ...draft, organization_id: organizationId };
-    const { error } = await (supabase as any)
+    const { error } = await supabase
       .from('org_sso_config')
-      .upsert(payload, { onConflict: 'organization_id' });
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .upsert(payload as any, { onConflict: 'organization_id' });
     if (error) {
       toast.error(`Save failed: ${error.message}`);
       return;
@@ -110,7 +111,7 @@ export const SsoAdminPage: React.FC<SsoAdminProps> = ({ organizationId }) => {
             <input style={input} value={draft.saml_idp_entity_id ?? ''}
               onChange={(e) => setDraft((d) => ({ ...d, saml_idp_entity_id: e.target.value }))} />
           </Field>
-          <Field label="SSO URL" error={!samlUrlCheck.ok ? (samlUrlCheck as any).reason : undefined}>
+          <Field label="SSO URL" error={!samlUrlCheck.ok ? samlUrlCheck.reason : undefined}>
             <input style={input} value={draft.saml_sso_url ?? ''}
               onChange={(e) => setDraft((d) => ({ ...d, saml_sso_url: e.target.value }))} />
           </Field>
@@ -118,7 +119,7 @@ export const SsoAdminPage: React.FC<SsoAdminProps> = ({ organizationId }) => {
             <input style={input} value={draft.saml_sp_entity_id ?? ''}
               onChange={(e) => setDraft((d) => ({ ...d, saml_sp_entity_id: e.target.value }))} />
           </Field>
-          <Field label={`X.509 Certificate(s) — ${certCount} PEM block(s) detected`}
+          <Field label={`X.509 Certificate(s): ${certCount} PEM block(s) detected`}
             hint="Paste one or more cert blocks (multiple blocks = rotation overlap)">
             <textarea
               style={{ ...input, minHeight: 120, fontFamily: 'monospace', fontSize: 11 }}
@@ -175,7 +176,7 @@ export const SsoAdminPage: React.FC<SsoAdminProps> = ({ organizationId }) => {
         />
         <Field label="Default role (used when no group matches)">
           <input style={input} value={draft.default_role ?? ''}
-            onChange={(e) => setDraft((d) => ({ ...d, default_role: e.target.value || null as any }))} />
+            onChange={(e) => setDraft((d) => ({ ...d, default_role: e.target.value || null }))} />
         </Field>
       </fieldset>
 

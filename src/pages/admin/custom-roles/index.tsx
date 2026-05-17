@@ -43,7 +43,7 @@ export const CustomRolesAdminPage: React.FC<Props> = ({ organizationId }) => {
   const { data: roles } = useQuery({
     queryKey: ['org_custom_roles', organizationId],
     queryFn: async () => {
-      const { data } = await (supabase as any)
+      const { data } = await supabase
         .from('org_custom_roles')
         .select('*')
         .eq('organization_id', organizationId)
@@ -54,7 +54,7 @@ export const CustomRolesAdminPage: React.FC<Props> = ({ organizationId }) => {
 
   const create = async () => {
     if (!draft.name.trim()) { toast.error('Name required'); return; }
-    const { error } = await (supabase as any).from('org_custom_roles').insert({
+    const { error } = await supabase.from('org_custom_roles').insert({
       organization_id: organizationId,
       name: draft.name.trim(),
       description: draft.description.trim() || null,
@@ -76,7 +76,7 @@ export const CustomRolesAdminPage: React.FC<Props> = ({ organizationId }) => {
       destructiveLabel: 'Delete role',
     });
     if (!ok) return;
-    await (supabase as any).from('org_custom_roles').delete().eq('id', id);
+    await supabase.from('org_custom_roles').delete().eq('id', id);
     qc.invalidateQueries({ queryKey: ['org_custom_roles', organizationId] });
   };
 

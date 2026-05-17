@@ -64,9 +64,7 @@ export const EntityAuditViewer: React.FC<EntityAuditViewerProps> = ({
   const { data, isPending } = useQuery({
     queryKey: ['audit-log', entityType, entityId],
     queryFn: async (): Promise<AuditLogRow[]> => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const sb = supabase as any;
-      const { data, error } = await sb
+      const { data, error } = await supabase
         .from('audit_log')
         .select(
           'id, created_at, user_id, user_email, user_name, project_id, organization_id, ' +
@@ -101,9 +99,7 @@ export const EntityAuditViewer: React.FC<EntityAuditViewerProps> = ({
 
   const exportSealed = async () => {
     toast.message('Generating sealed PDF…');
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const sb = supabase as any;
-    const { data, error } = await sb.functions.invoke('sealed-entity-export', {
+    const { data, error } = await supabase.functions.invoke('sealed-entity-export', {
       body: { entity_type: entityType, entity_id: entityId, project_id: projectId },
     });
     if (error) {
@@ -122,9 +118,7 @@ export const EntityAuditViewer: React.FC<EntityAuditViewerProps> = ({
   const shareMagicLink = async () => {
     const recipient = window.prompt('Recipient email (architect, owner, etc.):');
     if (!recipient) return;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const sb = supabase as any;
-    const { data, error } = await sb.functions.invoke('entity-magic-link', {
+    const { data, error } = await supabase.functions.invoke('entity-magic-link', {
       body: {
         entity_type: entityType,
         entity_id: entityId,

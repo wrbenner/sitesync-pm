@@ -247,7 +247,7 @@ const SubmittalDetailV2Page: React.FC = () => {
           open={copilotOpen}
           data={copilotData}
           onClose={() => setCopilotOpen(false)}
-          attribution="Iris co-pilot — Phase 6 deterministic shell. LLM augmentation ships in Phase 7."
+          attribution="Iris co-pilot: Phase 6 deterministic shell. LLM augmentation ships in Phase 7."
         />
       </div>
     </div>
@@ -290,7 +290,7 @@ const ActionCluster: React.FC<ActionClusterProps> = ({ copilotOpen, onToggleCoPi
           fontWeight: 600,
           fontFamily: FONT,
         }}
-        title="Approve — disposition picker comes online in Phase 7 (voice review codes)"
+        title="Approve (disposition picker coming in Phase 7 with voice review codes)"
       >
         Approve
       </button>

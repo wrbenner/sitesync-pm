@@ -505,7 +505,7 @@ export const DrawingToolbar: React.FC<DrawingToolbarProps> = ({
             type="text"
             value={filters.search}
             onChange={e => onFiltersChange({ ...filters, search: e.target.value })}
-            placeholder="Search sheets — try A3.2"
+            placeholder="Search sheets (try A3.2)"
             aria-label="Search drawings"
             style={S.searchInput}
             onFocus={e => { e.currentTarget.style.borderColor = colors.primaryOrange; e.currentTarget.style.boxShadow = `0 0 0 3px ${colors.primaryOrange}12`; }}
