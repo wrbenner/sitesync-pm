@@ -88,7 +88,7 @@ export const HashChainBadge: React.FC<HashChainBadgeProps> = ({
       }}
     >
       <ShieldAlert size={iconSize} />
-      Audit chain broken — {result.gaps.length} gap{result.gaps.length === 1 ? '' : 's'}
+      Audit chain broken. {result.gaps.length} gap{result.gaps.length === 1 ? '' : 's'}
     </button>
   );
 };

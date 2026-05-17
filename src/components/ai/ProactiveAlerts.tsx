@@ -99,7 +99,7 @@ function useProactiveAlerts(projectId: string | undefined) {
           severity: age > 30 ? 'critical' : 'warning',
           icon: AlertTriangle,
           title: `RFI #${rfi.number ?? '?'} has been open for ${age} days`,
-          description: `${factor}x average response time — ${rfi.title ?? 'untitled'}`,
+          description: `${factor}x average response time. ${rfi.title ?? 'untitled'}`,
           navigateTo: '/rfis',
         });
       }

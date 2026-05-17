@@ -504,7 +504,7 @@ const TasksPage: React.FC = () => {
     if (!projectId) return
     const ok = await confirm({
       title: 'Delete task?',
-      description: `"${task.title}" — this cannot be undone.`,
+      description: `"${task.title}". This cannot be undone.`,
       destructiveLabel: 'Delete task',
     })
     if (!ok) return
@@ -669,7 +669,7 @@ const TasksPage: React.FC = () => {
               <tr>
                 <td colSpan={9} style={{ padding: '40px 24px', textAlign: 'center', color: C.ink3, fontSize: 13 }}>
                   {tasks.length === 0
-                    ? 'No tasks yet — type a title above to capture the first one.'
+                    ? 'No tasks yet. Type a title above to capture the first one.'
                     : 'No tasks match this filter.'}
                 </td>
               </tr>
@@ -810,7 +810,7 @@ const QuickAddRow: React.FC<QuickAddRowProps> = ({
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           onKeyDown={onTitleKeyDown}
-          placeholder="+ New task — title, then Tab to set assignee / due date, Enter to save"
+          placeholder="+ New task: title, then Tab to set assignee / due date, Enter to save"
           aria-label="New task title"
           style={{
             width: '100%',
