@@ -184,8 +184,10 @@ export const BudgetKPIs: React.FC<BudgetKPIProps> = ({
       trendInvert: false,
     },
     {
-      label: 'REMAINING',
-      value: remaining,
+      // When over budget, flip the label and show the overage as a positive
+      // number — "OVER BUDGET  $500" reads more clearly than "REMAINING  -$500".
+      label: remaining < 0 ? 'OVER BUDGET' : 'REMAINING',
+      value: Math.abs(remaining),
       formatter: fmtCurrency,
       icon: ShieldCheck,
       color: remaining >= 0 ? '#16A34A' : '#DC2626',
