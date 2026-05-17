@@ -290,13 +290,13 @@ const QuickRFI: React.FC<QuickRFIProps> = ({ open, onClose }) => {
       // Graceful degradation: show what we have
       const fallbackDraft: AIDraft = {
         subject: 'Field Observation',
-        question: transcript || 'Photo captured — please add description.',
+        question: transcript || 'Photo captured. Please add description.',
         trade_classification: { urgency: 'medium' },
       };
       setAiDraft(fallbackDraft);
       setEditSubject(fallbackDraft.subject);
       setEditQuestion(fallbackDraft.question);
-      setError('AI processing failed — showing captured data. You can edit and submit.');
+      setError('AI processing failed. Showing captured data. You can edit and submit.');
       setPhase('review');
     }
   }, [voice, photoDataUrl, projectId, impact, notification]);
@@ -388,13 +388,13 @@ const QuickRFI: React.FC<QuickRFIProps> = ({ open, onClose }) => {
     } catch {
       const fallback: AIDraft = {
         subject: 'Field Observation',
-        question: 'Photo captured — please add description.',
+        question: 'Photo captured. Please add description.',
         trade_classification: { urgency: 'medium' },
       };
       setAiDraft(fallback);
       setEditSubject(fallback.subject);
       setEditQuestion(fallback.question);
-      setError('AI processing failed — you can edit and submit manually.');
+      setError('AI processing failed. You can edit and submit manually.');
       setPhase('review');
     }
   }, [voice, photoDataUrl, projectId]);

@@ -866,7 +866,7 @@ export function PdfViewer({ file, title, onClose, onNextDrawing, onPrevDrawing, 
           display: 'flex', alignItems: 'center', gap: 8,
         }}>
           {activeTool === 'measure' && (scaleOverride || scaleRatioText) && <span>Tape · drag to measure</span>}
-          {activeTool === 'measure' && !scaleOverride && !scaleRatioText && <span>Tape · no scale detected — click Calibrate first</span>}
+          {activeTool === 'measure' && !scaleOverride && !scaleRatioText && <span>Tape · no scale detected. Click Calibrate first.</span>}
           {activeTool === 'area' && <span>Area · click vertices, double-click to close</span>}
           {activeTool === 'count' && <span>Count · click to drop ({countLabel})</span>}
           {activeTool === 'calibrate' && <span>Calibrate · click two points on a known dimension</span>}

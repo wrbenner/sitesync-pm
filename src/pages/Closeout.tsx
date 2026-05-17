@@ -315,7 +315,7 @@ const WarrantiesTab: React.FC<{ projectId: string; warranties: WarrantyWithStatu
     const ok = await confirmWarranty({
       title: 'Delete warranty?',
       description: target
-        ? `"${target.item}"${target.manufacturer ? ` from ${target.manufacturer}` : ''} — closeout coverage will be removed.`
+        ? `"${target.item}"${target.manufacturer ? ` from ${target.manufacturer}` : ''}. Closeout coverage will be removed.`
         : 'This warranty record will be removed from the project closeout package.',
       destructiveLabel: 'Delete warranty',
     })
@@ -601,7 +601,7 @@ const OMManualsTab: React.FC<{ projectId: string; items: CloseoutItemRow[] }> = 
   const handleDelete = async (item: CloseoutItemRow) => {
     const ok = await confirmManual({
       title: 'Remove O&M manual?',
-      description: `"${item.description}"${item.trade ? ` from ${item.trade}` : ''} — closeout package will no longer include this manual.`,
+      description: `"${item.description}"${item.trade ? ` from ${item.trade}` : ''}. Closeout package will no longer include this manual.`,
       destructiveLabel: 'Remove manual',
     })
     if (!ok) return
@@ -826,7 +826,7 @@ const TrainingTab: React.FC<{ projectId: string; items: CloseoutItemRow[] }> = (
   const handleDelete = async (item: CloseoutItemRow) => {
     const ok = await confirmTraining({
       title: 'Delete training entry?',
-      description: `"${item.description}" — training record will be removed from the project closeout package.`,
+      description: `"${item.description}". Training record will be removed from the project closeout package.`,
       destructiveLabel: 'Delete entry',
     })
     if (!ok) return
@@ -943,7 +943,7 @@ const SignOffTab: React.FC<{ projectId: string; items: CloseoutItemRow[]; blocks
       kind: 'substantial_completion',
       label: 'Substantial Completion',
       item: substantial,
-      description: 'Project reached substantial completion — owner may occupy and use for intended purpose. Punch items may remain.',
+      description: 'Project reached substantial completion. Owner may occupy and use for intended purpose. Punch items may remain.',
     },
     {
       kind: 'final_completion',

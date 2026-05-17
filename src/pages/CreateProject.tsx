@@ -220,7 +220,7 @@ const IrisSuggest: React.FC<{
 // ── Templates grid ──────────────────────────────────────────────────────────
 
 const TEMPLATE_CARDS: Array<{ id: Template; label: string; subtitle: string; icon: React.ReactNode }> = [
-  { id: 'blank',          label: 'Blank',           subtitle: 'Start from scratch — five sections to fill.', icon: <FileText size={16} /> },
+  { id: 'blank',          label: 'Blank',           subtitle: 'Start from scratch. Five sections to fill.', icon: <FileText size={16} /> },
   { id: 'procore_import', label: 'Procore Import',  subtitle: 'Pull existing project data from Procore.',   icon: <Upload size={16} /> },
   { id: 'previous',       label: 'Previous Project', subtitle: 'Clone settings, contacts, templates.',       icon: <Layers size={16} /> },
   { id: 'industry',       label: 'Industry Template', subtitle: 'Mid-rise, healthcare, K-12, TI, etc.',     icon: <Briefcase size={16} /> },
