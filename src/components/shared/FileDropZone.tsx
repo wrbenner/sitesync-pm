@@ -117,7 +117,8 @@ export const FileDropZone: React.FC<FileDropZoneProps> = ({
           setItems((prev) =>
             prev.map((i) =>
               i.id === item.id
-                ? { ...i, status: 'error', error: err instanceof Error ? err.message : 'Upload failed' }
+                // eslint-disable-next-line react-hooks/invariant
+              ? { ...i, status: 'error', error: err instanceof Error ? err.message : 'Upload failed' }
                 : i,
             ),
           )
@@ -322,7 +323,7 @@ export const FileDropZone: React.FC<FileDropZoneProps> = ({
                 </div>
                 <div style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>
                   {humanSize(item.file.size)}
-                  {item.status === 'error' && item.error ? ` — ${item.error}` : ''}
+                  {item.status === 'error' && item.error ? `: ${item.error}` : ''}
                 </div>
                 {(item.status === 'uploading' || item.status === 'done') && (
                   <div

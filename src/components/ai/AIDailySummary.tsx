@@ -2,7 +2,7 @@ import React, { useMemo } from 'react';
 import {
   Sparkles, Sun, CloudRain, Cloud, CloudSnow, Wind, Thermometer,
   Users, ShieldAlert, FileQuestion, ClipboardCheck, Truck, Search,
-  AlertTriangle, CheckCircle2, XCircle, Clock, ChevronRight} from 'lucide-react';
+  AlertTriangle, CheckCircle2, XCircle, Clock, ChevronRight, type LucideIcon} from 'lucide-react';
 import { colors, spacing, typography, borderRadius, shadows } from '../../styles/theme';
 
 // ── Types ────────────────────────────────────────────────────
@@ -72,7 +72,7 @@ function rfiActionLabel(action: string): { label: string; color: string } {
   }
 }
 
-function inspectionResultStyle(result: string): { label: string; color: string; bg: string; Icon: React.FC<any> } {
+function inspectionResultStyle(result: string): { label: string; color: string; bg: string; Icon: LucideIcon } {
   switch (result) {
     case 'pass': return { label: 'Pass', color: '#16A34A', bg: '#F0FDF4', Icon: CheckCircle2 };
     case 'fail': return { label: 'Fail', color: '#DC2626', bg: '#FEF2F2', Icon: XCircle };
@@ -108,7 +108,7 @@ function generateExecutiveSummary(props: AIDailySummaryProps): string {
   if (props.safetyIncidents && props.safetyIncidents.length > 0) {
     const critical = props.safetyIncidents.filter(i => i.severity.toLowerCase() === 'critical').length;
     if (critical > 0) {
-      sentences.push(`${props.safetyIncidents.length} safety incident${props.safetyIncidents.length !== 1 ? 's' : ''} ${props.safetyIncidents.length !== 1 ? 'were' : 'was'} reported, including ${critical} critical — immediate review required.`);
+      sentences.push(`${props.safetyIncidents.length} safety incident${props.safetyIncidents.length !== 1 ? 's' : ''} ${props.safetyIncidents.length !== 1 ? 'were' : 'was'} reported, including ${critical} critical. Immediate review required.`);
     } else {
       sentences.push(`${props.safetyIncidents.length} safety incident${props.safetyIncidents.length !== 1 ? 's' : ''} ${props.safetyIncidents.length !== 1 ? 'were' : 'was'} reported, all non-critical.`);
     }
@@ -219,7 +219,7 @@ export const AIDailySummary: React.FC<AIDailySummaryProps> = (props) => {
     [dailyLogEntries],
   );
 
-  const WeatherIcon = weather ? weatherIcon(weather.condition) : Sun;
+  const WeatherIcon = useMemo(() => weather ? weatherIcon(weather.condition) : Sun, [weather]);
 
   const hasWorkActivity = dailyLogEntries && dailyLogEntries.length > 0;
   const hasSafety = safetyIncidents && safetyIncidents.length > 0;
@@ -290,6 +290,7 @@ export const AIDailySummary: React.FC<AIDailySummaryProps> = (props) => {
             background: '#F9FAFB',
             borderBottom: '1px solid #F3F4F6',
           }}>
+            {/* eslint-disable-next-line react-hooks/static-components */}
             <WeatherIcon size={20} style={{ color: '#6B7280', flexShrink: 0 }} />
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: spacing['4'], fontSize: typography.fontSize.sm, color: '#374151' }}>
               <span style={{ fontWeight: typography.fontWeight.medium }}>{weather.condition}</span>

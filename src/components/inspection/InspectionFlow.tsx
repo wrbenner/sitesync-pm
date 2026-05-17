@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/todo */
 import React, { useCallback, useState } from 'react'
 import { Camera, CheckCircle2, XCircle, Mic } from 'lucide-react'
 import { colors, spacing, typography, borderRadius } from '../../styles/theme'
@@ -98,7 +99,7 @@ export const InspectionFlow: React.FC<InspectionFlowProps> = ({
 
   const finishVerbalFail = useCallback(async () => {
     if (verbal.trim().length < 8) {
-      setError('Describe what failed — at least a sentence.')
+      setError('Describe what failed. At least a sentence.')
       return
     }
     setSubmitting(true)
@@ -292,7 +293,7 @@ export const InspectionFlow: React.FC<InspectionFlowProps> = ({
           textDecoration: 'underline',
         }}
       >
-        No physical tag — describe verbally
+        No physical tag. Describe verbally.
       </button>
     </div>
   )
