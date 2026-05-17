@@ -23,11 +23,11 @@ const STATUS_META: Record<
   'sent' | 'delivered' | 'bounced' | 'complained' | 'unknown',
   { color: string; label: string }
 > = {
-  sent: { color: colors.borderDefault, label: 'Sent — pending delivery' },
+  sent: { color: colors.borderDefault, label: 'Sent. Pending delivery.' },
   delivered: { color: '#2D8A6E', label: 'Delivered' },
   bounced: { color: '#C93B3B', label: 'Bounced' },
   complained: { color: '#C93B3B', label: 'Complained' },
-  unknown: { color: '#C4850C', label: 'Unknown — send may have failed' },
+  unknown: { color: '#C4850C', label: 'Unknown. Send may have failed.' },
 }
 
 export const RFIDistributionStatusList: React.FC<RFIDistributionStatusListProps> = ({ rfiId }) => {

@@ -89,7 +89,7 @@ export const WorkflowTimeline: React.FC<WorkflowTimelineProps> = ({
         const isFuture = !isCompleted && !isCurrent
 
         const stepStatus = isCompleted ? 'completed' : isCurrent ? 'current' : 'upcoming'
-        const stepAriaLabel = `Step ${idx + 1} of ${total}: ${state.label} — ${stepStatus}`
+        const stepAriaLabel = `Step ${idx + 1} of ${total}: ${state.label}, ${stepStatus}`
 
         const dotColor = isCompleted
           ? colors.statusActive
