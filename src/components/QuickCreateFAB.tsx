@@ -90,7 +90,7 @@ export const QuickCreateFAB: React.FC<QuickCreateFABProps> = ({
       ref={fabRef}
       style={{
         position: 'fixed',
-        bottom: isMobile ? 24 : 32,
+        bottom: isMobile ? 'calc(68px + env(safe-area-inset-bottom, 0px) + 16px)' : 32,
         right: isMobile ? 20 : 32,
         zIndex: 900,
         display: 'flex',
