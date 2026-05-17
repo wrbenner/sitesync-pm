@@ -182,16 +182,14 @@ const DrawingsPage: React.FC = () => {
       // The generated Database types lag behind the live schema (rfis.metadata
       // is jsonb added in 20260428100000), so route through an `any`-typed
       // client. Same pattern as src/lib/crossFeatureWorkflows.ts.
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const sb = supabase as any;
       // Status values per migration 00028_rfi_workflow.sql.
-      const { data, error: rfiErr } = await sb
+      const { data, error: rfiErr } = await supabase
         .from('rfis')
         .select('id, drawing_reference, metadata')
         .eq('project_id' as never, projectId)
         .in('status' as never, ['draft', 'open', 'under_review']);
       if (cancelled || rfiErr || !data) return;
-      const recent = (data as Array<{ id: string; drawing_reference: string | null; metadata: Record<string, unknown> | null }>)
+      const recent = (data as unknown as Array<{ id: string; drawing_reference: string | null; metadata: Record<string, unknown> | null }>)
         .filter((rfi) => {
           const m = rfi.metadata ?? {};
           const flaggedAt = m.last_revision_flagged_at as string | undefined;

@@ -120,9 +120,7 @@ export const taskService = {
     let projectId: string | null = null;
     if ('end_date' in safeUpdates) {
       // Generated Database types lag behind live schema; localized any cast.
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const sb = supabase as any;
-      const { data: prior } = await sb
+      const { data: prior } = await supabase
         .from('tasks')
         .select('end_date, project_id')
         .eq('id' as never, taskId)

@@ -44,10 +44,8 @@ export const SpecExcerptPanel: React.FC<SpecExcerptPanelProps> = ({
       // The generated Database types are strict about column-name unions and
       // lag behind some live schemas. Cast through `any` for the local query
       // — same escape hatch the rest of the codebase uses.
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const sb = supabase as any;
       // Exact match first; if none, fall back to prefix match.
-      const exact = await sb
+      const exact = await supabase
         .from('specifications')
         .select('id, section_number, title, description, division, revision, status, file_url')
         .eq('project_id', projectId)
@@ -55,7 +53,7 @@ export const SpecExcerptPanel: React.FC<SpecExcerptPanelProps> = ({
         .limit(1);
       if (exact.data && exact.data.length > 0) return exact.data as unknown as Specification[];
 
-      const prefix = await sb
+      const prefix = await supabase
         .from('specifications')
         .select('id, section_number, title, description, division, revision, status, file_url')
         .eq('project_id', projectId)

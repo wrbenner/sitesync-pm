@@ -43,9 +43,7 @@ export const RfiSlaPanel: React.FC<RfiSlaPanelProps> = ({
   const { data: lastEscalation } = useQuery({
     queryKey: ['rfi-escalation-latest', rfiId],
     queryFn: async () => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const sb = supabase as any;
-      const { data: esc } = await sb
+      const { data: esc } = await supabase
         .from('rfi_escalations')
         .select('id, stage, channel, recipient_email, notification_queue_id, triggered_at')
         .eq('rfi_id', rfiId)
@@ -53,7 +51,7 @@ export const RfiSlaPanel: React.FC<RfiSlaPanelProps> = ({
         .limit(1)
         .maybeSingle();
       if (!esc?.notification_queue_id) return { escalation: esc, queue: null };
-      const { data: q } = await sb
+      const { data: q } = await supabase
         .from('notification_queue')
         .select('id, status, error, retry_count, recipient_email')
         .eq('id', esc.notification_queue_id)
@@ -73,10 +71,8 @@ export const RfiSlaPanel: React.FC<RfiSlaPanelProps> = ({
       return;
     }
     setBusy(true);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const sb = supabase as any;
-    const userId = (await sb.auth.getUser()).data?.user?.id ?? null;
-    const { error } = await sb
+    const userId = (await supabase.auth.getUser()).data?.user?.id ?? null;
+    const { error } = await supabase
       .from('rfis')
       .update({
         sla_paused_at: new Date().toISOString(),
@@ -90,7 +86,7 @@ export const RfiSlaPanel: React.FC<RfiSlaPanelProps> = ({
       return;
     }
     // Audit-log the pause via rfi_escalations so the trail is unified.
-    await sb.from('rfi_escalations').insert({
+    await supabase.from('rfi_escalations').insert({
       rfi_id: rfiId,
       project_id: projectId,
       stage: 'pause',
@@ -108,13 +104,11 @@ export const RfiSlaPanel: React.FC<RfiSlaPanelProps> = ({
 
   const resumeClock = async () => {
     setBusy(true);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const sb = supabase as any;
-    const userId = (await sb.auth.getUser()).data?.user?.id ?? null;
+    const userId = (await supabase.auth.getUser()).data?.user?.id ?? null;
     const pausedSince = pausedAt ? new Date(pausedAt).getTime() : Date.now();
     const pauseSeconds = Math.floor((Date.now() - pausedSince) / 1000);
 
-    const { error } = await sb
+    const { error } = await supabase
       .from('rfis')
       .update({
         sla_paused_at: null,
@@ -133,7 +127,7 @@ export const RfiSlaPanel: React.FC<RfiSlaPanelProps> = ({
       toast.error(`Failed to resume: ${error.message}`);
       return;
     }
-    await sb.from('rfi_escalations').insert({
+    await supabase.from('rfi_escalations').insert({
       rfi_id: rfiId,
       project_id: projectId,
       stage: 'resume',

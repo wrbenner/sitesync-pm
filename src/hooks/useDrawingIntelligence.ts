@@ -281,10 +281,8 @@ export function useDrawingIntelligence(projectId: string | undefined) {
         void (async () => {
           // Strict generated Database types fight us on .in() with computed
           // string arrays; cast locally — this is best-effort observability.
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const sb = supabase as any
           const pairIds = (pairs as Array<{ id: string }>).map((p) => p.id)
-          const { data: highSev } = await sb
+          const { data: highSev } = await supabase
             .from('drawing_discrepancies')
             .select('id, severity, created_at')
             .in('pair_id' as never, pairIds)

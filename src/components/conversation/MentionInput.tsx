@@ -57,9 +57,7 @@ export const MentionInput: React.FC<MentionInputProps> = ({
   const { data: contacts = [] } = useQuery({
     queryKey: ['mention-contacts', projectId],
     queryFn: async (): Promise<MentionContact[]> => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const sb = supabase as any;
-      const { data } = await sb
+      const { data } = await supabase
         .from('directory_contacts')
         .select('id, name, email, role, trade, company, project_id')
         .eq('project_id', projectId);
@@ -92,9 +90,7 @@ export const MentionInput: React.FC<MentionInputProps> = ({
     const now = Date.now();
     if (now - lastHeartbeat.current < 4000) return;
     lastHeartbeat.current = now;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const sb = supabase as any;
-    sb.from('typing_indicators').upsert(
+    supabase.from('typing_indicators').upsert(
       {
         project_id: projectId,
         entity_type: typingChannel.split('/')[0] ?? 'rfi',
