@@ -74,7 +74,7 @@ test.describe('FMEA R.STRIPE.2 — Stripe redirect cancel recovery', () => {
 
   test('runtime: simulated back-navigation does not leave dialog stuck (skip-gracefully)', async ({
     page,
-    context,
+    context: _context,
   }) => {
     test.setTimeout(45_000)
 
