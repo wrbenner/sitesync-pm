@@ -1184,7 +1184,7 @@ const RFICreateWizard: React.FC<RFICreateWizardProps> = ({ open, onClose, onSubm
               style={{ width: 14, height: 14, accentColor: colors.primaryOrange, cursor: 'pointer' }}
             />
             <span>
-              <strong style={{ color: colors.textPrimary }}>Private</strong> — only PMs + admins can read this RFI
+              <strong style={{ color: colors.textPrimary }}>Private</strong>: only PMs and admins can read this RFI
             </span>
           </label>
 
