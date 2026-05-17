@@ -175,7 +175,7 @@ function renderWhereSlot(ctx: IrisContext, _trimLog: TrimLogEntry[]): string {
   if (slot.weather_5d_forecast && slot.weather_5d_forecast.length > 0) {
     const days = slot.weather_5d_forecast
       .slice(0, 3) // trim tail to first 3 days per spec §4.3
-      .map((d) => `  - ${d.date}: ${d.conditions}, ${d.low_f}–${d.high_f}°F, ${d.precipitation_pct}% precip`)
+      .map((d) => `  - ${d.date}: ${d.conditions}, ${d.low_f}-${d.high_f}°F, ${d.precipitation_pct}% precip`)
     lines.push('- 3-day forecast:', days.join('\n'))
   }
   return lines.join('\n')

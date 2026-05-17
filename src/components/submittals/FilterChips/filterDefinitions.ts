@@ -209,7 +209,7 @@ export const CHIP_CURRENT_REVISION: ChipDefinition<{ min?: number; max?: number 
     if (val.max !== undefined && r > val.max) return false
     return true
   },
-  pillSummary: (v) => `Rev: ${v.min ?? '0'}–${v.max ?? '∞'}`,
+  pillSummary: (v) => `Rev: ${v.min ?? '0'}-${v.max ?? '∞'}`,
 }
 
 export const CHIP_DIVISION = STR_LIST_CHIP(

@@ -274,7 +274,7 @@ export function useCommitDrawReport() {
       const recon = extraction.reconciliation
       if (!overrideReconciliationGuard && recon && !recon.reconciled && recon.deviation_pct > COMMIT_GUARD_THRESHOLD_PCT) {
         throw new Error(
-          `Line items ($${recon.sum_of_lines.toLocaleString()}) don't reconcile with contract sum ($${recon.stated_contract_sum.toLocaleString()}) — off by ${recon.deviation_pct.toFixed(1)}%. Fix rows or check the "Save anyway" override to proceed.`,
+          `Line items ($${recon.sum_of_lines.toLocaleString()}) don't reconcile with contract sum ($${recon.stated_contract_sum.toLocaleString()}). Off by ${recon.deviation_pct.toFixed(1)}%. Fix rows or check the "Save anyway" override to proceed.`,
         )
       }
       const contractId = await ensureContractId(projectId)
@@ -473,7 +473,7 @@ export function useCommitDrawReport() {
             body: {
               project_id: projectId,
               document_id: documentId,
-              document_name: `Draw Report #${extraction.application_number ?? '?'} — ${extraction.period_to ?? ''}`,
+              document_name: `Draw Report #${extraction.application_number ?? '?'}: ${extraction.period_to ?? ''}`,
               text: indexableText,
             },
           })
@@ -530,7 +530,7 @@ function buildIndexableText(extraction: DrawReportExtraction, rawText: string): 
       const completed = (li.previous_completed ?? 0) + (li.this_period ?? 0) + (li.materials_stored ?? 0)
       const pct = Number.isFinite(li.percent_complete) ? li.percent_complete : 0
       return (
-        `${li.item_number} ${li.cost_code} — ${li.description}: ` +
+        `${li.item_number} ${li.cost_code}: ${li.description}: ` +
         `scheduled ${$(li.scheduled_value)}, ` +
         `completed-to-date ${$(completed)} (${pct}%), ` +
         `retainage ${$(li.retainage)}, ` +

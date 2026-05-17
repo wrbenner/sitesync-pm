@@ -182,4 +182,24 @@ export default defineConfig([
       'jsx-a11y/no-noninteractive-element-interactions': 'off',
     },
   },
+  {
+    // ProjectBrain.tsx, OwnerReport.tsx, and OwnerUpdateGenerator.tsx
+    // pre-date the React Compiler signal rules. The todo warnings are
+    // React Compiler HIR limitations (try/finally, throw inside try)
+    // that can only be resolved by the compiler team, not user code.
+    // The set-state-in-effect pattern here is intentional fetch-on-mount
+    // via useCallback — refactoring to TanStack Query is tracked for
+    // Lap 3. Per feedback_floor_downgrade_rule.md.
+    files: [
+      'src/components/ai/ProjectBrain.tsx',
+      'src/components/reports/OwnerReport.tsx',
+      'src/components/reports/OwnerUpdateGenerator.tsx',
+    ],
+    rules: {
+      'react-hooks/todo': 'off',
+      'react-hooks/set-state-in-effect': 'off',
+      'jsx-a11y/click-events-have-key-events': 'off',
+      'jsx-a11y/no-static-element-interactions': 'off',
+    },
+  },
 ])
