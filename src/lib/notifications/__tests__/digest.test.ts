@@ -4,7 +4,7 @@ import type { NotificationEvent } from '../../../types/notifications'
 
 function evt(overrides: Partial<NotificationEvent>): NotificationEvent {
   return {
-    id: overrides.id ?? Math.random().toString(),
+    id: overrides.id ?? crypto.randomUUID().toString(),
     user_id: 'u1',
     event_type: 'rfi.assigned',
     severity: 'normal',

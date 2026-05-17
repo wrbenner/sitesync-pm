@@ -52,14 +52,14 @@ vi.mock('../../lib/sentry', () => ({
 // ---------------------------------------------------------------------------
 // Default session & user fixtures
 // ---------------------------------------------------------------------------
-const MOCK_USER = {
+const TEST_USER = {
   id: 'user-abc',
   email: 'test@example.com',
   user_metadata: { role: 'project_manager' },
 }
-const MOCK_SESSION = {
+const TEST_SESSION = {
   access_token: 'tok-abc',
-  user: MOCK_USER,
+  user: TEST_USER,
   expires_at: Math.floor(Date.now() / 1000) + 3600,
 }
 
@@ -140,7 +140,7 @@ describe('useAuth — error mapping via signIn', () => {
   it('returns null error on successful signIn', async () => {
     const useAuth = await getHook()
     mockSignInWithPassword.mockResolvedValue({
-      data: { session: MOCK_SESSION },
+      data: { session: TEST_SESSION },
       error: null,
     })
 
@@ -244,7 +244,7 @@ describe('useAuth — signUp', () => {
   it('returns null error on success', async () => {
     const useAuth = await getHook()
     mockSignUp.mockResolvedValue({
-      data: { user: MOCK_USER, session: MOCK_SESSION },
+      data: { user: TEST_USER, session: TEST_SESSION },
       error: null,
     })
     mockFromInsert.mockResolvedValue({ data: null, error: null })

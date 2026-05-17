@@ -17,7 +17,7 @@ import type { ReviewerStats } from '../../../hooks/useBallInCourtGroups'
 import type { SubmittalListRow } from '../../../hooks/useSubmittalsList'
 
 const mkRow = (over: Partial<SubmittalListRow>): SubmittalListRow => ({
-  id: String(over.id ?? Math.random()),
+  id: String(over.id ?? crypto.randomUUID()),
   project_id: 'p1',
   ...over,
 })

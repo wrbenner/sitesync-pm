@@ -46,7 +46,7 @@ vi.mock('../../../components/submittals/SubmittalRow', () => ({
 }))
 
 const mkRow = (over: Partial<SubmittalListRow>): SubmittalListRow => ({
-  id: String(over.id ?? Math.random()),
+  id: String(over.id ?? crypto.randomUUID()),
   project_id: 'p1',
   title: 'r',
   status: 'in_review',
