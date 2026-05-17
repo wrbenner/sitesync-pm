@@ -415,7 +415,7 @@ const TimeTracking: React.FC = () => {
   return (
     <PageContainer
       title="Time Tracking"
-      subtitle={`Week of ${toISODate(weekStart)} — Davis-Bacon compliant hours per cost code`}
+      subtitle={`Week of ${toISODate(weekStart)}: Davis-Bacon compliant hours per cost code`}
       actions={
         <>
           <Btn variant="secondary" onClick={autoFillFromLogs}>
@@ -467,7 +467,7 @@ const TimeTracking: React.FC = () => {
       {/* Week-at-a-glance: workers × days, backed by the `timesheets` table */}
       <Card padding={spacing['5']}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing['3'] }}>
-          <SectionHeader title={`Week at a Glance — ${weekFromISO} to ${weekToISO}`} />
+          <SectionHeader title={`Week at a Glance: ${weekFromISO} to ${weekToISO}`} />
           <Btn variant="primary" icon={<Plus size={14} />} onClick={() => setTsModalOpen(true)}>Enter Hours</Btn>
         </div>
         {timesheetsLoading ? (
@@ -695,7 +695,7 @@ const TimeTracking: React.FC = () => {
       {activeTab === 'payroll' && (
         <div>
           <Card padding={spacing['5']}>
-            <SectionHeader title="WH-347 — Certified Payroll Report" />
+            <SectionHeader title="WH-347: Certified Payroll Report" />
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: spacing['3'], marginBottom: spacing['4'], fontSize: typography.fontSize.sm }}>
               <div><span style={{ color: colors.textTertiary }}>Contractor:</span> <strong>{wh347Header.contractor}</strong></div>
               <div><span style={{ color: colors.textTertiary }}>Address:</span> {wh347Header.address}</div>

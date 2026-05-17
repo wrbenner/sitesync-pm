@@ -95,7 +95,7 @@ export const DrawingAnalysisReport: React.FC<{ data: DrawingAnalysisReportData }
     : 0
 
   return (
-    <Document title={`Drawing Analysis — ${data.projectName}`}>
+    <Document title={`Drawing Analysis: ${data.projectName}`}>
       <Page size="LETTER" style={styles.page}>
         <View style={styles.brand}>
           <Text style={styles.brandText}>SITESYNC AI</Text>

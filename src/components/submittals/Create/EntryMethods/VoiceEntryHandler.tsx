@@ -62,7 +62,7 @@ export const VoiceEntryHandler: React.FC<VoiceEntryHandlerProps> = ({ onDraftRea
       <button
         type="button"
         onClick={() => setOpen(true)}
-        title="Voice — Hey Iris, draft a submittal…"
+        title="Voice: Hey Iris, draft a submittal…"
         aria-label="Create submittal by voice"
         style={{
           display: 'inline-flex',

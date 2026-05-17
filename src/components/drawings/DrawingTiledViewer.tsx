@@ -2285,7 +2285,7 @@ export const DrawingTiledViewer: React.FC<DrawingTiledViewerProps> = ({
                   fontSize: 12,
                   fontWeight: 600,
                 }}
-                title="Revision cloud — drag a rectangle to scallop its edges"
+                title="Revision cloud: drag a rectangle to scallop its edges"
               >
                 Cloud
               </button>
@@ -2306,7 +2306,7 @@ export const DrawingTiledViewer: React.FC<DrawingTiledViewerProps> = ({
                   fontSize: 12,
                   fontWeight: 600,
                 }}
-                title="Place an approval stamp — click on the drawing"
+                title="Place an approval stamp: click on the drawing"
               >
                 Stamp
               </button>

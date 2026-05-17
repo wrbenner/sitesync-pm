@@ -247,7 +247,7 @@ export const FullTierProgressive: React.FC<FullTierProgressiveProps> = ({
             type="text"
             value={draft.responsible_sub_id ?? ''}
             onChange={(e) => onPatch({ responsible_sub_id: e.target.value || null })}
-            placeholder="Pick org — Phase 6 typeahead"
+            placeholder="Pick org"
             style={inputStyle}
             aria-label="Responsible sub (placeholder picker)"
           />

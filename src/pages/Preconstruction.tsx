@@ -1454,7 +1454,7 @@ function LevelingView({
                                 backgroundColor: responseBg(current),
                                 transition: `background ${transitions.instant}`,
                               }}
-                              title={`${current} — click to change`}
+                              title={`${current}. Click to change.`}
                             >
                               {responseIcon(current)}
                             </td>
