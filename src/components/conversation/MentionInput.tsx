@@ -61,13 +61,13 @@ export const MentionInput: React.FC<MentionInputProps> = ({
         .from('directory_contacts')
         .select('id, name, email, role, trade, company, project_id')
         .eq('project_id', projectId);
-      return ((data as any[] | null) ?? []).map((c) => ({
-        id: c.id as string,
-        name: c.name as string,
-        email: c.email as string | null,
-        role: c.role as string | null,
-        trade: c.trade as string | null,
-        company: c.company as string | null,
+      return (data ?? []).map((c) => ({
+        id: c.id,
+        name: c.name,
+        email: c.email,
+        role: c.role,
+        trade: c.trade,
+        company: c.company,
       }));
     },
     enabled: !!projectId,

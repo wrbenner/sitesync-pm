@@ -49,7 +49,7 @@ export const ApiTokensAdminPage: React.FC<Props> = ({ organizationId }) => {
   const { data: tokens } = useQuery({
     queryKey: ['org_api_tokens', organizationId],
     queryFn: async () => {
-      const { data } = await (supabase as any)
+      const { data } = await supabase
         .from('org_api_tokens')
         .select('*')
         .eq('organization_id', organizationId)
@@ -61,7 +61,7 @@ export const ApiTokensAdminPage: React.FC<Props> = ({ organizationId }) => {
   const create = async () => {
     if (!name.trim()) { toast.error('Name required'); return; }
     const minted = await mintToken();
-    const { error } = await (supabase as any).from('org_api_tokens').insert({
+    const { error } = await supabase.from('org_api_tokens').insert({
       organization_id: organizationId,
       name: name.trim(),
       prefix: minted.prefix,
@@ -83,7 +83,7 @@ export const ApiTokensAdminPage: React.FC<Props> = ({ organizationId }) => {
       destructiveLabel: 'Revoke token',
     });
     if (!ok) return;
-    const { error } = await (supabase as any)
+    const { error } = await supabase
       .from('org_api_tokens')
       .update({ revoked_at: new Date().toISOString(), revoked_reason: 'admin_revoked' } as never)
       .eq('id', id);
