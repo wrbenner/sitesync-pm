@@ -165,12 +165,12 @@ export function DrawReportUpload({ open, onClose, projectId, onSuccess }: DrawRe
       setStep('done')
       if (result.budgetRowsUpdated > 0) {
         toast.success(
-          `Draw report saved — ${result.lineItemCount} line items, ${result.budgetRowsUpdated} budget row${result.budgetRowsUpdated !== 1 ? 's' : ''} updated.`,
+          `Draw report saved. ${result.lineItemCount} line items, ${result.budgetRowsUpdated} budget row${result.budgetRowsUpdated !== 1 ? 's' : ''} updated.`,
           { duration: 5000 },
         )
       } else {
         toast.success(
-          `Draw report saved — ${result.lineItemCount} line items. Budget actuals unchanged (no CSI-division match in the current budget). Pay app + Construction Brain updated.`,
+          `Draw report saved. ${result.lineItemCount} line items. Budget actuals unchanged (no CSI-division match in the current budget). Pay app + Construction Brain updated.`,
           { duration: 7000 },
         )
       }
@@ -761,7 +761,7 @@ export function DrawReportUpload({ open, onClose, projectId, onSuccess }: DrawRe
                           numeric
                         />
                         <div
-                          title={low ? `Low confidence (${Math.round(line.confidence * 100)}%) — verify values` : `Confidence ${Math.round(line.confidence * 100)}%`}
+                          title={low ? `Low confidence (${Math.round(line.confidence * 100)}%). Verify values` : `Confidence ${Math.round(line.confidence * 100)}%`}
                           style={{
                             width: 10, height: 10, borderRadius: '50%',
                             backgroundColor: low ? colors.statusPending : colors.statusActive,

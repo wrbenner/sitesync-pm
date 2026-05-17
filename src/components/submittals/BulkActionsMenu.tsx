@@ -182,7 +182,7 @@ export const BulkActionsMenu: React.FC<BulkActionsMenuProps> = ({
         <MenuItem
           icon={<Sparkles size={12} />}
           disabled
-          title="Available in P2 of submittals — coming in Phase 4"
+          title="Available in P2 of submittals. Coming in Phase 4"
         >
           Re-run Iris Pre-flight
         </MenuItem>
@@ -195,7 +195,7 @@ export const BulkActionsMenu: React.FC<BulkActionsMenuProps> = ({
         <MenuItem
           icon={<FileSignature size={12} />}
           disabled
-          title="Available in P2 of submittals — coming in Phase 4"
+          title="Available in P2 of submittals. Coming in Phase 4"
         >
           Generate Stamp PDF
         </MenuItem>

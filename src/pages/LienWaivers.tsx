@@ -86,11 +86,11 @@ export function LienWaivers() {
   };
 
   // Use the actual DB column names. The API endpoint maps them so we need to handle both naming conventions.
-  const getWaiverState = (w: any): string => w.waiver_type ?? w.waiver_state ?? w.type ?? '';
-  const getContractorName = (w: any): string => w.contractor_name ?? w.subcontractor_id ?? '';
-  const getThroughDate = (w: any): string | null => w.through_date ?? w.payment_period ?? null;
-  const getSignedAt = (w: any): string | null => w.signed_at ?? w.received_at ?? null;
-  const getStatus = (w: any): string => w.status ?? 'pending';
+  const getWaiverState = (w: WaiverRow): string => (w.waiver_type ?? w.waiver_state ?? w.type ?? '') as string;
+  const getContractorName = (w: WaiverRow): string => (w.contractor_name ?? w.subcontractor_id ?? '') as string;
+  const getThroughDate = (w: WaiverRow): string | null => (w.through_date ?? w.payment_period ?? null) as string | null;
+  const getSignedAt = (w: WaiverRow): string | null => (w.signed_at ?? w.received_at ?? null) as string | null;
+  const getStatus = (w: WaiverRow): string => (w.status ?? 'pending') as string;
 
   const filtered = waivers.filter((w) => {
     const ws = getWaiverState(w);
@@ -130,7 +130,7 @@ export function LienWaivers() {
 
   const { confirm: confirmDeleteWaiver, dialog: deleteWaiverDialog } = useConfirm();
 
-  const handleDelete = async (w: any) => {
+  const handleDelete = async (w: WaiverRow) => {
     if (!projectId) return;
     const label = getContractorName(w) || 'this waiver';
     const ok = await confirmDeleteWaiver({
@@ -146,7 +146,7 @@ export function LienWaivers() {
     }
   };
 
-  const handleSendForSignature = async (w: any) => {
+  const handleSendForSignature = async (w: WaiverRow) => {
     if (!projectId) return;
     const vendor = getContractorName(w) || 'Unknown Vendor';
     setSendingSignatureId(w.id);
@@ -155,7 +155,7 @@ export function LienWaivers() {
       const label = WAIVER_TYPE_LABELS[waiverState as WaiverStateValue] ?? waiverState;
       const request = await createSignatureRequest.mutateAsync({
         project_id: projectId,
-        title: `Lien Waiver — ${label} — ${vendor}`,
+        title: `Lien Waiver: ${label}, ${vendor}`,
         source_file_url: `lien-waiver://${w.id}`,
         signing_order: 'parallel',
         metadata: { lien_waiver_id: w.id, signer_count: 1 },

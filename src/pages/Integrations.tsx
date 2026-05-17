@@ -501,7 +501,7 @@ const SyncHistoryPanel: React.FC<SyncHistoryPanelProps> = ({ connection, organiz
   }
 
   return (
-    <FormModal open onClose={onClose} title={`${providerName} — Sync History`} width={640}>
+    <FormModal open onClose={onClose} title={`${providerName}: Sync History`} width={640}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: spacing['4'] }}>
         {/* Trigger form */}
         <Card padding={spacing['4']}>

@@ -189,7 +189,7 @@ export const SubmittalActionPanel: React.FC<SubmittalActionPanelProps> = ({ open
             value={
               <span style={{ color: isOverdue(submittal.due_date, status) ? '#DC2626' : colors.ink }}>
                 {formatShortDate(submittal.due_date)}
-                {isOverdue(submittal.due_date, status) && ' — overdue'}
+                {isOverdue(submittal.due_date, status) && '. Overdue'}
               </span>
             }
           />
