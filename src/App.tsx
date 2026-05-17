@@ -574,8 +574,11 @@ function AppContent() {
   const { sidebarCollapsed, setSidebarCollapsed, setActiveView } = useUiStore();
   const navigate = useNavigate();
   const location = useLocation();
-  const isMobile = useMediaQuery('(max-width: 768px)');
-  const isTablet = useMediaQuery('(min-width: 768px) and (max-width: 1024px)');
+  // Tablets (≤1024px, iPad portrait) use MobileLayout — bottom-tab nav, full viewport.
+  // At 1024px the 252px sidebar leaves only 772px for content, which is too narrow for
+  // many dense table pages and causes the sticky sidebar (z-index 1020) to visually
+  // overlap page content in the grid. Desktop grid (sidebar + main) only at 1025px+.
+  const isMobile = useMediaQuery('(max-width: 1024px)');
   useTheme();
 
   const projectId = useProjectId();
@@ -631,12 +634,6 @@ function AppContent() {
   const prevDesktopCollapsed = useRef(sidebarCollapsed);
 
   useEffect(() => {
-    // Mobile uses MobileLayout entirely — collapse so any flicker through the
-    // desktop tree doesn't widen the layout. iPad keeps the full sidebar
-    // because (a) the Sidebar component renders at a fixed 252px regardless of
-    // the `collapsed` flag, so collapsing only desyncs the main margin and
-    // hides content behind the sidebar, and (b) 1024px viewports comfortably
-    // fit 252px sidebar + 772px content.
     if (isMobile) {
       prevDesktopCollapsed.current = sidebarCollapsed;
       setSidebarCollapsed(true);
@@ -644,7 +641,7 @@ function AppContent() {
       setSidebarCollapsed(prevDesktopCollapsed.current);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isMobile, isTablet]);
+  }, [isMobile]);
   const { toggleContextPanel, contextPanelOpen } = useAIAnnotationStore();
   const { openCopilot: closeCopilot, isOpen: copilotOpen } = useCopilotStore();
 

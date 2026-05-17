@@ -107,7 +107,7 @@ export const InboxClearState: React.FC = () => {
               lineHeight: 1.4,
             }}
           >
-            No items need you right now. The project is still moving — here's what's coming up.
+            No items need you right now. The project is still moving. Here's what's coming up.
           </span>
         </div>
       </div>
