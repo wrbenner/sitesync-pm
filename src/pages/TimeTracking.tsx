@@ -103,7 +103,7 @@ const TimeTracking: React.FC = () => {
     if (!projectId) return
     const ok = await confirmRemoveTimesheet({
       title: 'Delete timesheet entry?',
-      description: `${row.hours}h for ${row.worker_name ?? 'this worker'} on ${row.work_date} — will reflect on certified payroll if filed.`,
+      description: `${row.hours}h for ${row.worker_name ?? 'this worker'} on ${row.work_date}. This will reflect on certified payroll if filed.`,
       destructiveLabel: 'Delete entry',
     })
     if (!ok) return

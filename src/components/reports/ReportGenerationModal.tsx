@@ -116,7 +116,7 @@ const REPORT_TYPES: Array<{ value: ReportType; label: string; description: strin
   {
     value: 'scale_audit',
     label: 'Scale Audit',
-    description: 'Compare scales across paired drawings — flags mismatches.',
+    description: 'Compare scales across paired drawings. Flags mismatches.',
   },
   {
     value: 'full_analysis',

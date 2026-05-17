@@ -262,7 +262,7 @@ export const Permits: React.FC = () => {
     const label = (permit.permit_number as string) || (permit.type as string) || 'this permit'
     const ok = await confirmDeletePermit({
       title: 'Delete permit?',
-      description: `"${label}" — inspections logged against this permit are preserved as orphaned records for compliance audit.`,
+      description: `"${label}". Inspections logged against this permit are preserved as orphaned records for compliance audit.`,
       destructiveLabel: 'Delete permit',
     })
     if (!ok) return

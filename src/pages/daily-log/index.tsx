@@ -1530,7 +1530,7 @@ const DailyLogPage: React.FC = () => {
           )}
         >
           {photos.length === 0 ? (
-            <EmptyState icon={<Camera size={20} />} message="No photos yet — tap Capture to add one" />
+            <EmptyState icon={<Camera size={20} />} message="No photos yet. Tap Capture to add one." />
           ) : (
             <div style={{
               display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',

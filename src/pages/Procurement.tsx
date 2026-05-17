@@ -505,7 +505,7 @@ export const Procurement: React.FC = () => {
     if (!projectId) return
     const ok = await confirmDeleteProcurement({
       title: 'Delete purchase order?',
-      description: `PO #${po.po_number || ''} — committed-cost rollups will adjust on the next budget recalculation.`,
+      description: `PO #${po.po_number || ''}. Committed-cost rollups will adjust on the next budget recalculation.`,
       destructiveLabel: 'Delete PO',
     })
     if (!ok) return

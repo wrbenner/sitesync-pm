@@ -504,7 +504,7 @@ const TasksPage: React.FC = () => {
     if (!projectId) return
     const ok = await confirm({
       title: 'Delete task?',
-      description: `"${task.title}" — this cannot be undone.`,
+      description: `"${task.title}". This cannot be undone.`,
       destructiveLabel: 'Delete task',
     })
     if (!ok) return

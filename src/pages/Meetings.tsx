@@ -683,7 +683,7 @@ const MeetingDetailView: React.FC<{
                         onClick={async () => {
                           const ok = await confirmDeleteAgenda({
                             title: 'Delete agenda item?',
-                            description: `"${item.title}" — meeting minutes export will reflect the updated agenda.`,
+                            description: `"${item.title}". Meeting minutes export will reflect the updated agenda.`,
                             destructiveLabel: 'Delete agenda item',
                           });
                           if (!ok) return;
@@ -1277,7 +1277,7 @@ export const Meetings: React.FC = () => {
     if (!projectId) return;
     const ok = await confirmDeleteMeeting({
       title: 'Delete meeting?',
-      description: `"${meeting.title}" — meeting minutes, agenda, attendance, and action items will be removed. Action items in flight on other entities are preserved.`,
+      description: `"${meeting.title}". Meeting minutes, agenda, attendance, and action items will be removed. Action items in flight on other entities are preserved.`,
       destructiveLabel: 'Delete meeting',
     });
     if (!ok) return;

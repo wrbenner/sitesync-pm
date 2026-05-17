@@ -1755,7 +1755,7 @@ export const DrawingTiledViewer: React.FC<DrawingTiledViewerProps> = ({
       } else {
         toast.error(
           `${failedAnnotations.length} markup${failedAnnotations.length === 1 ? '' : 's'} failed to save`,
-          { description: succeeded > 0 ? `${succeeded} saved successfully — retry the rest with Save.` : 'Check drawing_markups RLS policy in Supabase.' },
+          { description: succeeded > 0 ? `${succeeded} saved successfully. Retry the rest with Save.` : 'Check drawing_markups RLS policy in Supabase.' },
         );
       }
     } finally {

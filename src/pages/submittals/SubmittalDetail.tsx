@@ -183,7 +183,7 @@ export const SubmittalDetail: React.FC<SubmittalDetailProps> = ({
     const label = (selected.title as string) || (selected.submittalNumber as string) || `Submittal ${id.slice(0, 8)}`;
     const ok = await confirmDeleteSubmittal({
       title: 'Delete submittal?',
-      description: `"${label}" — submittal is a contractual artifact tied to a spec section. Deleting removes it from the legal record. Consider voiding instead.`,
+      description: `"${label}". A submittal is a contractual artifact tied to a spec section. Deleting removes it from the legal record. Consider voiding instead.`,
       destructiveLabel: 'Delete submittal',
       typeToConfirm: 'DELETE',
     });
