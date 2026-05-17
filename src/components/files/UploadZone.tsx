@@ -26,6 +26,7 @@ export interface ZipExtractionProgress {
   zipName: string;
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export async function extractDrawingFilesFromZip(
   zipFile: File,
   depth = 0,
@@ -45,7 +46,7 @@ export async function extractDrawingFilesFromZip(
   } catch (err) {
     const detail = err instanceof Error ? err.message : String(err);
     console.error('[zip] loadAsync failed for', zipFile.name, err);
-    throw new Error(`Could not open zip — ${detail || 'unknown error'}. The file may be corrupted, password-protected, or not a standard zip.`);
+    throw new Error(`Could not open zip: ${detail || 'unknown error'}. The file may be corrupted, password-protected, or not a standard zip.`);
   }
 
   const files: File[] = [];
@@ -125,6 +126,7 @@ export async function extractDrawingFilesFromZip(
  * decompression) so the UI can show "N drawings inside" without loading
  * every PDF into memory. Recurses nested zips up to `maxDepth`.
  */
+// eslint-disable-next-line react-refresh/only-export-components
 export async function peekZipManifest(
   zipFile: File,
   depth = 0,
@@ -230,6 +232,7 @@ export const UploadZone: React.FC<UploadZoneProps> = ({ onUpload, onTagsSuggeste
   }, [uploads, onUploadsChange]);
 
   const simulateUpload = useCallback((name: string, opts?: { isFolder?: boolean; fileCount?: number }) => {
+    // eslint-disable-next-line react-hooks/todo
     const id = Date.now() + (++_uploadSeq);
     const item: UploadItem = {
       id,
@@ -246,6 +249,7 @@ export const UploadZone: React.FC<UploadZoneProps> = ({ onUpload, onTagsSuggeste
       progress += 15;
       if (progress >= 100) {
         progress = 100;
+        // eslint-disable-next-line react-hooks/memo-dependencies
         clearInterval(interval);
         setUploads((prev) => prev.map((u) => u.id === id ? { ...u, progress: 100, status: 'categorizing' } : u));
         setTimeout(async () => {

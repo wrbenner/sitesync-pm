@@ -10,7 +10,7 @@
 //   even though the column genuinely exists at runtime.
 //
 //   Pre-Lap-1, the codebase had 4339 typecheck errors, ~3000 of which were
-//   this pattern. The Bugatti fix is not `as any` — it is a typed wrapper
+//   this pattern. The Bugatti fix is not `as any` — it is a typed wrapper // type-safe-ok
 //   that preserves the literal table generic through the entire chain so
 //   the strict guard is satisfied AT COMPILE TIME.
 //
@@ -29,7 +29,7 @@
 // What this is NOT:
 //   • Not a query builder DSL like Kysely. We don't replace PostgrestBuilder.
 //   • Not an ORM. Rows still come back as the typed Row<T> Supabase emits.
-//   • Not a `as any` hideout. Every cast is contained, named, commented.
+//   • Not a `as any` hideout. Every cast is contained, named, commented. // type-safe-ok
 //
 // Migration plan:
 //   Phase B (this file) — write the helpers + property tests.

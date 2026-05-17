@@ -91,7 +91,6 @@ export const EntityHistoryPanel: React.FC<EntityHistoryPanelProps> = ({
 
   return (
     <section
-      role="region"
       aria-label={title}
       style={{
         backgroundColor: colors.surfaceRaised,
@@ -252,7 +251,7 @@ const HistoryEntryRow: React.FC<{ entry: AuditLogEntry }> = ({ entry }) => {
           }}
         >
           <span
-            title={fromIris ? 'System actor — Iris drafted, user approved.' : 'Human actor — signed-in user.'}
+            title={fromIris ? 'System actor: Iris drafted, user approved.' : 'Human actor: signed-in user.'}
             style={{
               display: 'inline-flex', alignItems: 'center', gap: 3,
               padding: '0 6px',
