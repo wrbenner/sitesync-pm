@@ -117,7 +117,7 @@ export const CrossProjectSearchPalette: React.FC<Props> = ({
               else if (e.key === 'ArrowUp')   { e.preventDefault(); setActiveIdx(i => Math.max(0, i - 1)) }
               else if (e.key === 'Enter' && flatOrdered[activeIdx]) onSelect(flatOrdered[activeIdx])
             }}
-            placeholder="Search across all projects — RFIs, submittals, punch, drawings…"
+            placeholder="Search across all projects: RFIs, submittals, punch, drawings…"
             style={{
               flex: 1, border: 'none', outline: 'none',
               fontFamily: typography.fontFamily, fontSize: 16, color: colors.ink,
@@ -138,7 +138,7 @@ export const CrossProjectSearchPalette: React.FC<Props> = ({
           )}
           {parsed.tooShort && (
             <p style={{ padding: spacing['4'], fontFamily: typography.fontFamily, fontSize: 12, color: colors.ink3, textAlign: 'center' }}>
-              Keep typing — at least 2 characters.
+              Keep typing. At least 2 characters required.
             </p>
           )}
           {!parsed.empty && !parsed.tooShort && loading && results.length === 0 && (

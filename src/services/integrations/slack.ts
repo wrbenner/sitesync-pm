@@ -224,7 +224,7 @@ export async function sendSlackChangeOrderNotification(
   const config = (data as unknown as { config?: Record<string, string> } | null)?.config ?? null
   if (!config?.webhookUrl) return { success: false, error: 'Slack not configured' }
   void co.projectId
-  const text = `Change order approved: ${co.title} ($${co.amount.toLocaleString()}) — by ${co.approvedBy}`
+  const text = `Change order approved: ${co.title} ($${co.amount.toLocaleString()}), approved by ${co.approvedBy}`
   return postToSlack(config.webhookUrl, [
     { type: 'section', text: { type: 'mrkdwn', text: `*Change order approved*\n${co.title}\nAmount: $${co.amount.toLocaleString()}\nApproved by: ${co.approvedBy}` } },
   ], text)
