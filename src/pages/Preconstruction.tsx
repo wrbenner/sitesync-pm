@@ -291,30 +291,30 @@ export const Preconstruction: React.FC = () => {
     const insights: { type: 'warning' | 'info' | 'success'; text: string }[] = []
 
     if (selectedPackage.estimated_value && lowest.bid_amount < selectedPackage.estimated_value * 0.7) {
-      insights.push({ type: 'warning', text: `Low bid is >30% below estimate — verify scope completeness and check for potential buy-in pricing.` })
+      insights.push({ type: 'warning', text: `Low bid is >30% below estimate. Verify scope completeness and check for potential buy-in pricing.` })
     }
     if (variancePct > 40) {
-      insights.push({ type: 'warning', text: `Very high spread (${variancePct.toFixed(0)}%) — likely scope interpretation differences. Request clarifications before leveling.` })
+      insights.push({ type: 'warning', text: `Very high spread (${variancePct.toFixed(0)}%): likely scope interpretation differences. Request clarifications before leveling.` })
     } else if (variancePct > 25) {
-      insights.push({ type: 'info', text: `Moderate spread (${variancePct.toFixed(0)}%) — review scope definitions for ambiguity.` })
+      insights.push({ type: 'info', text: `Moderate spread (${variancePct.toFixed(0)}%). Review scope definitions for ambiguity.` })
     }
     if (unusuallyLow.length > 0) {
-      insights.push({ type: 'warning', text: `${unusuallyLow.length} bid(s) >25% below average — check for errors, missing scope, or qualification concerns.` })
+      insights.push({ type: 'warning', text: `${unusuallyLow.length} bid(s) >25% below average. Check for errors, missing scope, or qualification concerns.` })
     }
     if (unusuallyHigh.length > 0) {
-      insights.push({ type: 'info', text: `${unusuallyHigh.length} bid(s) >30% above average — may include extra scope or higher qualifications.` })
+      insights.push({ type: 'info', text: `${unusuallyHigh.length} bid(s) >30% above average. May include extra scope or higher qualifications.` })
     }
     if (bids.length < 3) {
-      insights.push({ type: 'warning', text: `Only ${bids.length} bid(s) received — insufficient coverage for competitive leveling. Target 3-5 bids minimum.` })
+      insights.push({ type: 'warning', text: `Only ${bids.length} bid(s) received. Insufficient coverage for competitive leveling. Target 3-5 bids minimum.` })
     }
     if (coeffVar < 10 && bids.length >= 3) {
-      insights.push({ type: 'success', text: `Tight clustering (CV: ${coeffVar.toFixed(1)}%) — pricing is competitive and scope interpretation is consistent.` })
+      insights.push({ type: 'success', text: `Tight clustering (CV: ${coeffVar.toFixed(1)}%): pricing is competitive, scope interpretation consistent.` })
     }
 
     // Scope gap detection
     const excludedCount = scopeResponseList.filter((r) => r.response === 'excluded').length
     if (excludedCount > 0) {
-      insights.push({ type: 'warning', text: `${excludedCount} scope exclusion(s) detected across bidders — review leveling matrix for gaps.` })
+      insights.push({ type: 'warning', text: `${excludedCount} scope exclusion(s) detected across bidders. Review leveling matrix for gaps.` })
     }
 
     return { bids, avg, median, lowest, highest, spread, variancePct, stdDev, coeffVar, unusuallyLow, unusuallyHigh, insights }

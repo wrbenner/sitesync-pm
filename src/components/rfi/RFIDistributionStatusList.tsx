@@ -58,7 +58,7 @@ export const RFIDistributionStatusList: React.FC<RFIDistributionStatusListProps>
         const status = (row.delivery_status ?? 'sent') as keyof typeof STATUS_META
         const meta = STATUS_META[status] ?? STATUS_META.sent
         const tooltip = row.bounce_reason
-          ? `${meta.label} — ${row.bounce_reason}`
+          ? `${meta.label}: ${row.bounce_reason}`
           : meta.label
         return (
           <li

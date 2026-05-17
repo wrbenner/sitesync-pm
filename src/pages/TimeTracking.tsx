@@ -1074,7 +1074,7 @@ const TimeTracking: React.FC = () => {
               <option value="">Select worker</option>
               {((workforceMembers ?? []) as unknown as Array<Record<string, unknown>>).map((w) => (
                 <option key={w.id as string} value={w.id as string}>
-                  {((w.name as string) ?? 'Unnamed')}{w.trade ? ` — ${w.trade as string}` : ''}
+                  {((w.name as string) ?? 'Unnamed')}{w.trade ? `, ${w.trade as string}` : ''}
                 </option>
               ))}
             </select>

@@ -96,12 +96,12 @@ const SecurityOverview: React.FC = () => {
           <ControlCard
             icon={<Database size={18} />}
             title="Tenant isolation"
-            body="Every row carries organization_id and project_id. Postgres Row-Level Security policies enforce tenant scoping at the database layer — a query that &quot;forgets&quot; to filter still returns zero rows for unauthorized callers. Every tenant-scoped table is FORCE ROW LEVEL SECURITY enabled, so even superuser-equivalent service-role queries cannot bypass policies without explicitly disabling them per-statement."
+            body="Every row carries organization_id and project_id. Postgres Row-Level Security policies enforce tenant scoping at the database layer: a query that &quot;forgets&quot; to filter still returns zero rows for unauthorized callers. Every tenant-scoped table is FORCE ROW LEVEL SECURITY enabled, so even superuser-equivalent service-role queries cannot bypass policies without explicitly disabling them per-statement."
           />
           <ControlCard
             icon={<FileCheck2 size={18} />}
             title="Tamper-evident audit log"
-            body="Every privileged mutation is captured with actor, timestamp, before/after state, and changed fields. Audit log entries form a SHA-256 hash chain — each entry's hash covers its content plus the prior entry's hash. A scheduled verifier walks the chain nightly and alerts on integrity break. UPDATE/DELETE on the audit log is blocked at the database layer for non-superuser roles."
+            body="Every privileged mutation is captured with actor, timestamp, before/after state, and changed fields. Audit log entries form a SHA-256 hash chain: each entry's hash covers its content plus the prior entry's hash. A scheduled verifier walks the chain nightly and alerts on integrity break. UPDATE/DELETE on the audit log is blocked at the database layer for non-superuser roles."
           />
           <ControlCard
             icon={<Lock size={18} />}

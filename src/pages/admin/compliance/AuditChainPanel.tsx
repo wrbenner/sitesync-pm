@@ -64,7 +64,7 @@ export const AuditChainPanel: React.FC<{ projectId: string | undefined }> = ({ p
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: spacing['4'] }}>
       {error && (
-        <DegradedBanner message="Could not load audit_log — check RLS + service role grants." />
+        <DegradedBanner message="Could not load audit_log. Check RLS + service role grants." />
       )}
       {data?.partial && (
         <DegradedBanner message="audit_log is missing the entry_hash / previous_hash columns. Apply the 20260426000001_audit_log_hash_chain migration to enable chain verification." />
