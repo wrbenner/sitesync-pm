@@ -57,8 +57,8 @@ export const PeriodClosedBanner: React.FC<PeriodClosedBannerProps> = ({ projectI
             fontWeight: typography.fontWeight.medium,
           }}
         >
-          Period {label} is closed — edits restricted to owner/admin.
-          Reopen in Budget → Period Close.
+          Period {label} is closed. Edits restricted to owner/admin.
+          Reopen in Budget: Period Close.
         </span>
         <div style={{ marginLeft: 'auto' }}>
           <Link
