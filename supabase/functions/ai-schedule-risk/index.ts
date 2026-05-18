@@ -59,9 +59,9 @@ Deno.serve(async (req) => {
     ] = await Promise.all([
       adminClient
         .from('schedule_phases')
-        .select('id, name, status, scheduled_start, scheduled_end, is_critical_path')
+        .select('id, name, status, start_date, end_date, is_critical_path')
         .eq('project_id', projectId)
-        .order('scheduled_start', { ascending: true }),
+        .order('start_date', { ascending: true }),
       adminClient
         .from('weather_cache')
         .select('forecast_data')
