@@ -194,8 +194,8 @@ const RequestAccessPage: React.FC<RequestAccessPageProps> = ({ moduleName }) => 
     <button
       onClick={() => {/* TODO: wire up request access flow */}}
       style={{
-        backgroundColor: colors.brand400, color: colors.white,
-        border: 'none', borderRadius: borderRadius.md,
+        backgroundColor: 'transparent', color: colors.brand700,
+        border: `1.5px solid ${colors.brand700}`, borderRadius: borderRadius.md,
         padding: `${spacing['2']} ${spacing['5']}`,
         fontSize: typography.fontSize.body, fontWeight: typography.fontWeight.medium,
         cursor: 'pointer', fontFamily: typography.fontFamily,
