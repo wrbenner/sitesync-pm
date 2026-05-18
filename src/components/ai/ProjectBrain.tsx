@@ -625,7 +625,7 @@ export const ProjectBrain: React.FC = () => {
       const msg = e instanceof Error ? e.message : String(e);
       updateConvMessages(convId, (msgs) => [...msgs, {
         role: 'assistant',
-        content: `Sorry — ${msg}`,
+        content: `Sorry: ${msg}`,
         ts: Date.now(),
       }]);
     } finally {

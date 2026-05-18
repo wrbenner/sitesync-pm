@@ -164,8 +164,8 @@ export const RFIDistributionStaticList: React.FC<Props> = ({
                 disabled={!canEdit}
                 title={
                   r.bounce_reason
-                    ? `${r.recipient_email} — ${statusInfo.label}: ${r.bounce_reason}`
-                    : `${r.recipient_email} — ${statusInfo.label}`
+                    ? `${r.recipient_email} (${statusInfo.label}): ${r.bounce_reason}`
+                    : `${r.recipient_email} (${statusInfo.label})`
                 }
                 style={{
                   all: 'unset',

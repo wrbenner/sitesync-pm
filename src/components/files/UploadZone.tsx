@@ -45,7 +45,7 @@ export async function extractDrawingFilesFromZip(
   } catch (err) {
     const detail = err instanceof Error ? err.message : String(err);
     console.error('[zip] loadAsync failed for', zipFile.name, err);
-    throw new Error(`Could not open zip — ${detail || 'unknown error'}. The file may be corrupted, password-protected, or not a standard zip.`);
+    throw new Error(`Could not open zip: ${detail || 'unknown error'}. The file may be corrupted, password-protected, or not a standard zip.`);
   }
 
   const files: File[] = [];

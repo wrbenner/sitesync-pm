@@ -186,12 +186,12 @@ export async function geocodeAddress(query: string): Promise<GeocodingResult[]> 
     );
     if (!response.ok) throw new Error(`Geocoding failed: ${response.status}`);
     const data = await response.json();
-    return data.map((r: any) => ({
-      lat: parseFloat(r.lat),
-      lng: parseFloat(r.lon),
-      display_name: r.display_name,
-      address: r.address || {},
-      boundingbox: r.boundingbox,
+    return (data as Record<string, unknown>[]).map((r) => ({
+      lat: parseFloat(r.lat as string),
+      lng: parseFloat(r.lon as string),
+      display_name: r.display_name as string,
+      address: (r.address || {}) as Record<string, string>,
+      boundingbox: (r.boundingbox as string[]).slice(0, 4) as [string, string, string, string],
     }));
   } catch (err) {
     console.error('[SiteIntelligence] Geocoding error:', err);
@@ -213,39 +213,39 @@ function mapFloodZone(zone: string, subtype: string): { risk_level: FloodZoneDat
       return {
         risk_level: 'High',
         insurance_required: true,
-        description: `Zone ${zoneUpper} — Special Flood Hazard Area (1% annual chance flood). Mandatory flood insurance. Base flood elevations may apply.`,
+        description: `Zone ${zoneUpper}: Special Flood Hazard Area (1% annual chance flood). Mandatory flood insurance. Base flood elevations may apply.`,
       };
     case 'VE':
     case 'V':
       return {
         risk_level: 'High',
         insurance_required: true,
-        description: `Zone ${zoneUpper} — Coastal High Hazard Area with wave action. Mandatory flood insurance. Elevated construction required.`,
+        description: `Zone ${zoneUpper}: Coastal High Hazard Area with wave action. Mandatory flood insurance. Elevated construction required.`,
       };
     case 'X':
       if (subtype && subtype.includes('500')) {
         return {
           risk_level: 'Moderate',
           insurance_required: false,
-          description: 'Zone X (Shaded) — 0.2% annual chance (500-year) flood area. Flood insurance recommended but not mandatory.',
+          description: 'Zone X (Shaded): 0.2% annual chance (500-year) flood area. Flood insurance recommended but not mandatory.',
         };
       }
       return {
         risk_level: 'Minimal',
         insurance_required: false,
-        description: 'Zone X (Unshaded) — Minimal flood hazard. Area outside the 0.2% annual chance floodplain. Flood insurance optional.',
+        description: 'Zone X (Unshaded): Minimal flood hazard. Area outside the 0.2% annual chance floodplain. Flood insurance optional.',
       };
     case 'D':
       return {
         risk_level: 'Low',
         insurance_required: false,
-        description: 'Zone D — Undetermined risk. Flood hazards are possible but not determined. Flood insurance available.',
+        description: 'Zone D: Undetermined risk. Flood hazards are possible but not determined. Flood insurance available.',
       };
     default:
       return {
         risk_level: 'Low',
         insurance_required: false,
-        description: zone ? `Zone ${zone} — Flood hazard data available from FEMA NFHL.` : 'No FEMA flood data available for this location.',
+        description: zone ? `Zone ${zone}: Flood hazard data available from FEMA NFHL.` : 'No FEMA flood data available for this location.',
       };
   }
 }
@@ -424,7 +424,7 @@ async function fetchWeather(lat: number, lng: number): Promise<WeatherData | nul
     };
 
     // Aggregate 3-hour forecast into daily summaries
-    const dailyMap = new Map<string, any[]>();
+    const dailyMap = new Map<string, Record<string, unknown>[]>();
     for (const item of forecastData.list || []) {
       const date = item.dt_txt.split(' ')[0];
       if (!dailyMap.has(date)) dailyMap.set(date, []);
@@ -434,16 +434,18 @@ async function fetchWeather(lat: number, lng: number): Promise<WeatherData | nul
     const forecast: WeatherForecastDay[] = [];
     for (const [date, items] of dailyMap) {
       if (forecast.length >= 5) break;
-      const temps = items.map((i: any) => i.main.temp);
-      const winds = items.map((i: any) => i.wind.speed);
-      const gusts = items.map((i: any) => i.wind.gust || i.wind.speed);
-      const pops = items.map((i: any) => (i.pop || 0) * 100);
-      const rains = items.map((i: any) => i.rain?.['3h'] || 0);
-      const snows = items.map((i: any) => i.snow?.['3h'] || 0);
+      const temps = items.map((i) => (i.main as Record<string, number>).temp);
+      const winds = items.map((i) => (i.wind as Record<string, number>).speed);
+      const gusts = items.map((i) => { const w = i.wind as Record<string, number>; return w.gust || w.speed; });
+      const pops = items.map((i) => ((i.pop as number | undefined) || 0) * 100);
+      const rains = items.map((i) => ((i.rain as Record<string, number> | undefined)?.['3h'] || 0));
+      const snows = items.map((i) => ((i.snow as Record<string, number> | undefined)?.['3h'] || 0));
       // Pick the most common weather condition
+      type WeatherItem = { main: string; description: string; icon: string };
       const condCounts = new Map<string, number>();
       for (const i of items) {
-        const c = i.weather[0]?.main || 'Clear';
+        const w = (i.weather as WeatherItem[] | undefined)?.[0];
+        const c = w?.main || 'Clear';
         condCounts.set(c, (condCounts.get(c) || 0) + 1);
       }
       let bestCond = 'Clear';
@@ -452,17 +454,18 @@ async function fetchWeather(lat: number, lng: number): Promise<WeatherData | nul
         if (cnt > bestCount) { bestCond = c; bestCount = cnt; }
       }
       const midItem = items[Math.floor(items.length / 2)];
+      const midWeather = (midItem?.weather as WeatherItem[] | undefined)?.[0];
 
       forecast.push({
         date,
         temp_high: Math.round(Math.max(...temps)),
         temp_low: Math.round(Math.min(...temps)),
         conditions: bestCond,
-        description: midItem.weather[0]?.description || '',
-        icon: midItem.weather[0]?.icon || '01d',
+        description: midWeather?.description || '',
+        icon: midWeather?.icon || '01d',
         wind_speed: Math.round(Math.max(...winds)),
         wind_gust: Math.round(Math.max(...gusts)),
-        humidity: Math.round(items.reduce((s: number, i: any) => s + i.main.humidity, 0) / items.length),
+        humidity: Math.round(items.reduce((s: number, i) => s + ((i.main as Record<string, number>).humidity), 0) / items.length),
         precipitation_probability: Math.round(Math.max(...pops)),
         rain_mm: Math.round(rains.reduce((s: number, v: number) => s + v, 0) * 10) / 10,
         snow_mm: Math.round(snows.reduce((s: number, v: number) => s + v, 0) * 10) / 10,
@@ -651,9 +654,9 @@ async function fetchEPAData(lat: number, lng: number): Promise<EPAFacility[]> {
       return await fetchEPASuperfund(lat, lng);
     }
 
-    return data.features.slice(0, 10).map((f: any) => {
-      const a = f.attributes;
-      const geom = f.geometry;
+    return (data.features as Record<string, unknown>[]).slice(0, 10).map((f) => {
+      const a = f.attributes as Record<string, string>;
+      const geom = f.geometry as { x: number; y: number } | null | undefined;
       const dist = geom ? haversineDistance(lat, lng, geom.y, geom.x) : { miles: 0, feet: 0 };
       return {
         name: a.PRIMARY_NAME || 'Unknown',
@@ -662,7 +665,7 @@ async function fetchEPAData(lat: number, lng: number): Promise<EPAFacility[]> {
         city: a.CITY_NAME || '',
         state: a.STATE_CODE || '',
         distance_mi: dist.miles,
-        programs: (a.INTEREST_TYPES || '').split(',').map((s: string) => s.trim()).filter(Boolean),
+        programs: (a.INTEREST_TYPES || '').split(',').map((s) => s.trim()).filter(Boolean),
       };
     });
   } catch (err) {
@@ -696,9 +699,9 @@ async function fetchEPASuperfund(lat: number, lng: number): Promise<EPAFacility[
     if (!response.ok) return [];
     const data = await response.json();
     if (!data.features) return [];
-    return data.features.slice(0, 10).map((f: any) => {
-      const a = f.attributes;
-      const geom = f.geometry;
+    return (data.features as Record<string, unknown>[]).slice(0, 10).map((f) => {
+      const a = f.attributes as Record<string, string>;
+      const geom = f.geometry as { x: number; y: number } | null | undefined;
       const dist = geom ? haversineDistance(lat, lng, geom.y, geom.x) : { miles: 0, feet: 0 };
       return {
         name: a.SITE_NAME || 'Unknown',

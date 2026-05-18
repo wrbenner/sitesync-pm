@@ -81,7 +81,7 @@ function triageResponse(r: RFIResponseRow): TriageSuggestion | null {
 
   const ambiguityNote =
     typeConfidence < 0.6
-      ? "Iris couldn't classify this response with confidence — review before applying."
+      ? "Iris couldn't classify this response with confidence. Review before applying."
       : null
 
   const band = bandFromScore(Math.min(typeConfidence, actionConfidence))
@@ -201,7 +201,7 @@ export const RFIIrisTriage: React.FC<RFIIrisTriageProps> = ({ rfiId, projectId, 
           afterState: { suggested_action: triage.suggestedAction },
           metadata: { kind: 'iris_triage_action_stub', action: triage.suggestedAction },
         })
-        toast(`Logged "${triage.suggestedAction.replace(/_/g, ' ')}" — wired flow ships in a follow-up.`)
+        toast(`Logged "${triage.suggestedAction.replace(/_/g, ' ')}". Wired flow ships in a follow-up.`)
       }
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Action failed')
