@@ -1048,7 +1048,7 @@ export function RFIDetail() {
                         await approveDraft.mutateAsync(d)
                         sonnerToast.success('Approved')
                       } catch {
-                        sonnerToast.error('Could not approve — please try again')
+                        sonnerToast.error('Could not approve. Please try again.')
                       }
                     }}
                     onReject={async (d) => {

@@ -25,7 +25,7 @@ export function TrialBanner() {
         lineHeight: 1.45,
       }}
     >
-      You're on a free trial — <strong>{trialDaysRemaining} day{trialDaysRemaining === 1 ? '' : 's'}</strong> remaining.
+      You're on a free trial: <strong>{trialDaysRemaining} day{trialDaysRemaining === 1 ? '' : 's'}</strong> remaining.
       Add a payment method in the billing portal to keep access after the trial ends.
     </div>
   )

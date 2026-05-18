@@ -115,10 +115,10 @@ export const Osha300Panel: React.FC<{ projectId: string | undefined }> = ({ proj
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: spacing['4'] }}>
       {error && !data?.partial && (
-        <DegradedBanner message="Could not load incidents — check RLS + table presence." />
+        <DegradedBanner message="Could not load incidents. Check RLS + table presence." />
       )}
       {data?.partial && (
-        <DegradedBanner message="Older deployment — incidents missing days_away / days_restricted / case_classification. Builder treats as zero / 'other recordable'." />
+        <DegradedBanner message="Older deployment: incidents missing days_away / days_restricted / case_classification. Builder treats as zero / 'other recordable'." />
       )}
 
       {/* Header row: year + ITA inputs + export */}
@@ -244,7 +244,7 @@ export const Osha300Panel: React.FC<{ projectId: string | undefined }> = ({ proj
           fontFamily: typography.fontFamily,
         }}>
           <div style={{ fontSize: typography.fontSize.title, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, marginBottom: spacing['1'] }}>
-            Form 300A — Annual Summary
+            Form 300A: Annual Summary
           </div>
           <div style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary, marginBottom: spacing['4'] }}>
             Establishment: {summary.establishment} · Year: {summary.year} · Posting: {summary.postingPeriod.from} → {summary.postingPeriod.to}
@@ -269,7 +269,7 @@ export const Osha300Panel: React.FC<{ projectId: string | undefined }> = ({ proj
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: spacing['3'] }}>
             <div style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary }}>
-              Each 301 detail page is per-incident. The lib's <code>buildForm301()</code> takes per-incident text fields (whatHappened / injuryNature / bodyPart / treatment / source) — wire that capture into the incident detail UI to render full 301s here.
+              Each 301 detail page is per-incident. The lib's <code>buildForm301()</code> takes per-incident text fields (whatHappened / injuryNature / bodyPart / treatment / source). Wire that capture into the incident detail UI to render full 301s here.
             </div>
             <div style={{ border: `1px solid ${colors.borderSubtle}`, borderRadius: borderRadius.lg, overflow: 'hidden' }}>
               <TableHeaderRow template="60px 1fr 1fr 1fr 1fr" columns={['Case#', 'Worker', 'Date', 'Result', 'Description']} />

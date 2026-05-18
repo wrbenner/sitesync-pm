@@ -413,7 +413,7 @@ export const RFICloseDialog: React.FC<Props> = ({
               <FieldLabel required>
                 Summary{' '}
                 <span style={{ color: colors.textTertiary, marginLeft: 6, textTransform: 'none', letterSpacing: 0, fontWeight: 400 }}>
-                  (20+ characters — the audit-chain narrative)
+                  (20+ characters, the audit-chain narrative)
                 </span>
               </FieldLabel>
               <textarea

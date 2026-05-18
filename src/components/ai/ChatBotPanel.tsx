@@ -539,7 +539,7 @@ export const ChatBotPanel: React.FC<ChatBotPanelProps> = ({
               fontSize: typography.fontSize.body,
             }}
           >
-            Ask me about your project — RFIs, schedule, drawings, or anything else.
+            Ask me about your project: RFIs, schedule, drawings, or anything else.
           </div>
         )}
         {messages.map((m) => (

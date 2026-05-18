@@ -318,7 +318,7 @@ const DemoProjectSection: React.FC<{ orgId: string }> = ({ orgId }) => {
             This is the Maple Ridge demo project
           </h3>
           <p style={{ margin: `${spacing['1']} 0 ${spacing['3']}`, fontSize: typography.fontSize.sm, color: colors.textSecondary, lineHeight: 1.5 }}>
-            Pre-populated with realistic RFIs, submittals, change orders, daily logs, and punch items so new users never see an empty dashboard. Click below to restore the original demo data — useful before a sales walkthrough.
+            Pre-populated with realistic RFIs, submittals, change orders, daily logs, and punch items so new users never see an empty dashboard. Click below to restore the original demo data (useful before a sales walkthrough).
           </p>
           <button
             type="button"

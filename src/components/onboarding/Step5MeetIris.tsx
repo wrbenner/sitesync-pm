@@ -9,7 +9,7 @@ import { Link } from 'react-router-dom'
 const PILLARS = [
   {
     title: 'Drafts with citations',
-    body: 'Every Iris draft anchors back to source data — drawing coordinates, photos, RFIs, spec sections. Eight citation kinds total. You can see what Iris read before writing.',
+    body: 'Every Iris draft anchors back to source data: drawing coordinates, photos, RFIs, spec sections. Eight citation kinds total. You can see what Iris read before writing.',
   },
   {
     title: 'You always approve',
@@ -27,7 +27,7 @@ export default function Step5MeetIris() {
       <p style={{ color: '#5C5C5C', fontSize: 14 }}>
         Iris is the AI layer that drafts RFIs, submittals, daily logs, and
         follow-ups based on context (drawings, photos, prior RFIs). The
-        point isn't replacement — it's removing the blank page.
+        point isn't replacement. It's removing the blank page.
       </p>
 
       <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'grid', gap: 12 }}>

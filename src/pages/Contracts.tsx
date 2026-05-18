@@ -328,7 +328,7 @@ const SovSection: React.FC<SovSectionProps> = ({ contractId, contractTitle, onCl
     <Card padding={spacing['4']} style={{ marginTop: spacing['4'] }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing['4'] }}>
         <div>
-          <SectionHeader title={`Schedule of Values — ${contractTitle}`} />
+          <SectionHeader title={`Schedule of Values: ${contractTitle}`} />
         </div>
         <div style={{ display: 'flex', gap: spacing['2'], alignItems: 'center' }}>
           <Btn variant="primary" size="sm" icon={<Plus size={14} />} onClick={() => setShowAddForm(true)}>
@@ -732,7 +732,7 @@ const SignaturesTab: React.FC<SignaturesTabProps> = ({ projectId }) => {
 
       <Modal open={showModal} onClose={() => { setShowModal(false); resetForm() }} title="Request Signature" width="640px">
         <div style={{ display: 'flex', flexDirection: 'column', gap: spacing['4'] }}>
-          <InputField label="Title" value={sigTitle} onChange={setSigTitle} placeholder="e.g. Subcontract Agreement — ABC Electric" />
+          <InputField label="Title" value={sigTitle} onChange={setSigTitle} placeholder="e.g. Subcontract Agreement: ABC Electric" />
           <InputField label="Document URL" value={sigUrl} onChange={setSigUrl} placeholder="https://... or select a contract" />
 
           <div>
@@ -1021,7 +1021,7 @@ const InsuranceSection: React.FC<{ projectId: string; contract: Contract; onClos
   return (
     <Card padding={spacing['4']} style={{ marginTop: spacing['4'] }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing['4'] }}>
-        <SectionHeader title={`Insurance Certificates — ${contract.title}`} />
+        <SectionHeader title={`Insurance Certificates: ${contract.title}`} />
         <div style={{ display: 'flex', gap: spacing['2'] }}>
           <Btn variant="primary" size="sm" icon={<Plus size={14} />} onClick={() => setUploadOpen(true)} data-testid="upload-coi-button">
             Upload COI
@@ -1031,7 +1031,7 @@ const InsuranceSection: React.FC<{ projectId: string; contract: Contract; onClos
       </div>
       {!company && (
         <div style={{ padding: spacing['3'], marginBottom: spacing['3'], backgroundColor: colors.statusPendingSubtle, borderRadius: borderRadius.base, color: colors.statusPending, fontSize: typography.fontSize.sm }}>
-          Contract has no counterparty name — add one to track insurance certificates.
+          Contract has no counterparty name. Add one to track insurance certificates.
         </div>
       )}
       {certsLoading ? (
@@ -1193,7 +1193,7 @@ const PaymentScheduleSection: React.FC<{ contractId: string; contractTitle: stri
   return (
     <Card padding={spacing['4']} style={{ marginTop: spacing['4'] }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing['4'] }}>
-        <SectionHeader title={`Payment Schedule — ${contractTitle}`} />
+        <SectionHeader title={`Payment Schedule: ${contractTitle}`} />
         <Btn variant="ghost" size="sm" onClick={onClose}><X size={16} /></Btn>
       </div>
       {/* Progress bar */}

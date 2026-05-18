@@ -237,7 +237,7 @@ const ConfirmWipeDialog: React.FC<{
               lineHeight: 1.5,
             }}
           >
-            This will delete every record the seeder created on this project — RFIs,
+            This will delete every record the seeder created on this project: RFIs,
             submittals, punch items, schedule activities, budget lines, photos, and
             commitments. Records you created manually are <strong>not</strong> touched.
           </p>

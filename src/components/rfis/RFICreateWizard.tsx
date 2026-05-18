@@ -379,7 +379,7 @@ const RFIProcoreFieldsRow: React.FC<RFIProcoreFieldsRowProps> = ({
             boxSizing: 'border-box',
           }}
         >
-          <option value="">— Select —</option>
+          <option value="">Select…</option>
           {memberOptions.map((m) => (
             <option key={m.value} value={m.value}>
               {m.label}
@@ -885,7 +885,7 @@ const RFICreateWizard: React.FC<RFICreateWizardProps> = ({ open, onClose, onSubm
             />
             {question.length > 0 && question.trim().length < 5 && (
               <div style={{ fontSize: '11px', color: colors.statusCritical, marginTop: 4, display: 'flex', alignItems: 'center', gap: 4 }}>
-                <AlertCircle size={11} /> Be specific — a clear question gets a faster answer
+                <AlertCircle size={11} /> Be specific: a clear question gets a faster answer
               </div>
             )}
 
@@ -1102,7 +1102,7 @@ const RFICreateWizard: React.FC<RFICreateWizardProps> = ({ open, onClose, onSubm
                     fontFamily: 'inherit',
                   }}
                 >
-                  <option value="">—</option>
+                  <option value="">…</option>
                   <option value="yes">Yes</option>
                   <option value="no">No</option>
                   <option value="tbd">TBD</option>
@@ -1142,7 +1142,7 @@ const RFICreateWizard: React.FC<RFICreateWizardProps> = ({ open, onClose, onSubm
                     fontFamily: 'inherit',
                   }}
                 >
-                  <option value="">—</option>
+                  <option value="">…</option>
                   <option value="yes">Yes</option>
                   <option value="no">No</option>
                   <option value="tbd">TBD</option>
@@ -1184,7 +1184,7 @@ const RFICreateWizard: React.FC<RFICreateWizardProps> = ({ open, onClose, onSubm
               style={{ width: 14, height: 14, accentColor: colors.primaryOrange, cursor: 'pointer' }}
             />
             <span>
-              <strong style={{ color: colors.textPrimary }}>Private</strong> — only PMs + admins can read this RFI
+              <strong style={{ color: colors.textPrimary }}>Private</strong>: only PMs + admins can read this RFI
             </span>
           </label>
 

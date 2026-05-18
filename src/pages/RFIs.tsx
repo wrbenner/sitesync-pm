@@ -1256,8 +1256,8 @@ const RFIsPage: React.FC = () => {
               >
                 {(
                   [
-                    { mode: 'pdf_official' as RFIExportMode, label: 'PDF — Official Only' },
-                    { mode: 'pdf_all' as RFIExportMode, label: 'PDF — All Responses' },
+                    { mode: 'pdf_official' as RFIExportMode, label: 'PDF: Official Only' },
+                    { mode: 'pdf_all' as RFIExportMode, label: 'PDF: All Responses' },
                     { mode: 'csv' as RFIExportMode, label: 'CSV (current view)' },
                     { mode: 'xlsx' as RFIExportMode, label: 'XLSX (current view)' },
                   ]
@@ -1840,7 +1840,7 @@ const RFIsPage: React.FC = () => {
                 </div>
                 {aiSuggestionError && (
                   <div style={{ marginBottom: 6, fontSize: 11, color: INK_3 }}>
-                    Iris unavailable — type manually
+                    Iris unavailable. Type manually.
                   </div>
                 )}
                 <div style={{ display: 'flex', gap: 8 }}>

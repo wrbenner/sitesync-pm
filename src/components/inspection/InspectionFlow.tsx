@@ -292,7 +292,7 @@ export const InspectionFlow: React.FC<InspectionFlowProps> = ({
           textDecoration: 'underline',
         }}
       >
-        No physical tag — describe verbally
+        No physical tag (describe verbally)
       </button>
     </div>
   )

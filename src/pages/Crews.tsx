@@ -708,7 +708,7 @@ function CrewDetailPanel({
                 <div>
                   <label style={labelStyle}>Phase</label>
                   <select style={inputStyle} value={phaseId} onChange={(e) => setPhaseId(e.target.value)}>
-                    <option value="">— Unassigned —</option>
+                    <option value="">Unassigned</option>
                     {phasesForAssignment.map((p) => (
                       <option key={p.id} value={p.id}>{p.name}</option>
                     ))}

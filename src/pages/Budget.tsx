@@ -446,7 +446,7 @@ const BudgetPage: React.FC = () => {
       <div ref={tableScrollRef} style={{ flex: 1, overflow: 'auto', backgroundColor: C.surface }}>
         <table
           role="grid"
-          aria-label={`Budget — ${VIEW_LABEL[view]} view`}
+          aria-label={`Budget: ${VIEW_LABEL[view]} view`}
           style={{
             width: '100%',
             borderCollapse: 'separate',

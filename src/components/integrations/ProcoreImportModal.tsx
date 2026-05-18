@@ -26,7 +26,7 @@ const ALL_SCOPES: { key: ImportScope; label: string; help: string }[] = [
   { key: 'rfis', label: 'RFIs', help: 'Open + closed Requests for Information.' },
   { key: 'submittals', label: 'Submittals', help: 'Spec submittals with status + due date.' },
   { key: 'change_orders', label: 'Change orders', help: 'Approved + pending change orders.' },
-  { key: 'drawings', label: 'Drawings', help: 'Sheet metadata only — no PDFs.' },
+  { key: 'drawings', label: 'Drawings', help: 'Sheet metadata only (no PDFs).' },
 ]
 
 export const ProcoreImportModal: React.FC<Props> = ({ open, onClose, targetProjectId, targetProjectName }) => {

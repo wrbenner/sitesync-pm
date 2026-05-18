@@ -314,7 +314,7 @@ const CommandPaletteBody: React.FC<{ onClose: () => void }> = ({ onClose }) => {
             <Search size={20} color={colors.textTertiary} style={{ flexShrink: 0 }} />
             <Command.Input
               ref={inputRef}
-              placeholder="Search for anything — RFIs, sheets, people, pages…"
+              placeholder="Search for anything: RFIs, sheets, people, pages…"
               value={query}
               onValueChange={setQuery}
               style={inputStyle}

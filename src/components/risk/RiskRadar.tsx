@@ -31,7 +31,7 @@ export const RiskRadar: React.FC = () => {
       <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'], marginBottom: spacing['4'] }}>
         <AlertTriangle size={20} color={colors.primaryOrange} />
         <h3 style={{ margin: 0, fontSize: typography.fontSize.body, fontWeight: typography.fontWeight.semibold }}>
-          Risk Radar — Top 10
+          Risk Radar: Top 10
         </h3>
       </div>
 

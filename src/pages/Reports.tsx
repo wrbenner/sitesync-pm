@@ -67,7 +67,7 @@ async function downloadReportRun(run: Record<string, unknown>): Promise<void> {
       ? new Date(run.generated_at as string).toLocaleString()
       : 'N/A'
     let y = 720
-    page.drawText('SiteSync PM — Report', { x: 50, y, font: fontBold, size: 20, color: rgb(0.96, 0.47, 0.13) })
+    page.drawText('SiteSync PM: Report', { x: 50, y, font: fontBold, size: 20, color: rgb(0.96, 0.47, 0.13) })
     y -= 30
     page.drawLine({ start: { x: 50, y }, end: { x: 562, y }, thickness: 1, color: rgb(0.85, 0.85, 0.85) })
     y -= 30

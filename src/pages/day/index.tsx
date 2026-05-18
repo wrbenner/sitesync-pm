@@ -163,7 +163,7 @@ function OfflineBanner() {
       }}
     >
       <WifiOff size={12} aria-hidden />
-      <span>Showing cached items — offline</span>
+      <span>Showing cached items (offline)</span>
     </div>
   )
 }

@@ -409,7 +409,7 @@ export function DrawReportUpload({ open, onClose, projectId, onSuccess }: DrawRe
                   Drop your draw report here
                 </p>
                 <p style={{ margin: 0, fontSize: typography.fontSize.sm, color: colors.textTertiary }}>
-                  AIA G702/G703 (PDF) or Excel (.xlsx) — any format, any layout
+                  AIA G702/G703 (PDF) or Excel (.xlsx): any format, any layout
                 </p>
               </div>
 

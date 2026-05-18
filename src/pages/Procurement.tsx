@@ -1282,7 +1282,7 @@ export const Procurement: React.FC = () => {
               }}
               style={selectStyle}
             >
-              <option value="">No PO — ad-hoc delivery</option>
+              <option value="">No PO (ad-hoc delivery)</option>
               {(pos || []).map((po: Record<string, unknown>) => (
                 <option key={po.id as string} value={po.id as string}>
                   PO #{String(po.po_number)} - {po.vendor_name as string}
