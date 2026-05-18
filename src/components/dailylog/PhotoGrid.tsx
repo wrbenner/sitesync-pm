@@ -2,12 +2,14 @@ import React, { useState, useCallback } from 'react';
 import { Camera, MapPin, X, ChevronLeft, ChevronRight, Tag, Sparkles, RefreshCw } from 'lucide-react';
 import { colors, spacing, typography, borderRadius, transitions, zIndex } from '../../styles/theme';
 import { aiService } from '../../lib/aiService';
+import { StoragePhoto } from '../photos/StoragePhoto';
 
 export type PhotoCategory = 'progress' | 'safety' | 'quality' | 'weather';
 
 export interface DailyLogPhoto {
   id: string;
   url: string;
+  path?: string;
   thumbnail?: string;
   caption: string;
   category: PhotoCategory;
@@ -107,8 +109,14 @@ export const PhotoGrid: React.FC<PhotoGridProps> = React.memo(({ photos, onCaptu
               onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.transform = 'scale(1.03)'; }}
               onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.transform = 'scale(1)'; }}
             >
-              {photo.url ? (
-                <img loading="lazy" src={photo.url} alt={photo.caption} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              {(photo.path || photo.url) ? (
+                <StoragePhoto
+                  bucket="daily-log-photos"
+                  pathOrUrl={photo.path ?? photo.url}
+                  alt={photo.caption}
+                  loading="lazy"
+                  iconSize={24}
+                />
               ) : (
                 <div style={{ width: '100%', height: '100%', background: `linear-gradient(135deg, ${cat.color}22, ${cat.color}44)`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   <Camera size={24} color={cat.color} />
@@ -185,8 +193,15 @@ export const PhotoGrid: React.FC<PhotoGridProps> = React.memo(({ photos, onCaptu
 
           {/* Image */}
           <div onClick={e => e.stopPropagation()} style={{ maxWidth: '90vw', maxHeight: '80vh', position: 'relative' }}>
-            {viewing.url ? (
-              <img loading="lazy" src={viewing.url} alt={viewing.caption} style={{ maxWidth: '100%', maxHeight: '80vh', borderRadius: borderRadius.lg }} />
+            {(viewing.path || viewing.url) ? (
+              <StoragePhoto
+                bucket="daily-log-photos"
+                pathOrUrl={viewing.path ?? viewing.url}
+                alt={viewing.caption}
+                loading="eager"
+                iconSize={48}
+                style={{ maxWidth: '100%', maxHeight: '80vh', width: 'auto', height: 'auto', objectFit: 'contain', borderRadius: borderRadius.lg }}
+              />
             ) : (
               <div style={{ width: 400, height: 300, background: `linear-gradient(135deg, ${categoryConfig[viewing.category].color}22, ${categoryConfig[viewing.category].color}44)`, borderRadius: borderRadius.lg, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <Camera size={48} color={categoryConfig[viewing.category].color} />

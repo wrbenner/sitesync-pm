@@ -112,6 +112,7 @@ async function uploadAndAttach(blob: Blob, meta: CaptureMetadata): Promise<strin
   const photoEntry = {
     id: crypto.randomUUID(),
     url: photoUrl,
+    path,
     caption: meta.caption,
     category: 'progress' as const,
     timestamp: meta.timestamp,
