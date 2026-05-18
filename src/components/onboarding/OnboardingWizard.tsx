@@ -60,7 +60,7 @@ export default function OnboardingWizard() {
   const finish = async () => {
     setFinishError(null)
     if (!user?.id) {
-      setFinishError('No active session — sign in again to finish.')
+      setFinishError('No active session. Sign in again to finish.')
       return
     }
     try {

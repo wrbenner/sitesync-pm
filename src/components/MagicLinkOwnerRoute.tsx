@@ -109,7 +109,7 @@ const MagicLinkOwnerRouteBody: React.FC<{ token: string }> = ({ token }) => {
         <Card
           icon={<Clock size={24} aria-hidden />}
           title="Verifying your link…"
-          body="Hang tight — we're confirming your access."
+          body="Hang tight. Confirming your access..."
         />
       </Centered>
     )

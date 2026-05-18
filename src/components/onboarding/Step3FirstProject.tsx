@@ -38,7 +38,7 @@ export default function Step3FirstProject() {
   const submit = async () => {
     setError(null)
     if (!orgId) {
-      setError('No active organization yet — finish step 2 first.')
+      setError('No active organization yet. Finish step 2 first.')
       return
     }
     if (name.trim().length < 2) {

@@ -850,7 +850,7 @@ const RFICreateWizard: React.FC<RFICreateWizardProps> = ({ open, onClose, onSubm
           }}
         >
           <strong style={{ color: colors.textPrimary }}>Save as Draft</strong> to refine
-          later — Number and Due Date are suggested values until you{' '}
+          later. Number and Due Date are suggested values until you{' '}
           <strong style={{ color: colors.textPrimary }}>Create as Open</strong> (or promote
           via the detail-page state-machine).
         </div>
