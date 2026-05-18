@@ -29,14 +29,14 @@ export function useProjectCostCodes(projectId: string | null | undefined) {
         if (code && code.trim()) seen.add(code.trim())
       })
 
-      // 2. Best-effort merge with budget_line_items.code if it exists.
+      // 2. Best-effort merge with budget_line_items.csi_code if it exists.
       try {
         const { data: budgetRows } = await fromTable('budget_line_items' as never)
-          .select('code')
+          .select('csi_code')
           .eq('project_id' as never, projectId)
-          .not('code' as never, 'is', null)
-        ;((budgetRows as unknown as { code?: string | null }[]) ?? []).forEach((row) => {
-          if (row.code && row.code.trim()) seen.add(row.code.trim())
+          .not('csi_code' as never, 'is', null)
+        ;((budgetRows as unknown as { csi_code?: string | null }[]) ?? []).forEach((row) => {
+          if (row.csi_code && row.csi_code.trim()) seen.add(row.csi_code.trim())
         })
       } catch {
         // budget module may not be wired on this project — non-fatal.

@@ -39,13 +39,16 @@ import { typography } from '../../styles/theme';
 import type { FieldCapture as FieldCaptureRow } from '../../types/database';
 
 // ── SafeImage — defensive image source resolver ──────────────────────────────
-// `field_captures.file_url` may contain either:
-//   • an absolute URL (http(s), data:, blob:) → use as-is
-//   • a Supabase Storage path (e.g. "project/abc/photo.jpg") → sign it
-// This component handles both, falling back to a Camera glyph while
-// loading or on error. Without this, paths render as broken images.
+// `field_captures.file_url` may contain:
+//   • a non-storage URL (data:, blob:, third-party http(s)) → use as-is
+//   • a Supabase public-bucket URL from when the bucket was public — the
+//     bucket has since been flipped private, so we extract the path + sign
+//     against the original bucket
+//   • a bare Supabase Storage path → sign against the field-captures bucket
+// Falls back to a Camera glyph while loading or on error.
 
 const ABS_URL_RE = /^(https?:|data:|blob:)/i;
+const SUPABASE_PUBLIC_RE = /\/storage\/v1\/object\/public\/([^/]+)\/(.+)$/;
 
 const SafeImage: React.FC<{
   value: string | null | undefined;
@@ -54,9 +57,22 @@ const SafeImage: React.FC<{
   loading?: 'lazy' | 'eager';
   iconSize?: number;
 }> = ({ value, alt, style, loading, iconSize = 20 }) => {
-  const isAbs = !!value && ABS_URL_RE.test(value);
-  const signed = useSignedUrl(isAbs ? null : (value ?? null));
-  const src = isAbs ? value : signed;
+  let absoluteUrl: string | null = null;
+  let storagePath: string | null = null;
+  let bucket = 'field-captures';
+  if (value) {
+    const m = value.match(SUPABASE_PUBLIC_RE);
+    if (m) {
+      bucket = m[1];
+      storagePath = m[2];
+    } else if (ABS_URL_RE.test(value)) {
+      absoluteUrl = value;
+    } else {
+      storagePath = value;
+    }
+  }
+  const signed = useSignedUrl(storagePath, bucket);
+  const src = absoluteUrl ?? signed;
   const [errored, setErrored] = useState(false);
   if (!value || errored || !src) {
     return (
@@ -287,11 +303,11 @@ const CaptureOverlay: React.FC<CaptureOverlayProps> = ({ open, onClose, projectI
       const path = `${projectId}/${Date.now()}-${safeName}`;
       const { error: upErr } = await supabase.storage.from('field-captures')
         .upload(path, file, { upsert: false });
-      let fileUrl: string | null = preview;
-      if (!upErr) {
-        const { data: pub } = supabase.storage.from('field-captures').getPublicUrl(path);
-        fileUrl = pub?.publicUrl ?? preview;
-      }
+      // Store the storage path (not a public URL) — the field-captures bucket
+      // is private, so the display layer (SafeImage) resolves to a signed URL
+      // at render time. Falls back to the local preview blob if upload failed
+      // so the row at least renders something locally.
+      const fileUrl: string | null = upErr ? preview : path;
 
       // Insert the row first so the user sees it land in the grid quickly.
       const inserted = await createCapture.mutateAsync({
