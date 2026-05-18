@@ -54,6 +54,7 @@ import { useIrisDrafts } from '../../hooks/useIrisDrafts';
 
 import { supabase } from '../../lib/supabase';
 import { fromTable } from '../../lib/db/queries'
+import { StoragePhoto } from '../../components/photos/StoragePhoto';
 import { fetchWeather, formatWeatherSummary } from '../../lib/weather';
 import type { WeatherData } from '../../lib/weather';
 import { typography } from '../../styles/theme';
@@ -112,6 +113,7 @@ interface DailyLogEntry {
 interface PhotoRecord {
   id: string;
   url: string;
+  path?: string;
   caption?: string;
   category?: string;
   timestamp?: string;
@@ -366,12 +368,13 @@ const PhotoTile: React.FC<{ photo: PhotoRecord }> = React.memo(({ photo }) => (
     overflow: 'hidden',
     aspectRatio: '4 / 3',
   }}>
-    {photo.url ? (
-      <img
-        src={photo.url}
+    {(photo.path || photo.url) ? (
+      <StoragePhoto
+        bucket="daily-log-photos"
+        pathOrUrl={photo.path ?? photo.url}
         alt={photo.caption ?? 'Daily log photo'}
-        style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
         loading="lazy"
+        iconSize={20}
       />
     ) : (
       <div style={{
@@ -528,6 +531,7 @@ const DailyLogPage: React.FC = () => {
         out.push({
           id: (rec.id as string) ?? `${e.id}:${out.length}`,
           url: (rec.url as string) ?? '',
+          path: (rec.path as string) ?? undefined,
           caption: (rec.caption as string) ?? e.description ?? '',
           category: (rec.category as string) ?? 'progress',
           timestamp: (rec.timestamp as string) ?? e.created_at ?? undefined,
@@ -885,7 +889,7 @@ const DailyLogPage: React.FC = () => {
         };
         await insertBuilder.insert({
           daily_log_id: logId, type: 'photo', description: file.name,
-          photos: [{ id: crypto.randomUUID(), url: photoUrl, caption: '', category: 'progress', timestamp: new Date().toISOString() }],
+          photos: [{ id: crypto.randomUUID(), url: photoUrl, path, caption: '', category: 'progress', timestamp: new Date().toISOString() }],
         } as never);
         refetch();
         addToast('success', 'Photo uploaded');
