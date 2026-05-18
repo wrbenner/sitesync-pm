@@ -7,6 +7,7 @@ import { colors, spacing, typography, borderRadius, transitions } from '../../st
 import { useProjectId } from '../../hooks/useProjectId';
 import { useSafetyInspections, useIncidents, useToolboxTalks, useSafetyCertifications, useCorrectiveActions, useDailyLogs } from '../../hooks/queries';
 import { supabase } from '../../lib/supabase';
+import { useScrollFade } from '../../hooks/useScrollFade';
 import type { TabKey } from './safetyTypes';
 import { SafetyMetrics } from './SafetyMetrics';
 import { IncidentList } from './IncidentList';
@@ -37,6 +38,7 @@ export const Safety: React.FC = () => {
   const [showIncidentModal, setShowIncidentModal] = useState(false);
   const [showTalkModal, setShowTalkModal] = useState(false);
   const [windowWidth, setWindowWidth] = useState(() => window.innerWidth);
+  const { ref: tabStripRef, canScrollRight: tabsHaveMore } = useScrollFade<HTMLDivElement>();
 
   const projectId = useProjectId();
 
@@ -223,22 +225,38 @@ export const Safety: React.FC = () => {
       />
 
       {/* Tab Switcher */}
-      <div style={{ display: 'flex', gap: spacing['1'], backgroundColor: colors.surfaceInset, borderRadius: borderRadius.lg, padding: spacing['1'], marginBottom: spacing.lg, overflowX: 'auto' }}>
-        {tabs.map((tab) => {
-          const Icon = tab.icon;
-          const isActive = activeTab === tab.key;
-          return (
-            <button
-              key={tab.key}
-              aria-pressed={isActive}
-              onClick={() => setActiveTab(tab.key)}
-              style={{ display: 'flex', alignItems: 'center', gap: spacing['2'], padding: `${spacing['2']} ${spacing['4']}`, border: 'none', borderRadius: borderRadius.base, cursor: 'pointer', fontSize: typography.fontSize.sm, fontFamily: typography.fontFamily, fontWeight: isActive ? typography.fontWeight.medium : typography.fontWeight.normal, color: isActive ? colors.orangeText : colors.textSecondary, backgroundColor: isActive ? colors.surfaceRaised : 'transparent', transition: `all ${transitions.instant}`, whiteSpace: 'nowrap', minHeight: '36px', flexShrink: 0 }}
-            >
-              {React.createElement(Icon, { size: 14 })}
-              {tab.label}
-            </button>
-          );
-        })}
+      <div style={{ position: 'relative', marginBottom: spacing.lg }}>
+        <div
+          ref={tabStripRef}
+          style={{ display: 'flex', gap: spacing['1'], backgroundColor: colors.surfaceInset, borderRadius: borderRadius.lg, padding: spacing['1'], overflowX: 'auto', scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+        >
+          {tabs.map((tab) => {
+            const Icon = tab.icon;
+            const isActive = activeTab === tab.key;
+            return (
+              <button
+                key={tab.key}
+                aria-pressed={isActive}
+                onClick={() => setActiveTab(tab.key)}
+                style={{ display: 'flex', alignItems: 'center', gap: spacing['2'], padding: `${spacing['2']} ${spacing['4']}`, border: 'none', borderRadius: borderRadius.base, cursor: 'pointer', fontSize: typography.fontSize.sm, fontFamily: typography.fontFamily, fontWeight: isActive ? typography.fontWeight.medium : typography.fontWeight.normal, color: isActive ? colors.orangeText : colors.textSecondary, backgroundColor: isActive ? colors.surfaceRaised : 'transparent', transition: `all ${transitions.instant}`, whiteSpace: 'nowrap', minHeight: '36px', flexShrink: 0 }}
+              >
+                {React.createElement(Icon, { size: 14 })}
+                {tab.label}
+              </button>
+            );
+          })}
+        </div>
+        {tabsHaveMore && (
+          <div
+            aria-hidden="true"
+            style={{
+              position: 'absolute', right: 0, top: 0, bottom: 0, width: 48,
+              background: `linear-gradient(to right, transparent, ${colors.surfaceInset})`,
+              pointerEvents: 'none',
+              borderRadius: `0 ${borderRadius.lg} ${borderRadius.lg} 0`,
+            }}
+          />
+        )}
       </div>
 
       {/* Skeleton loaders */}
