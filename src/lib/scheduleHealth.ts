@@ -110,18 +110,20 @@ export function analyzeScheduleHealth(phases: MappedSchedulePhase[]): HealthRepo
   }
 
   // If ≥80% of activities are completely unlinked (no preds AND no succs),
-  // the schedule has no logic data at all — typically seed/imported data that
+  // the schedule has no logic data — typically imported P6/MPP data that
   // hasn't been sequenced yet. Return a neutral "unanalyzed" report rather
-  // than an F-grade that would alarm users on an otherwise healthy project.
-  // Only applies to larger schedules (>10 activities) — small schedules should
-  // still be analyzed so that genuine issues (missing preds, dangling) surface.
+  // than an alarming F-grade on an otherwise healthy project.
+  // Only applies to larger schedules (>10 activities) so small genuine issues
+  // still surface. The prior condition also required totalLinks === 0, but
+  // even 2-3 links in a 247-activity schedule still means effectively no
+  // logic network — the orphan rate alone is the right signal.
   const totalLinks = phases.reduce((sum, p) => sum + (predecessorMap.get(p.id)?.length ?? 0), 0);
   const orphanCount = phases.filter(p =>
     (predecessorMap.get(p.id)?.length ?? 0) === 0 &&
     (successorMap.get(p.id)?.length ?? 0) === 0
   ).length;
   const orphanRate = phases.length > 0 ? orphanCount / phases.length : 0;
-  if (orphanRate >= 0.8 && totalLinks === 0 && phases.length > 10) {
+  if (orphanRate >= 0.8 && phases.length > 10) {
     return unlinkedReport(phases.length);
   }
 

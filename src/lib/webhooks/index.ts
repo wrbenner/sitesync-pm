@@ -127,7 +127,7 @@ export function eventFromTrigger(input: {
     status_from,
     status_to,
     payload: input.after ?? {},
-    event_id: globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random()}`,
+    event_id: crypto.randomUUID(),
     created_at: new Date().toISOString(),
   }
 }
