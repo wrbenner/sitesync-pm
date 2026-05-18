@@ -147,7 +147,7 @@ export const ProcoreImportModal: React.FC<Props> = ({ open, onClose, targetProje
       {!result && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: spacing['4'] }}>
           <p style={{ margin: 0, fontSize: typography.fontSize.sm, color: colors.textSecondary, lineHeight: 1.55 }}>
-            Pulls your Procore project&apos;s open data into <strong style={{ color: colors.textPrimary }}>{targetProjectName ?? 'this project'}</strong> so your team can run on real data immediately. One-shot import — for ongoing sync, use the Procore integration once you&apos;re ready to commit.
+            Pulls your Procore project&apos;s open data into <strong style={{ color: colors.textPrimary }}>{targetProjectName ?? 'this project'}</strong> so your team can run on real data immediately. One-shot import. For ongoing sync, use the Procore integration once you&apos;re ready to commit.
           </p>
 
           {/* Procore creds */}

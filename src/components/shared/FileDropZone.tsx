@@ -322,7 +322,7 @@ export const FileDropZone: React.FC<FileDropZoneProps> = ({
                 </div>
                 <div style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>
                   {humanSize(item.file.size)}
-                  {item.status === 'error' && item.error ? ` — ${item.error}` : ''}
+                  {item.status === 'error' && item.error ? `: ${item.error}` : ''}
                 </div>
                 {(item.status === 'uploading' || item.status === 'done') && (
                   <div

@@ -761,7 +761,7 @@ export function DrawReportUpload({ open, onClose, projectId, onSuccess }: DrawRe
                           numeric
                         />
                         <div
-                          title={low ? `Low confidence (${Math.round(line.confidence * 100)}%) — verify values` : `Confidence ${Math.round(line.confidence * 100)}%`}
+                          title={low ? `Low confidence (${Math.round(line.confidence * 100)}%): verify values` : `Confidence ${Math.round(line.confidence * 100)}%`}
                           style={{
                             width: 10, height: 10, borderRadius: '50%',
                             backgroundColor: low ? colors.statusPending : colors.statusActive,
