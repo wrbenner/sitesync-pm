@@ -33,7 +33,9 @@ export const NAV_ITEMS: NavItem[] = [
   { id: 'inspections', label: 'Inspections', icon: 'ClipboardCheck',  route: '/permits',       description: 'Inspection checklists and status' },
   { id: 'reports',     label: 'Reports',     icon: 'FileText',        route: '/reports',       description: 'Generate and view reports' },
   { id: 'documents',   label: 'Documents',   icon: 'FolderOpen',      route: '/files',         description: 'Project documents and files' },
-  { id: 'commitments', label: 'Commitments', icon: 'Handshake',       route: '/commitments',   description: 'Track who owes what' },
+  // 'commitments' nav item removed — the `commitments` table does not yet
+  // exist in prod (would 404 on every click). Re-enable when the migration
+  // adding the table ships.
 ]
 
 const NAV_BY_ID = new Map(NAV_ITEMS.map((item) => [item.id, item]))
