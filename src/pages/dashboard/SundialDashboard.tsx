@@ -174,7 +174,7 @@ function QuestionHeadline({
         color: INK,
         margin: 0,
         maxWidth: mobile ? undefined : 1100,
-        textWrap: 'balance' as any,
+        textWrap: 'balance',
       }}
     >
       {segments.map((seg, i) => {
@@ -757,24 +757,27 @@ function SundialDesktop({ data }: { data: SundialData }) {
             color: INK_3,
           }}
         >
-          <span
-            style={{ cursor: 'pointer' }}
+          <button
+            type="button"
+            style={{ cursor: 'pointer', background: 'none', border: 'none', padding: 0, font: 'inherit', color: 'inherit', letterSpacing: 'inherit', textTransform: 'inherit' }}
             onClick={() => navigate('/drawings')}
           >
             Plans
-          </span>
-          <span
-            style={{ cursor: 'pointer' }}
+          </button>
+          <button
+            type="button"
+            style={{ cursor: 'pointer', background: 'none', border: 'none', padding: 0, font: 'inherit', color: 'inherit', letterSpacing: 'inherit', textTransform: 'inherit' }}
             onClick={() => navigate('/daily-log')}
           >
             Day book
-          </span>
-          <span
-            style={{ cursor: 'pointer' }}
+          </button>
+          <button
+            type="button"
+            style={{ cursor: 'pointer', background: 'none', border: 'none', padding: 0, font: 'inherit', color: 'inherit', letterSpacing: 'inherit', textTransform: 'inherit' }}
             onClick={() => navigate('/projects')}
           >
             Portfolio
-          </span>
+          </button>
         </div>
       </div>
 
@@ -795,7 +798,7 @@ function SundialDesktop({ data }: { data: SundialData }) {
                 color: INK,
                 margin: 0,
                 maxWidth: 1100,
-                textWrap: 'balance' as any,
+                textWrap: 'balance',
               }}
             >
               The day is <span style={{ fontStyle: 'italic' }}>yours</span>
