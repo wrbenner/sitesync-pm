@@ -83,7 +83,7 @@ export function generateMonthlyReport(input: MonthlyReportInput): GeneratedDocum
   }
 
   return {
-    title: `Monthly report — ${snapshot.meta.project_name || snapshot.meta.project_id}`,
+    title: `Monthly report: ${snapshot.meta.project_name || snapshot.meta.project_id}`,
     subtitle: month,
     as_of: snapshot.meta.snapshot_at,
     sections,

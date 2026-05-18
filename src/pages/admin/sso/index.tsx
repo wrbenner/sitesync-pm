@@ -118,7 +118,7 @@ export const SsoAdminPage: React.FC<SsoAdminProps> = ({ organizationId }) => {
             <input style={input} value={draft.saml_sp_entity_id ?? ''}
               onChange={(e) => setDraft((d) => ({ ...d, saml_sp_entity_id: e.target.value }))} />
           </Field>
-          <Field label={`X.509 Certificate(s) — ${certCount} PEM block(s) detected`}
+          <Field label={`X.509 Certificate(s) (${certCount} PEM block(s) detected)`}
             hint="Paste one or more cert blocks (multiple blocks = rotation overlap)">
             <textarea
               style={{ ...input, minHeight: 120, fontFamily: 'monospace', fontSize: 11 }}

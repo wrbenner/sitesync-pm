@@ -122,7 +122,7 @@ const IrisCell: React.FC<{ submittalId: string; projectId: string | undefined }>
   }
   return (
     <span
-      title="Iris drafted a review — click the row to review"
+      title="Iris drafted a review. Click the row to review."
       style={{
         display: 'inline-flex',
         alignItems: 'center',

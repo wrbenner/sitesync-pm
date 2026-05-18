@@ -213,14 +213,14 @@ function mapFloodZone(zone: string, subtype: string): { risk_level: FloodZoneDat
       return {
         risk_level: 'High',
         insurance_required: true,
-        description: `Zone ${zoneUpper} — Special Flood Hazard Area (1% annual chance flood). Mandatory flood insurance. Base flood elevations may apply.`,
+        description: `Zone ${zoneUpper}: Special Flood Hazard Area (1% annual chance flood). Mandatory flood insurance. Base flood elevations may apply.`,
       };
     case 'VE':
     case 'V':
       return {
         risk_level: 'High',
         insurance_required: true,
-        description: `Zone ${zoneUpper} — Coastal High Hazard Area with wave action. Mandatory flood insurance. Elevated construction required.`,
+        description: `Zone ${zoneUpper}: Coastal High Hazard Area with wave action. Mandatory flood insurance. Elevated construction required.`,
       };
     case 'X':
       if (subtype && subtype.includes('500')) {
@@ -245,7 +245,7 @@ function mapFloodZone(zone: string, subtype: string): { risk_level: FloodZoneDat
       return {
         risk_level: 'Low',
         insurance_required: false,
-        description: zone ? `Zone ${zone} — Flood hazard data available from FEMA NFHL.` : 'No FEMA flood data available for this location.',
+        description: zone ? `Zone ${zone}: Flood hazard data available from FEMA NFHL.` : 'No FEMA flood data available for this location.',
       };
   }
 }
@@ -357,8 +357,8 @@ function assessConstructionWeather(current: WeatherCurrent, forecast: WeatherFor
   // OSHA crane: sustained > 20 mph requires evaluation
   const craneHold = wind > 20;
   const craneReason = craneHold
-    ? `Wind ${wind} mph — crane operations require evaluation (OSHA: >20 mph)`
-    : `Wind ${wind} mph — within crane operating limits`;
+    ? `Wind ${wind} mph: crane operations require evaluation (OSHA: >20 mph)`
+    : `Wind ${wind} mph: within crane operating limits`;
 
   const freezeRisk = current.temp_min !== undefined ? current.temp_min < 32 : temp < 35;
   const heatRisk = temp >= 95;

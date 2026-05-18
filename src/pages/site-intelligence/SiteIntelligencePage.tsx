@@ -752,7 +752,7 @@ function exportReport(data: SiteIntelligenceData) {
   if (data.nearby.length > 0) {
     lines.push(`── NEARBY AMENITIES ────────────────────────────────`);
     for (const a of data.nearby) {
-      lines.push(`  ${a.name} (${a.category}) — ${a.distance_mi} mi`);
+      lines.push(`  ${a.name} (${a.category}), ${a.distance_mi} mi`);
     }
     lines.push(``);
   }
@@ -760,7 +760,7 @@ function exportReport(data: SiteIntelligenceData) {
   if (data.epa_facilities.length > 0) {
     lines.push(`── EPA FACILITIES (3 mi radius) ────────────────────`);
     for (const f of data.epa_facilities) {
-      lines.push(`  ${f.name} — ${f.street}, ${f.city} ${f.state}`);
+      lines.push(`  ${f.name}: ${f.street}, ${f.city} ${f.state}`);
     }
   } else {
     lines.push(`── EPA FACILITIES ──────────────────────────────────`);
@@ -1079,7 +1079,7 @@ const SiteIntelligencePage: React.FC = () => {
               value={searchQuery}
               onChange={(e) => handleSearchInput(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-              placeholder="Enter a job site address — e.g. 1200 Construction Ave, Austin, TX 78701"
+              placeholder="Enter a job site address, e.g. 1200 Construction Ave, Austin, TX 78701"
               style={{
                 flex: 1, border: 'none', outline: 'none',
                 backgroundColor: 'transparent',

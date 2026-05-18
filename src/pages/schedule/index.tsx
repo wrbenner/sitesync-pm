@@ -65,7 +65,7 @@ function IrisNote({ phase, onClose }: IrisNoteProps) {
   const lag = daysBehind(phase);
   const reasons: string[] = [];
   if (phase.status === 'delayed') reasons.push('Activity is currently flagged as delayed.');
-  if (float >= 0 && float < 3) reasons.push(`Only ${float} day${float === 1 ? '' : 's'} of float — small slip cascades.`);
+  if (float >= 0 && float < 3) reasons.push(`Only ${float} day${float === 1 ? '' : 's'} of float: a small slip cascades.`);
   if (lag > 0) reasons.push(`Trending ${lag} day${lag === 1 ? '' : 's'} behind expected progress.`);
   if (reasons.length === 0) reasons.push('On the critical path; small disruptions push the project end date.');
 

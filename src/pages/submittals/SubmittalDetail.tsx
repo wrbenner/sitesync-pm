@@ -161,7 +161,7 @@ export const SubmittalDetail: React.FC<SubmittalDetailProps> = ({
         return;
       }
       queryClient.invalidateQueries({ queryKey: ['submittals'] });
-      addToast('warning', `Revision requested for ${selected?.submittalNumber} — Rev ${result.data?.revision_number ?? ''} created`);
+      addToast('warning', `Revision requested for ${selected?.submittalNumber}. Rev ${result.data?.revision_number ?? ''} created.`);
       onClose();
     } catch (err) {
       toast.error(`Failed to create revision: ${(err as Error).message}`);

@@ -115,7 +115,7 @@ function groupBySpecSection(submittals: Array<Record<string, unknown>>): Submitt
     const divName = divCode === '00' ? 'Unassigned Spec Section' : getCSIDivisionName(divCode);
     groups.push({
       key: divCode,
-      label: divCode === '00' ? divName : `Division ${divCode} — ${divName}`,
+      label: divCode === '00' ? divName : `Division ${divCode}: ${divName}`,
       sublabel: sections.length > 1 ? `${sections.length} spec sections` : undefined,
       submittals: allInDiv,
       stats: computeStats(allInDiv),

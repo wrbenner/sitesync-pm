@@ -211,7 +211,7 @@ function buildVisitors(ctx: DayContext): {
     return { bullets: [], reason: '(none recorded)' };
   }
   const bullets = ctx.inspections.map((i) => {
-    const result = i.result ? ` — ${i.result.toUpperCase()}` : '';
+    const result = i.result ? `: ${i.result.toUpperCase()}` : '';
     const inspector = i.inspector ? ` (${i.inspector})` : '';
     const notes = i.notes ? `: ${i.notes}` : '';
     const text = `${i.type}${result}${inspector}${notes}`;
