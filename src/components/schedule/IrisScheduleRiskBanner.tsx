@@ -58,7 +58,7 @@ export const IrisScheduleRiskBanner: React.FC<Props> = ({ projectId }) => {
     queryKey: ['ai-schedule-risk', projectId],
     enabled: !!projectId && !!user && autoFetch,
     staleTime: 15 * 60 * 1000,
-    retry: 1,
+    retry: 0,
     refetchOnWindowFocus: false,
     queryFn: async () => {
       const { data: { session } } = await supabase.auth.getSession();
@@ -66,7 +66,10 @@ export const IrisScheduleRiskBanner: React.FC<Props> = ({ projectId }) => {
         body: { project_id: projectId },
         headers: session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : undefined,
       });
-      if (res.error) throw res.error;
+      if (res.error) {
+        console.error('[ai-schedule-risk] invoke failed', res.error);
+        throw res.error;
+      }
       return (res.data?.risks ?? []) as unknown as ScheduleRisk[];
     },
   });
@@ -171,7 +174,7 @@ export const IrisScheduleRiskBanner: React.FC<Props> = ({ projectId }) => {
       >
         <AlertTriangle size={16} color="#C93B3B" aria-hidden />
         <span style={{ fontSize: 13, color: '#9A2929', flex: 1 }}>
-          Risk scan failed. {(error as Error).message ?? 'Try again in a minute.'}
+          Risk scan unavailable. Try again in a moment.
         </span>
         <button
           type="button"

@@ -55,21 +55,46 @@ export function errorResponse(
 
 // ── CORS ─────────────────────────────────────────────────────
 
-const ALLOWED_ORIGINS = [
+const STATIC_ALLOWED_ORIGINS = new Set<string>([
   'http://localhost:5173',
   'http://localhost:3000',
   'https://sitesync.ai',
   'https://app.sitesync.ai',
-]
+])
+
+// Hostname suffixes that are allowed when served over HTTPS. Vercel preview
+// deployments use `<branch>-<hash>-<team>.vercel.app`, so we accept any
+// HTTPS subdomain of vercel.app rather than maintaining a hash allowlist.
+const ALLOWED_HTTPS_SUFFIXES = ['.vercel.app']
+
+function resolveAllowedOrigin(origin: string | null): string | null {
+  if (!origin) return null
+  if (STATIC_ALLOWED_ORIGINS.has(origin)) return origin
+  try {
+    const u = new URL(origin)
+    if (u.protocol !== 'https:') return null
+    for (const suffix of ALLOWED_HTTPS_SUFFIXES) {
+      if (u.hostname.endsWith(suffix)) return origin
+    }
+  } catch {
+    // malformed Origin header — fall through to null
+  }
+  return null
+}
 
 export function getCorsHeaders(req: Request): Record<string, string> {
-  const origin = req.headers.get('Origin') || ''
-  const allowedOrigin = ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0]
+  const origin = req.headers.get('Origin')
+  const allowedOrigin = resolveAllowedOrigin(origin)
+  // When the origin isn't on the allowlist, return a static-allowlist value
+  // so we still emit a header. The browser will block the response if it
+  // doesn't match the caller's origin — which is the correct behavior.
+  const headerOrigin = allowedOrigin ?? 'https://sitesync.ai'
   return {
-    'Access-Control-Allow-Origin': allowedOrigin,
+    'Access-Control-Allow-Origin': headerOrigin,
     'Access-Control-Allow-Methods': 'GET, POST, PATCH, DELETE, OPTIONS',
     'Access-Control-Allow-Headers': 'Authorization, Content-Type, X-API-Key, X-Idempotency-Key, x-client-info, apikey',
     'Access-Control-Max-Age': '86400',
+    Vary: 'Origin',
   }
 }
 

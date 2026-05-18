@@ -68,7 +68,7 @@ Deno.serve(async (req) => {
         .eq('project_id', projectId)
         .order('cached_at', { ascending: false })
         .limit(1)
-        .single(),
+        .maybeSingle(),
       adminClient
         .from('crews')
         .select('id, name, status, availability_percent')
@@ -78,7 +78,7 @@ Deno.serve(async (req) => {
         .select('id, subject, affected_phases')
         .eq('project_id', projectId)
         .eq('status', 'open'),
-      adminClient.from('projects').select('name').eq('id', projectId).single(),
+      adminClient.from('projects').select('name').eq('id', projectId).maybeSingle(),
     ])
 
     if (!activities || activities.length === 0) {
@@ -142,7 +142,7 @@ Only include activities with notable risk (probability > 0.3 or on critical path
         'content-type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-6-20250930',
+        model: 'claude-sonnet-4-6',
         max_tokens: 2048,
         messages: [
           {
