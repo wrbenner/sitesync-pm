@@ -103,7 +103,7 @@ function generateHeaderCells(start: Date, end: Date, zoom: TimeScale): Array<{ l
       }
       case 'week': {
         const weekEnd = addDays(cellDate, 6);
-        label = `${MONTHS[cellDate.getMonth()]} ${cellDate.getDate()}–${weekEnd.getDate()}`;
+        label = `${MONTHS[cellDate.getMonth()]} ${cellDate.getDate()}-${weekEnd.getDate()}`;
         break;
       }
       case 'month':
@@ -693,7 +693,7 @@ const GanttRow: React.FC<GanttRowProps> = React.memo(({ phase, chartStart, pxPer
       ) : (
         /* ── Activity bar ── */
         <div
-          title={`${phase.name} — ${progress}% (${toDateStr(start)} → ${toDateStr(end)})`}
+          title={`${phase.name}: ${progress}% (${toDateStr(start)} to ${toDateStr(end)})`}
           onMouseDown={(e) => onDragStart?.(phase.id, e)}
           style={{
             position: 'absolute', left, top: BAR_TOP, width, height: BAR_H,

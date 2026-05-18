@@ -64,7 +64,7 @@ export async function generateIrisDraft(
 ): Promise<IrisDraft> {
   const draftType = item.irisEnhancement?.draftType
   if (!draftType) {
-    throw new Error(`StreamItem ${item.id} has no irisEnhancement.draftType — cannot generate a draft.`)
+    throw new Error(`StreamItem ${item.id} has no irisEnhancement.draftType. Cannot generate a draft.`)
   }
 
   const template = DRAFT_TEMPLATES[draftType]

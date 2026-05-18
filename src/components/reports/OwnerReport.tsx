@@ -757,7 +757,7 @@ export const OwnerReportPdfDoc: React.FC<{ data: OwnerReportData }> = ({ data })
   const { projectName, projectAddress, reportDate, narrative, percentComplete, overallStatus, scheduleSummary, budgetSummary, riskFlags, lookahead } = data
 
   return (
-    <Document title={`Owner Report — ${projectName}`}>
+    <Document title={`Owner Report: ${projectName}`}>
       <Page size="LETTER" style={pdfStyles.page}>
         <View style={pdfStyles.brand}>
           <Text style={pdfStyles.brandText}>SITESYNC PM</Text>

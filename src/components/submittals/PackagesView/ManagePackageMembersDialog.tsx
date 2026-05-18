@@ -106,7 +106,7 @@ export const ManagePackageMembersDialog: React.FC<ManagePackageMembersDialogProp
   }
 
   return (
-    <DialogShell title={`Manage members — Package #${pkg.number}`} onClose={onClose} width={580}>
+    <DialogShell title={`Manage members: Package #${pkg.number}`} onClose={onClose} width={580}>
       <form onSubmit={submit} style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
         <input
           type="search"

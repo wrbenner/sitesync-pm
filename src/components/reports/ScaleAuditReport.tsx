@@ -99,7 +99,7 @@ export const ScaleAuditReport: React.FC<{ data: ScaleAuditReportData }> = ({ dat
   const ordered = [...mismatches, ...matches]
 
   return (
-    <Document title={`${projectName} — Scale Audit`}>
+    <Document title={`${projectName}: Scale Audit`}>
       <Page size="A4" style={styles.page}>
         {/* Brand bar */}
         <View style={styles.brand}>

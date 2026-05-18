@@ -251,7 +251,7 @@ export const dailyLogService = {
       weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
     });
     const narrative = [
-      `Daily Construction Log — ${dateFmt}`,
+      `Daily Construction Log: ${dateFmt}`,
       '',
       `WEATHER: ${weatherText}`,
       '',

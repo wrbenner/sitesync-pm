@@ -1096,7 +1096,7 @@ export default function SiteMap() {
     <div style={containerStyle}>
       <PageContainer
         title={isFullscreen ? undefined : "Site Map"}
-        subtitle={isFullscreen ? undefined : "Live operational map — real-time site intelligence for your project"}
+        subtitle={isFullscreen ? undefined : "Live operational map. Real-time site intelligence for your project"}
         actions={
           <div style={{ display: 'flex', gap: spacing['2'], alignItems: 'center', flexWrap: 'wrap' }}>
             <WeatherWidget weather={weather} loading={weatherLoading} />

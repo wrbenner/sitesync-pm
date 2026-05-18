@@ -116,7 +116,7 @@ export const AIInsightsWidget: React.FC = React.memo(() => {
           <AlertTriangle size={13} color={colors.statusPending} style={{ flexShrink: 0 }} />
           <span style={{ flex: 1, fontSize: typography.fontSize.caption, color: '#92400E' }}>
             {mostRecentCreatedAt
-              ? `AI insights updated ${relativeTime(mostRecentCreatedAt)} — live analysis unavailable.`
+              ? `AI insights updated ${relativeTime(mostRecentCreatedAt)}. Live analysis unavailable.`
               : 'AI insights are showing cached data. Live analysis unavailable.'}
           </span>
           <button

@@ -84,13 +84,13 @@ function titleFor(state: SlaState): string {
     case 'nudge':
       return state.businessDaysRemaining === 0
         ? 'Response is due today. A T-2 reminder may already have fired.'
-        : `${state.businessDaysRemaining} business days remaining — within the T-2 nudge window.`;
+        : `${state.businessDaysRemaining} business days remaining. Within the T-2 nudge window.`;
     case 'overdue':
       return `${state.businessDaysOverdue} business day(s) past due. First overdue notice has been sent.`;
     case 'overdue_cc':
       return `${state.businessDaysOverdue} business days past due. Manager has been CC'd.`;
     case 'delay_risk':
-      return `${state.businessDaysOverdue} business days past due — flagged as delay risk; CO narrative auto-drafted.`;
+      return `${state.businessDaysOverdue} business days past due. Flagged as delay risk. CO narrative auto-drafted.`;
     case 'paused':
       return 'SLA clock is paused. The escalator will not fire until it is resumed.';
     default:

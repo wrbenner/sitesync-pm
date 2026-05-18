@@ -810,7 +810,7 @@ const QuickAddRow: React.FC<QuickAddRowProps> = ({
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           onKeyDown={onTitleKeyDown}
-          placeholder="+ New task — title, then Tab to set assignee / due date, Enter to save"
+          placeholder="+ New task. Title, then Tab for assignee / due date, Enter to save"
           aria-label="New task title"
           style={{
             width: '100%',

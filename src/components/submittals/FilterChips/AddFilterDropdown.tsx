@@ -474,7 +474,7 @@ const OperandInput: React.FC<{
         <MultiSelect
           value={(value as string[]) ?? []}
           onChange={(v) => onChange(v.length ? v : undefined)}
-          options={CSI_DIVISIONS.map((d) => ({ value: d.code, label: `${d.code} — ${d.name}` }))}
+          options={CSI_DIVISIONS.map((d) => ({ value: d.code, label: `${d.code}: ${d.name}` }))}
         />
       )
     case 'disposition-multi':

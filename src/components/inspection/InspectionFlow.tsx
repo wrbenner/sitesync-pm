@@ -98,7 +98,7 @@ export const InspectionFlow: React.FC<InspectionFlowProps> = ({
 
   const finishVerbalFail = useCallback(async () => {
     if (verbal.trim().length < 8) {
-      setError('Describe what failed — at least a sentence.')
+      setError('Describe what failed. Use at least one full sentence.')
       return
     }
     setSubmitting(true)

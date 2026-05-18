@@ -4,6 +4,27 @@
 // OpenWeatherMap (weather), Overpass/OSM (amenities), USGS (elevation),
 // EPA (environmental). All free public APIs.
 
+// ── Internal API shapes (external responses, not exported) ────
+
+interface NominatimItem {
+  lat: string; lon: string; display_name: string;
+  address?: Record<string, string>;
+  boundingbox?: string[];
+}
+interface OWMForecastItem {
+  dt_txt: string;
+  main: { temp: number; humidity: number };
+  wind: { speed: number; gust?: number };
+  pop?: number;
+  rain?: { '3h': number };
+  snow?: { '3h': number };
+  weather: Array<{ main: string; description: string; icon: string }>;
+}
+interface ArcGISFeature {
+  attributes: Record<string, string | number | null>;
+  geometry?: { x: number; y: number };
+}
+
 // ── Types ─────────────────────────────────────────────────────
 
 export interface GeocodingResult {
@@ -186,7 +207,7 @@ export async function geocodeAddress(query: string): Promise<GeocodingResult[]> 
     );
     if (!response.ok) throw new Error(`Geocoding failed: ${response.status}`);
     const data = await response.json();
-    return data.map((r: any) => ({
+    return data.map((r: NominatimItem) => ({
       lat: parseFloat(r.lat),
       lng: parseFloat(r.lon),
       display_name: r.display_name,
@@ -213,14 +234,14 @@ function mapFloodZone(zone: string, subtype: string): { risk_level: FloodZoneDat
       return {
         risk_level: 'High',
         insurance_required: true,
-        description: `Zone ${zoneUpper} — Special Flood Hazard Area (1% annual chance flood). Mandatory flood insurance. Base flood elevations may apply.`,
+        description: `Zone ${zoneUpper}: Special Flood Hazard Area (1% annual chance flood). Mandatory flood insurance. Base flood elevations may apply.`,
       };
     case 'VE':
     case 'V':
       return {
         risk_level: 'High',
         insurance_required: true,
-        description: `Zone ${zoneUpper} — Coastal High Hazard Area with wave action. Mandatory flood insurance. Elevated construction required.`,
+        description: `Zone ${zoneUpper}: Coastal High Hazard Area with wave action. Mandatory flood insurance. Elevated construction required.`,
       };
     case 'X':
       if (subtype && subtype.includes('500')) {
@@ -245,7 +266,7 @@ function mapFloodZone(zone: string, subtype: string): { risk_level: FloodZoneDat
       return {
         risk_level: 'Low',
         insurance_required: false,
-        description: zone ? `Zone ${zone} — Flood hazard data available from FEMA NFHL.` : 'No FEMA flood data available for this location.',
+        description: zone ? `Zone ${zone}: Flood hazard data available from FEMA NFHL.` : 'No FEMA flood data available for this location.',
       };
   }
 }
@@ -357,8 +378,8 @@ function assessConstructionWeather(current: WeatherCurrent, forecast: WeatherFor
   // OSHA crane: sustained > 20 mph requires evaluation
   const craneHold = wind > 20;
   const craneReason = craneHold
-    ? `Wind ${wind} mph — crane operations require evaluation (OSHA: >20 mph)`
-    : `Wind ${wind} mph — within crane operating limits`;
+    ? `Wind ${wind} mph. Crane operations require evaluation (OSHA: >20 mph)`
+    : `Wind ${wind} mph. Within crane operating limits`;
 
   const freezeRisk = current.temp_min !== undefined ? current.temp_min < 32 : temp < 35;
   const heatRisk = temp >= 95;
@@ -424,7 +445,7 @@ async function fetchWeather(lat: number, lng: number): Promise<WeatherData | nul
     };
 
     // Aggregate 3-hour forecast into daily summaries
-    const dailyMap = new Map<string, any[]>();
+    const dailyMap = new Map<string, OWMForecastItem[]>();
     for (const item of forecastData.list || []) {
       const date = item.dt_txt.split(' ')[0];
       if (!dailyMap.has(date)) dailyMap.set(date, []);
@@ -434,12 +455,12 @@ async function fetchWeather(lat: number, lng: number): Promise<WeatherData | nul
     const forecast: WeatherForecastDay[] = [];
     for (const [date, items] of dailyMap) {
       if (forecast.length >= 5) break;
-      const temps = items.map((i: any) => i.main.temp);
-      const winds = items.map((i: any) => i.wind.speed);
-      const gusts = items.map((i: any) => i.wind.gust || i.wind.speed);
-      const pops = items.map((i: any) => (i.pop || 0) * 100);
-      const rains = items.map((i: any) => i.rain?.['3h'] || 0);
-      const snows = items.map((i: any) => i.snow?.['3h'] || 0);
+      const temps = items.map((i) => i.main.temp);
+      const winds = items.map((i) => i.wind.speed);
+      const gusts = items.map((i) => i.wind.gust ?? i.wind.speed);
+      const pops = items.map((i) => (i.pop ?? 0) * 100);
+      const rains = items.map((i) => i.rain?.['3h'] ?? 0);
+      const snows = items.map((i) => i.snow?.['3h'] ?? 0);
       // Pick the most common weather condition
       const condCounts = new Map<string, number>();
       for (const i of items) {
@@ -462,7 +483,7 @@ async function fetchWeather(lat: number, lng: number): Promise<WeatherData | nul
         icon: midItem.weather[0]?.icon || '01d',
         wind_speed: Math.round(Math.max(...winds)),
         wind_gust: Math.round(Math.max(...gusts)),
-        humidity: Math.round(items.reduce((s: number, i: any) => s + i.main.humidity, 0) / items.length),
+        humidity: Math.round(items.reduce((s: number, i) => s + i.main.humidity, 0) / items.length),
         precipitation_probability: Math.round(Math.max(...pops)),
         rain_mm: Math.round(rains.reduce((s: number, v: number) => s + v, 0) * 10) / 10,
         snow_mm: Math.round(snows.reduce((s: number, v: number) => s + v, 0) * 10) / 10,
@@ -651,7 +672,7 @@ async function fetchEPAData(lat: number, lng: number): Promise<EPAFacility[]> {
       return await fetchEPASuperfund(lat, lng);
     }
 
-    return data.features.slice(0, 10).map((f: any) => {
+    return data.features.slice(0, 10).map((f: ArcGISFeature) => {
       const a = f.attributes;
       const geom = f.geometry;
       const dist = geom ? haversineDistance(lat, lng, geom.y, geom.x) : { miles: 0, feet: 0 };
@@ -662,7 +683,7 @@ async function fetchEPAData(lat: number, lng: number): Promise<EPAFacility[]> {
         city: a.CITY_NAME || '',
         state: a.STATE_CODE || '',
         distance_mi: dist.miles,
-        programs: (a.INTEREST_TYPES || '').split(',').map((s: string) => s.trim()).filter(Boolean),
+        programs: String(a.INTEREST_TYPES || '').split(',').map((s: string) => s.trim()).filter(Boolean),
       };
     });
   } catch (err) {
@@ -696,7 +717,7 @@ async function fetchEPASuperfund(lat: number, lng: number): Promise<EPAFacility[
     if (!response.ok) return [];
     const data = await response.json();
     if (!data.features) return [];
-    return data.features.slice(0, 10).map((f: any) => {
+    return data.features.slice(0, 10).map((f: ArcGISFeature) => {
       const a = f.attributes;
       const geom = f.geometry;
       const dist = geom ? haversineDistance(lat, lng, geom.y, geom.x) : { miles: 0, feet: 0 };
