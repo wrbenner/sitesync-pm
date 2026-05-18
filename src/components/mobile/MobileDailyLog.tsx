@@ -145,7 +145,7 @@ export const MobileDailyLog: React.FC<MobileDailyLogProps> = ({
             }}>
               <div style={{ fontSize: '56px', marginBottom: spacing['2'] }}>☀️</div>
               <p style={{ fontSize: typography.fontSize.subtitle, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, margin: 0 }}>
-                {data.weather.tempHigh}°F / {data.weather.tempLow}°F
+                High {data.weather.tempHigh}° / Low {data.weather.tempLow}°F
               </p>
               <p style={{ fontSize: typography.fontSize.body, color: colors.textSecondary, margin: `${spacing['1']} 0 0` }}>
                 {data.weather.conditions} · Wind {data.weather.wind}
@@ -154,20 +154,20 @@ export const MobileDailyLog: React.FC<MobileDailyLogProps> = ({
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: spacing['3'] }}>
               <div>
-                <label style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary, marginBottom: spacing['1'], display: 'block' }}>Conditions</label>
-                <input value={data.weather.conditions} onChange={(e) => setData((d) => ({ ...d, weather: { ...d.weather, conditions: e.target.value } }))} style={touchInput} />
+                <label htmlFor="weather-conditions" style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary, marginBottom: spacing['1'], display: 'block' }}>Conditions</label>
+                <input id="weather-conditions" value={data.weather.conditions} onChange={(e) => setData((d) => ({ ...d, weather: { ...d.weather, conditions: e.target.value } }))} style={touchInput} />
               </div>
               <div>
-                <label style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary, marginBottom: spacing['1'], display: 'block' }}>Wind</label>
-                <input value={data.weather.wind} onChange={(e) => setData((d) => ({ ...d, weather: { ...d.weather, wind: e.target.value } }))} style={touchInput} />
+                <label htmlFor="weather-wind" style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary, marginBottom: spacing['1'], display: 'block' }}>Wind</label>
+                <input id="weather-wind" value={data.weather.wind} onChange={(e) => setData((d) => ({ ...d, weather: { ...d.weather, wind: e.target.value } }))} style={touchInput} />
               </div>
               <div>
-                <label style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary, marginBottom: spacing['1'], display: 'block' }}>High °F</label>
-                <input type="number" inputMode="numeric" value={data.weather.tempHigh} onChange={(e) => setData((d) => ({ ...d, weather: { ...d.weather, tempHigh: e.target.value } }))} style={{ ...touchInput, textAlign: 'center' }} />
+                <label htmlFor="weather-high" style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary, marginBottom: spacing['1'], display: 'block' }}>High °F</label>
+                <input id="weather-high" type="number" inputMode="numeric" value={data.weather.tempHigh} onChange={(e) => setData((d) => ({ ...d, weather: { ...d.weather, tempHigh: e.target.value } }))} style={{ ...touchInput, textAlign: 'center' }} />
               </div>
               <div>
-                <label style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary, marginBottom: spacing['1'], display: 'block' }}>Low °F</label>
-                <input type="number" inputMode="numeric" value={data.weather.tempLow} onChange={(e) => setData((d) => ({ ...d, weather: { ...d.weather, tempLow: e.target.value } }))} style={{ ...touchInput, textAlign: 'center' }} />
+                <label htmlFor="weather-low" style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary, marginBottom: spacing['1'], display: 'block' }}>Low °F</label>
+                <input id="weather-low" type="number" inputMode="numeric" value={data.weather.tempLow} onChange={(e) => setData((d) => ({ ...d, weather: { ...d.weather, tempLow: e.target.value } }))} style={{ ...touchInput, textAlign: 'center' }} />
               </div>
             </div>
           </div>
