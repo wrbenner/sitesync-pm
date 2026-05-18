@@ -563,8 +563,8 @@ export const AnnotationCanvas: React.FC<AnnotationCanvasProps> = ({
           readout = formatAreaReadout(pts, pixelsToInchesRef.current);
         } else {
           readout = pts.length < 3
-            ? `${pts.length} pt${pts.length === 1 ? '' : 's'} — keep clicking vertices`
-            : `${pts.length} pts — click start dot to close`;
+            ? `${pts.length} pt${pts.length === 1 ? '' : 's'}. Keep clicking vertices.`
+            : `${pts.length} pts. Click start dot to close.`;
         }
         const anchor = pts[pts.length - 1] ?? { x: 0, y: 0 };
         areaLabel.current.set({ text: readout, left: anchor.x + 10, top: anchor.y + 10 });
