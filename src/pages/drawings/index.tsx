@@ -374,7 +374,7 @@ const DrawingsPage: React.FC = () => {
         to_company: data.recipient_company,
         to_contact: data.recipient_name,
         to_email: data.recipient_email || null,
-        subject: `Drawing Set Issue — ${data.purpose.replace(/_/g, ' ')}`,
+        subject: `Drawing Set Issue: ${data.purpose.replace(/_/g, ' ')}`,
         purpose: data.purpose,
         notes: data.remarks || null,
         document_ids: data.drawing_ids,

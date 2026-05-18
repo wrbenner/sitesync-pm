@@ -498,7 +498,7 @@ async function parsePdfScheduleHeuristic(file: File): Promise<ImportResult> {
 
   warnings.push(
     `Extracted ${activities.length} activities from PDF. ` +
-    `Dependencies were inferred from sequential ordering — review and adjust as needed.`
+    `Dependencies were inferred from sequential ordering. Review and adjust as needed.`
   );
 
   if (timelinePoints.length >= 2) {
@@ -846,7 +846,7 @@ export async function parsePdfSchedule(file: File, projectId?: string): Promise<
       try {
         const result = await parsePdfScheduleHeuristic(file);
         result.warnings = [
-          `AI extraction unavailable (${aiMsg}). Used heuristic fallback — dates may be approximate.`,
+          `AI extraction unavailable (${aiMsg}). Used heuristic fallback: dates may be approximate.`,
           ...result.warnings,
         ];
         return result;

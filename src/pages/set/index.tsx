@@ -561,7 +561,7 @@ const DrawingRow: React.FC<{ drawing: Drawing }> = ({ drawing }) => {
               whiteSpace: 'nowrap',
             }}
           >
-            {drawing.sheet_number ? `${drawing.sheet_number} — ` : ''}
+            {drawing.sheet_number ? `${drawing.sheet_number}: ` : ''}
             {drawing.title}
           </span>
         </div>

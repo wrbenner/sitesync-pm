@@ -198,7 +198,7 @@ async function draftDailyLogFromTool(
   const result = await draftAction<DraftedActionType & 'daily_log.draft'>({
     project_id: ctx.projectId,
     action_type: 'daily_log.draft' as const,
-    title: `Daily log — ${a.date}`,
+    title: `Daily log: ${a.date}`,
     summary: a.notes.slice(0, 280),
     payload: {
       date: a.date,
@@ -226,7 +226,7 @@ async function draftPayAppFromTool(
   const result = await draftAction<DraftedActionType & 'pay_app.draft'>({
     project_id: ctx.projectId,
     action_type: 'pay_app.draft' as const,
-    title: `Pay App #${a.application_number} — ${a.period_to}`,
+    title: `Pay App #${a.application_number}: ${a.period_to}`,
     summary: `${a.line_items.length} line items · $${(a.amount_due ?? 0).toLocaleString()} due`,
     payload: {
       application_number: a.application_number,

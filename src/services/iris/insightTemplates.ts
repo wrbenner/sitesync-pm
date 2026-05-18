@@ -80,7 +80,7 @@ export function varianceHeadline(ctx: VarianceContext): string {
   const factor = ctx.averageWeeklyPct > 0
     ? (ctx.weekDeltaPct / ctx.averageWeeklyPct).toFixed(1)
     : '—';
-  return `Spend ${factor}× weekly average — trending toward overrun`;
+  return `Spend ${factor}× weekly average: trending toward overrun`;
 }
 
 export function varianceChain(ctx: VarianceContext): string[] {
@@ -112,7 +112,7 @@ export function staffingChain(ctx: StaffingContext): string[] {
 // ── Weather ──────────────────────────────────────────────────────────────────
 
 export function weatherHeadline(ctx: WeatherContext): string {
-  return `${ctx.conditionsLabel} ${ctx.dayCount}d — ${ctx.outdoorActivityCount} outdoor activit${ctx.outdoorActivityCount === 1 ? 'y' : 'ies'} at risk`;
+  return `${ctx.conditionsLabel} ${ctx.dayCount}d: ${ctx.outdoorActivityCount} outdoor activit${ctx.outdoorActivityCount === 1 ? 'y' : 'ies'} at risk`;
 }
 
 export function weatherChain(ctx: WeatherContext): string[] {

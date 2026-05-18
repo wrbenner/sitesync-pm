@@ -177,7 +177,7 @@ const FIXTURE_RFI_17: GroundingResponse = {
     {
       lane: 'claude',
       answer:
-        'ADA Standards § 404.2.4.1 governs doors in series (vestibules). Required clear distance between two hinged or pivoted doors in series shall be 48 inches minimum plus the width of any door swinging into the space. The 46" measurement on A-201 is short by 2" before accounting for the inner-door swing — likely 32" more. Project does not qualify for the alteration exception in 202.4 because Retail Entry 2 is new construction.',
+        'ADA Standards § 404.2.4.1 governs doors in series (vestibules). Required clear distance between two hinged or pivoted doors in series shall be 48 inches minimum plus the width of any door swinging into the space. The 46" measurement on A-201 is short by 2" before accounting for the inner-door swing: likely 32" more. Project does not qualify for the alteration exception in 202.4 because Retail Entry 2 is new construction.',
       confidence: 0.91,
       latencyMs: 1690,
       sources: [

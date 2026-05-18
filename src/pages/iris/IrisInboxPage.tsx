@@ -280,7 +280,7 @@ const IrisInboxPage: React.FC = () => {
           ) : filteredInsights.length === 0 ? (
             <EmptyState
               icon={<Sparkles size={28} />}
-              title="No risks detected — Iris is watching."
+              title="No risks detected. Iris is watching."
               description="Iris monitors RFIs, submittals, schedule, budget, staffing, and weather. Risks appear here as they emerge."
             />
           ) : (
