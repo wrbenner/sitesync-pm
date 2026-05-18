@@ -45,9 +45,16 @@ async function shot(page: Page, viewport: string, n: number, name: string) {
 }
 
 async function signIn(page: Page) {
-  await page.goto('#/login')
-  await page.getByPlaceholder('you@company.com').fill(USER)
-  await page.getByPlaceholder('Enter your password').fill(PASS)
+  await page.goto('#/dashboard')
+  await page.waitForLoadState('domcontentloaded', { timeout: 8_000 }).catch(() => undefined)
+  await page.waitForTimeout(400)
+  if (!page.url().includes('/login')) { await settle(page, 800); return }
+  await page.getByPlaceholder('Email').fill(USER).catch(async () => {
+    await page.getByPlaceholder('you@company.com').fill(USER).catch(() => undefined)
+  })
+  await page.getByPlaceholder('Password').fill(PASS).catch(async () => {
+    await page.getByPlaceholder('Enter your password').fill(PASS).catch(() => undefined)
+  })
   await page.locator('button[type="submit"]').first().click()
   await page.waitForURL(/#\/(dashboard|onboarding|profile|$)/, { timeout: 20_000 })
   await settle(page, 1500)
