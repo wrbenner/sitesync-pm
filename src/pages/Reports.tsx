@@ -412,7 +412,7 @@ function useOwnerUpdateContext(
       ? {
           percentCommitted: budget.percentCommitted,
           approvedTotal: budget.totalOriginal,
-          sourceLabel: 'Budget items — committed vs original',
+          sourceLabel: 'Budget items: committed vs original',
         }
       : undefined
 

@@ -311,7 +311,7 @@ const HUDCompliancePage: React.FC = () => {
                 id: `alert-payroll-${entry.id}`,
                 severity: 'critical',
                 program: 'Davis-Bacon',
-                message: `Certified payroll report rejected for ${entry.contractor} — week ending ${fmtDate(entry.weekEnding)}. Review and resubmit.`,
+                message: `Certified payroll report rejected for ${entry.contractor}, week ending ${fmtDate(entry.weekEnding)}. Review and resubmit.`,
                 date: entry.weekEnding,
                 actionRequired: true,
               });
@@ -484,7 +484,7 @@ const HUDCompliancePage: React.FC = () => {
                 </div>
               </div>
               <div style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary, textAlign: 'center' }}>
-                {overallHealth >= 90 ? 'Excellent — all programs on track' : overallHealth >= 70 ? 'Good — some items need attention' : 'At Risk — immediate action required'}
+                {overallHealth >= 90 ? 'Excellent: all programs on track' : overallHealth >= 70 ? 'Good: some items need attention' : 'At Risk: immediate action required'}
               </div>
             </motion.div>
 

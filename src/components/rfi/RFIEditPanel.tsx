@@ -300,7 +300,7 @@ export const RFIEditPanel: React.FC<RFIEditPanelProps> = ({ open, onClose, rfiId
             />
           </FieldRow>
 
-          <FieldRow label="Question" hint="Rich-text — paste screenshots, format with lists, links.">
+          <FieldRow label="Question" hint="Rich-text: paste screenshots, format with lists, links.">
             <RFIRichTextEditor
               value={draft.question}
               onChange={(html) => setField('question', html)}

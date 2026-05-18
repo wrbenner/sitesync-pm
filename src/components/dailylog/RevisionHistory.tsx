@@ -61,7 +61,7 @@ export const RevisionHistory: React.FC<RevisionHistoryProps> = ({
             color: colors.ink3,
           }}
         >
-          No revisions — original log stands.
+          No revisions: original log stands.
         </p>
       ) : (
         <ol style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 0 }}>
