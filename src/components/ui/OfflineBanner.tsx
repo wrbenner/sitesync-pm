@@ -168,7 +168,7 @@ export const OfflineBanner: React.FC = () => {
   } else if (isCaching) {
     const progress = cacheProgress;
     const progressText = progress
-      ? ` — ${humanizeTable(progress.currentTable)} (${progress.completed}/${progress.total})`
+      ? `: ${humanizeTable(progress.currentTable)} (${progress.completed}/${progress.total})`
       : '';
     config = {
       bg: colors.statusInfoSubtle,

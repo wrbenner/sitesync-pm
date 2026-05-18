@@ -102,7 +102,7 @@ export const RFIVoiceFAB: React.FC<RFIVoiceFABProps> = ({ projectId, drawingId, 
         })
         if (transcribeErr) throw transcribeErr
         const transcript = (transcribeData as { transcript?: string } | null)?.transcript?.trim()
-        if (!transcript) throw new Error('Empty transcript — please speak louder or longer.')
+        if (!transcript) throw new Error('Empty transcript. Speak louder or longer and try again.')
         // Step 2 — drive the multi-pass draft.
         setState('drafting')
         const { draftId } = await createDraft.mutateAsync({

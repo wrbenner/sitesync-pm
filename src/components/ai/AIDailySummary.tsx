@@ -108,7 +108,7 @@ function generateExecutiveSummary(props: AIDailySummaryProps): string {
   if (props.safetyIncidents && props.safetyIncidents.length > 0) {
     const critical = props.safetyIncidents.filter(i => i.severity.toLowerCase() === 'critical').length;
     if (critical > 0) {
-      sentences.push(`${props.safetyIncidents.length} safety incident${props.safetyIncidents.length !== 1 ? 's' : ''} ${props.safetyIncidents.length !== 1 ? 'were' : 'was'} reported, including ${critical} critical — immediate review required.`);
+      sentences.push(`${props.safetyIncidents.length} safety incident${props.safetyIncidents.length !== 1 ? 's' : ''} ${props.safetyIncidents.length !== 1 ? 'were' : 'was'} reported, including ${critical} critical. Immediate review required.`);
     } else {
       sentences.push(`${props.safetyIncidents.length} safety incident${props.safetyIncidents.length !== 1 ? 's' : ''} ${props.safetyIncidents.length !== 1 ? 'were' : 'was'} reported, all non-critical.`);
     }

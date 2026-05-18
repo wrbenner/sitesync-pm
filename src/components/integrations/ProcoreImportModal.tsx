@@ -26,7 +26,7 @@ const ALL_SCOPES: { key: ImportScope; label: string; help: string }[] = [
   { key: 'rfis', label: 'RFIs', help: 'Open + closed Requests for Information.' },
   { key: 'submittals', label: 'Submittals', help: 'Spec submittals with status + due date.' },
   { key: 'change_orders', label: 'Change orders', help: 'Approved + pending change orders.' },
-  { key: 'drawings', label: 'Drawings', help: 'Sheet metadata only — no PDFs.' },
+  { key: 'drawings', label: 'Drawings', help: 'Sheet metadata only, no PDFs.' },
 ]
 
 export const ProcoreImportModal: React.FC<Props> = ({ open, onClose, targetProjectId, targetProjectName }) => {
@@ -147,7 +147,7 @@ export const ProcoreImportModal: React.FC<Props> = ({ open, onClose, targetProje
       {!result && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: spacing['4'] }}>
           <p style={{ margin: 0, fontSize: typography.fontSize.sm, color: colors.textSecondary, lineHeight: 1.55 }}>
-            Pulls your Procore project&apos;s open data into <strong style={{ color: colors.textPrimary }}>{targetProjectName ?? 'this project'}</strong> so your team can run on real data immediately. One-shot import — for ongoing sync, use the Procore integration once you&apos;re ready to commit.
+            Pulls your Procore project&apos;s open data into <strong style={{ color: colors.textPrimary }}>{targetProjectName ?? 'this project'}</strong> so your team can run on real data immediately. One-shot import. For ongoing sync, use the Procore integration once you&apos;re ready to commit.
           </p>
 
           {/* Procore creds */}
