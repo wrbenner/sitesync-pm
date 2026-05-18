@@ -772,7 +772,7 @@ const LinkedTab: React.FC<{ drawingId: string; projectId?: string }> = ({ drawin
         const rows = (data ?? []) as unknown as Array<Record<string, unknown>>;
         return rows.map((r) => ({
           id: String(r.id),
-          label: `RFI #${r.number ?? '?'} — ${String(r.subject ?? r.title ?? 'Untitled')}`,
+          label: `RFI #${r.number ?? '?'}: ${String(r.subject ?? r.title ?? 'Untitled')}`,
           sub: String(r.status ?? ''),
         }));
       }
@@ -785,7 +785,7 @@ const LinkedTab: React.FC<{ drawingId: string; projectId?: string }> = ({ drawin
       const rows = (data ?? []) as unknown as Array<Record<string, unknown>>;
       return rows.map((r) => ({
         id: String(r.id),
-        label: `Punch #${r.item_number ?? '?'} — ${String(r.description ?? 'No description')}`,
+        label: `Punch #${r.item_number ?? '?'}: ${String(r.description ?? 'No description')}`,
         sub: String(r.status ?? ''),
       }));
     },

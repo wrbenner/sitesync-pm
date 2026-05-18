@@ -40,7 +40,7 @@ export default function Step2OrgDetails() {
   const save = async () => {
     setError(null)
     if (!orgId) {
-      setError('No active organization — sign in again to continue.')
+      setError('No active organization. Sign in again to continue.')
       return
     }
     const trimmed = name.trim()
@@ -69,7 +69,7 @@ export default function Step2OrgDetails() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       <p style={{ color: '#5C5C5C', fontSize: 14, margin: 0 }}>
-        We pulled this from your sign-up. Confirm it looks right — it shows up on PDF exports,
+        We pulled this from your sign-up. Confirm it looks right: it shows up on PDF exports,
         invite emails, and the audit chain footer.
       </p>
 

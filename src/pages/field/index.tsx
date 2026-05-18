@@ -126,7 +126,7 @@ const FieldPage: React.FC = () => {
         id: `pi-${item.id}`,
         type: 'punch',
         timestamp: (item.createdDate as string) ?? (item.created_at as string) ?? '',
-        title: `${item.itemNumber ?? 'PL'} — ${item.area ?? 'No area'}`,
+        title: `${item.itemNumber ?? 'PL'}: ${item.area ?? 'No area'}`,
         subtitle: item.description as string,
         status: item.verification_status as string,
         needsAttention,

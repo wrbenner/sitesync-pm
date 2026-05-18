@@ -227,7 +227,7 @@ const TimeTracking: React.FC = () => {
   // --- T&M Tickets Demo Data ---
   const tmTickets = [
     {
-      id: 'TM-0041', date: '2026-04-14', description: 'Emergency water line repair — broken 4" main at loading dock', location: 'Building B, Loading Dock', authorizedBy: 'J. Henderson (Owner Rep)',
+      id: 'TM-0041', date: '2026-04-14', description: 'Emergency water line repair: broken 4" main at loading dock', location: 'Building B, Loading Dock', authorizedBy: 'J. Henderson (Owner Rep)',
       status: 'Approved' as const,
       labor: [
         { worker: 'Thompson, Marcus', classification: 'Plumber', st: 6, ot: 2, dt: 0, rate: 56.20 },
@@ -278,7 +278,7 @@ const TimeTracking: React.FC = () => {
       ],
     },
     {
-      id: 'TM-0044', date: '2026-04-18', description: 'Owner-requested finish upgrade — lobby tile replacement', location: 'Building A, Lobby', authorizedBy: 'K. Watanabe (PM)',
+      id: 'TM-0044', date: '2026-04-18', description: 'Owner-requested finish upgrade: lobby tile replacement', location: 'Building A, Lobby', authorizedBy: 'K. Watanabe (PM)',
       status: 'Billed' as const,
       labor: [
         { worker: 'Nguyen, Thanh', classification: 'Carpenter', st: 8, ot: 0, dt: 0, rate: 49.30 },
@@ -415,7 +415,7 @@ const TimeTracking: React.FC = () => {
   return (
     <PageContainer
       title="Time Tracking"
-      subtitle={`Week of ${toISODate(weekStart)} — Davis-Bacon compliant hours per cost code`}
+      subtitle={`Week of ${toISODate(weekStart)} (Davis-Bacon compliant hours per cost code)`}
       actions={
         <>
           <Btn variant="secondary" onClick={autoFillFromLogs}>
@@ -467,7 +467,7 @@ const TimeTracking: React.FC = () => {
       {/* Week-at-a-glance: workers × days, backed by the `timesheets` table */}
       <Card padding={spacing['5']}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing['3'] }}>
-          <SectionHeader title={`Week at a Glance — ${weekFromISO} to ${weekToISO}`} />
+          <SectionHeader title={`Week at a Glance: ${weekFromISO} to ${weekToISO}`} />
           <Btn variant="primary" icon={<Plus size={14} />} onClick={() => setTsModalOpen(true)}>Enter Hours</Btn>
         </div>
         {timesheetsLoading ? (
@@ -695,7 +695,7 @@ const TimeTracking: React.FC = () => {
       {activeTab === 'payroll' && (
         <div>
           <Card padding={spacing['5']}>
-            <SectionHeader title="WH-347 — Certified Payroll Report" />
+            <SectionHeader title="WH-347: Certified Payroll Report" />
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: spacing['3'], marginBottom: spacing['4'], fontSize: typography.fontSize.sm }}>
               <div><span style={{ color: colors.textTertiary }}>Contractor:</span> <strong>{wh347Header.contractor}</strong></div>
               <div><span style={{ color: colors.textTertiary }}>Address:</span> {wh347Header.address}</div>
@@ -1074,7 +1074,7 @@ const TimeTracking: React.FC = () => {
               <option value="">Select worker</option>
               {((workforceMembers ?? []) as unknown as Array<Record<string, unknown>>).map((w) => (
                 <option key={w.id as string} value={w.id as string}>
-                  {((w.name as string) ?? 'Unnamed')}{w.trade ? ` — ${w.trade as string}` : ''}
+                  {((w.name as string) ?? 'Unnamed')}{w.trade ? ` (${w.trade as string})` : ''}
                 </option>
               ))}
             </select>

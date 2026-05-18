@@ -1042,7 +1042,7 @@ const DailyLogPage: React.FC = () => {
           <button
             type="button"
             onClick={() => setShowIrisDraftSheet(true)}
-            aria-label="Iris drafted this log from field data — open to review"
+            aria-label="Iris drafted this log from field data. Open to review."
             style={{
               display: 'inline-flex', alignItems: 'center', gap: 6,
               padding: '5px 11px', borderRadius: 999,

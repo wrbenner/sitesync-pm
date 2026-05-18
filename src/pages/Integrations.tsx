@@ -416,8 +416,8 @@ export const Integrations: React.FC = () => {
               borderRadius: borderRadius.md, marginBottom: spacing['3'],
               fontSize: typography.fontSize.sm, color: colors.statusInfo,
             }}>
-              Live OAuth is not wired yet. This creates a <strong>pending_auth</strong> row — click
-              "Confirm Connection" on the card once the remote side is ready.
+              Live OAuth is not wired yet. This creates a <strong>pending_auth</strong> row.
+              Click "Confirm Connection" on the card once the remote side is ready.
             </div>
 
             <FormField label="Account name">
@@ -501,7 +501,7 @@ const SyncHistoryPanel: React.FC<SyncHistoryPanelProps> = ({ connection, organiz
   }
 
   return (
-    <FormModal open onClose={onClose} title={`${providerName} — Sync History`} width={640}>
+    <FormModal open onClose={onClose} title={`${providerName}: Sync History`} width={640}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: spacing['4'] }}>
         {/* Trigger form */}
         <Card padding={spacing['4']}>
@@ -576,7 +576,7 @@ const SyncHistoryPanel: React.FC<SyncHistoryPanelProps> = ({ connection, organiz
               fontSize: typography.fontSize.caption, color: colors.statusPending,
             }}>
               <AlertTriangle size={11} />
-              Connection is {connection.status} — confirm it before syncing.
+              Connection is {connection.status}. Confirm it before syncing.
             </div>
           )}
         </Card>

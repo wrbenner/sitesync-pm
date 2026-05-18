@@ -178,7 +178,7 @@ export const RFIActionPanel: React.FC<RFIActionPanelProps> = ({ open, onClose, r
             value={
               <span style={{ color: isOverdue(rfi.due_date, status) ? '#DC2626' : colors.ink }}>
                 {formatShortDate(rfi.due_date)}
-                {isOverdue(rfi.due_date, status) && ' — overdue'}
+                {isOverdue(rfi.due_date, status) && ' (overdue)'}
               </span>
             }
           />

@@ -536,7 +536,7 @@ const RelatedIntelligence: React.FC<{ submittal: Record<string, any> }> = ({ sub
 
   if (submittal.spec_section) {
     relatedItems.push({
-      type: 'Spec', label: `${submittal.spec_section} — ${specDiv || 'Unknown Division'}`,
+      type: 'Spec', label: `${submittal.spec_section}: ${specDiv || 'Unknown Division'}`,
       link: '#', color: colors.statusInfo,
     })
   }

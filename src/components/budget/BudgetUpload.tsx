@@ -383,8 +383,8 @@ export function BudgetUpload({ open, onClose, onSuccess }: BudgetUploadProps) {
                   <span>
                     Spreadsheet total: {fmtFull(parseResult.grandTotal)}
                     {Math.abs(totalBudget - parseResult.grandTotal) < 2
-                      ? ' — matches parsed total'
-                      : ` — parsed total: ${fmtFull(totalBudget)} (${parseResult.sectionTotals.length} section totals excluded)`}
+                      ? ' (matches parsed total)'
+                      : ` (parsed total: ${fmtFull(totalBudget)}, ${parseResult.sectionTotals.length} section totals excluded)`}
                   </span>
                 </div>
               )}

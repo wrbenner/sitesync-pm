@@ -98,7 +98,7 @@ export const InspectionFlow: React.FC<InspectionFlowProps> = ({
 
   const finishVerbalFail = useCallback(async () => {
     if (verbal.trim().length < 8) {
-      setError('Describe what failed — at least a sentence.')
+      setError('Describe what failed. Include at least one sentence.')
       return
     }
     setSubmitting(true)
@@ -292,7 +292,7 @@ export const InspectionFlow: React.FC<InspectionFlowProps> = ({
           textDecoration: 'underline',
         }}
       >
-        No physical tag — describe verbally
+        No physical tag (describe verbally)
       </button>
     </div>
   )

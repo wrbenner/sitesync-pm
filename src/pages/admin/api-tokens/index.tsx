@@ -109,7 +109,7 @@ export const ApiTokensAdminPage: React.FC<Props> = ({ organizationId }) => {
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: colors.statusPending, fontWeight: typography.fontWeight.semibold }}>
-            <AlertCircle size={14} /> Copy this token now — you won't see it again.
+            <AlertCircle size={14} /> Copy this token now. You won't see it again.
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8 }}>
             <code style={{ flex: 1, padding: '6px 10px', background: 'white', border: `1px solid ${colors.border}`, borderRadius: 6, fontFamily: 'monospace', fontSize: 12, wordBreak: 'break-all' }}>

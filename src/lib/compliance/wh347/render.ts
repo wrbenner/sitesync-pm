@@ -45,9 +45,9 @@ export function renderText(form: Wh347Generated): string {
     lines.push(`${w.workerName}` + (w.ssnLast4 ? ` (SSN xxx-xx-${w.ssnLast4})` : ''))
     lines.push(`  Classification: ${w.classification}` + (w.apprenticeLevel ? ` [Apprentice L${w.apprenticeLevel}]` : ''))
     if (w.decision) {
-      lines.push(`  Wage decision:  ${w.decision.wage_decision_number ?? '(none)'} — base $${w.decision.base_rate.toFixed(2)}/hr + $${w.decision.fringe_rate.toFixed(2)}/hr fringe`)
+      lines.push(`  Wage decision:  ${w.decision.wage_decision_number ?? '(none)'}: base $${w.decision.base_rate.toFixed(2)}/hr + $${w.decision.fringe_rate.toFixed(2)}/hr fringe`)
     } else {
-      lines.push(`  Wage decision:  *** UNRESOLVED *** — ${w.decisionMatchNote}`)
+      lines.push(`  Wage decision:  *** UNRESOLVED *** (${w.decisionMatchNote})`)
     }
     lines.push(`  Hours: ${DAY_LABELS.map((d, i) => `${d}=${w.hoursPerDay[i] ?? 0}`).join('  ')}`)
     lines.push(`         straight=${w.straightHours}  OT=${w.overtimeHours}  DT=${w.doubleTimeHours}  total=${w.totalHours}`)

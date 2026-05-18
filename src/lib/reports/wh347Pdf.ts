@@ -57,7 +57,7 @@ export async function generateWH347PDF(
   drawField('FOR WEEK ENDING', header.weekEnding, 460, y, 140)
   y -= 28
   drawField('ADDRESS', header.address, LEFT, y, 280)
-  drawField('PROJECT AND LOCATION', `${header.projectName} — ${header.projectLocation}`, 340, y, 260)
+  drawField('PROJECT AND LOCATION', `${header.projectName}, ${header.projectLocation}`, 340, y, 260)
   y -= 28
   drawField('PROJECT OR CONTRACT NO.', header.contractNo, LEFT, y, 280)
   y -= 20

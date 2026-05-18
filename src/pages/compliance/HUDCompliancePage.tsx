@@ -311,7 +311,7 @@ const HUDCompliancePage: React.FC = () => {
                 id: `alert-payroll-${entry.id}`,
                 severity: 'critical',
                 program: 'Davis-Bacon',
-                message: `Certified payroll report rejected for ${entry.contractor} — week ending ${fmtDate(entry.weekEnding)}. Review and resubmit.`,
+                message: `Certified payroll report rejected for ${entry.contractor}, week ending ${fmtDate(entry.weekEnding)}. Review and resubmit.`,
                 date: entry.weekEnding,
                 actionRequired: true,
               });
@@ -484,7 +484,7 @@ const HUDCompliancePage: React.FC = () => {
                 </div>
               </div>
               <div style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary, textAlign: 'center' }}>
-                {overallHealth >= 90 ? 'Excellent — all programs on track' : overallHealth >= 70 ? 'Good — some items need attention' : 'At Risk — immediate action required'}
+                {overallHealth >= 90 ? 'Excellent: all programs on track' : overallHealth >= 70 ? 'Good: some items need attention' : 'At Risk: immediate action required'}
               </div>
             </motion.div>
 
@@ -629,7 +629,7 @@ const HUDCompliancePage: React.FC = () => {
                   flex: 1, background: isCurrentYear ? colors.primaryOrange : isInitial ? colors.statusActive : colors.statusInfo,
                   opacity: isCurrentYear ? 1 : i <= 1 ? 0.9 : 0.4,
                   position: 'relative', cursor: 'pointer',
-                }} title={`Year ${i + 1} — ${isInitial ? 'Initial Compliance' : 'Extended Use'}`} />
+                }} title={`Year ${i + 1}: ${isInitial ? 'Initial Compliance' : 'Extended Use'}`} />
               );
             })}
           </div>
@@ -731,7 +731,7 @@ const HUDCompliancePage: React.FC = () => {
                       <td style={tableCellStyle}>
                         <button
                           disabled
-                          aria-label="Edit unit — coming soon"
+                          aria-label="Edit unit (coming soon)"
                           title="HUD compliance editor not yet wired"
                           style={{ background: 'none', border: 'none', cursor: 'not-allowed', color: colors.textTertiary, padding: 4, opacity: 0.5 }}
                         >

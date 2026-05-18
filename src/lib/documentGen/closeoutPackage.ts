@@ -80,7 +80,7 @@ export function generateCloseoutPackage(snapshot: ProjectSnapshot): GeneratedDoc
   }
 
   return {
-    title: `Closeout package — ${snapshot.meta.project_name || snapshot.meta.project_id}`,
+    title: `Closeout package: ${snapshot.meta.project_name || snapshot.meta.project_id}`,
     as_of: snapshot.meta.snapshot_at,
     sections,
   }

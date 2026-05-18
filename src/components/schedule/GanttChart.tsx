@@ -693,7 +693,7 @@ const GanttRow: React.FC<GanttRowProps> = React.memo(({ phase, chartStart, pxPer
       ) : (
         /* ── Activity bar ── */
         <div
-          title={`${phase.name} — ${progress}% (${toDateStr(start)} → ${toDateStr(end)})`}
+          title={`${phase.name}: ${progress}% (${toDateStr(start)} → ${toDateStr(end)})`}
           onMouseDown={(e) => onDragStart?.(phase.id, e)}
           style={{
             position: 'absolute', left, top: BAR_TOP, width, height: BAR_H,

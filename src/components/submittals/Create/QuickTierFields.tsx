@@ -75,7 +75,7 @@ export const QuickTierFields: React.FC<QuickTierFieldsProps> = ({
           type="text"
           value={draft.ball_in_court_user_id ?? ''}
           onChange={(e) => onPatch({ ball_in_court_user_id: e.target.value || null })}
-          placeholder="Pick a person — coming Phase 6 (typeahead)"
+          placeholder="Pick a person (coming Phase 6: typeahead)"
           style={inputStyle}
           aria-label="Ball in court (placeholder picker)"
         />

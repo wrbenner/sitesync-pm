@@ -50,7 +50,7 @@ const TIER_TONE: Record<ConfidenceTier, { fg: string; bg: string; ring: string; 
     fg: colors.statusCritical,
     bg: colors.statusCriticalSubtle,
     ring: colors.statusCritical,
-    label: 'Low confidence — review carefully',
+    label: 'Low confidence: review carefully',
   },
 }
 
@@ -125,7 +125,7 @@ function buildDeterministicOwnerUpdate(ctx: ProjectContextSnapshot): {
   // Section 4 — Top risks
   const risks = (ctx.topRisks ?? []).slice(0, 3)
   if (risks.length > 0) {
-    const lines = risks.map((r) => `${r.title} — ${r.summary}`).join('; ')
+    const lines = risks.map((r) => `${r.title}: ${r.summary}`).join('; ')
     sentences.push(`Key risks. ${lines}.`)
     for (const r of risks) sources.push(r.sourceLabel)
   } else {
@@ -135,7 +135,7 @@ function buildDeterministicOwnerUpdate(ctx: ProjectContextSnapshot): {
   // Section 5 — Decisions needed
   const decisions = (ctx.decisionsNeeded ?? []).slice(0, 5)
   if (decisions.length > 0) {
-    const lines = decisions.map((d) => `${d.title} — ${d.summary}`).join('; ')
+    const lines = decisions.map((d) => `${d.title}: ${d.summary}`).join('; ')
     sentences.push(`Decisions needed from owner. ${lines}.`)
     for (const d of decisions) sources.push(d.sourceLabel)
   } else {
@@ -557,7 +557,7 @@ export const OwnerUpdateGenerator: React.FC<OwnerUpdateGeneratorProps> = ({
                     )}
                     {usedFallback && !loading && (
                       <span
-                        title="Iris streaming was unavailable — assembled deterministically from project data."
+                        title="Iris streaming was unavailable. Assembled deterministically from project data."
                         style={{
                           display: 'inline-flex',
                           alignItems: 'center',
@@ -720,7 +720,7 @@ export const OwnerUpdateGenerator: React.FC<OwnerUpdateGeneratorProps> = ({
                     }}
                   >
                     {usedFallback
-                      ? 'Streaming was unavailable. Draft assembled from project data — review before sending.'
+                      ? 'Streaming was unavailable. Draft assembled from project data: review before sending.'
                       : 'AI prepares, you approve. Edit freely before sending.'}
                   </span>
                   <div style={{ display: 'flex', gap: spacing['2'] }}>

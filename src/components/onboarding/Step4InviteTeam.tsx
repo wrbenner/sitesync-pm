@@ -37,12 +37,12 @@ export default function Step4InviteTeam() {
   const submit = async () => {
     setError(null)
     if (!orgId) {
-      setError('No active organization yet — finish step 2 first.')
+      setError('No active organization yet. Finish step 2 first.')
       return
     }
     const cleaned = emails.map((e) => e.trim()).filter((e) => e.length > 0)
     if (cleaned.length === 0) {
-      setError('Add at least one email — or click Skip to do this later.')
+      setError('Add at least one email, or click Skip to do this later.')
       return
     }
     if (cleaned.some((e) => !e.includes('@'))) {

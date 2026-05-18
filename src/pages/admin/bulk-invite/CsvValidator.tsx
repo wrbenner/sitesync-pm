@@ -43,7 +43,7 @@ export const CsvValidator: React.FC<CsvValidatorProps> = ({ rows, errors }) => {
                 color: colors.statusCritical,
               }}
             >
-              Row {e.row}: {e.field} — {e.message}
+              Row {e.row}: {e.field}: {e.message}
             </li>
           ))}
         </ul>

@@ -185,11 +185,11 @@ export const MfaEnrollment: React.FC = () => {
     if (!backupCodes) return
     const stamp = new Date().toISOString().slice(0, 10)
     const header = [
-      'SiteSync — Two-Factor Authentication Backup Codes',
+      'SiteSync: Two-Factor Authentication Backup Codes',
       `Generated: ${new Date().toISOString()}`,
       '',
       'Each code may be used ONCE to sign in if you lose access to your',
-      'authenticator app. Store them somewhere safe — a password manager,',
+      'authenticator app. Store them somewhere safe (a password manager,',
       'a printed copy in a locked drawer, etc. Never email them to yourself.',
       '',
     ].join('\n')

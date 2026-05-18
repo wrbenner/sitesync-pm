@@ -427,7 +427,7 @@ const DropZone: React.FC<{
           Drop shop drawings, product data, or specs
         </div>
         <div style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>
-          PDF, DWG, images, or documents — we'll figure out the rest
+          PDF, DWG, images, or documents: we'll figure out the rest
         </div>
       </div>
     )

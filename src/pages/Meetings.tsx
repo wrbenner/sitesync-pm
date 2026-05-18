@@ -794,7 +794,7 @@ const MeetingDetailView: React.FC<{
         {showAttendeeForm && (
           <div style={{ marginTop: spacing.md, padding: spacing.md, background: colors.surfaceInset, borderRadius: borderRadius.lg }}>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: spacing.sm, marginBottom: spacing.sm }}>
-              <InputField label="Name / Role" value={attendeeForm.role} onChange={(v) => setAttendeeForm({ ...attendeeForm, role: v })} placeholder="e.g. Jane Smith — PM" />
+              <InputField label="Name / Role" value={attendeeForm.role} onChange={(v) => setAttendeeForm({ ...attendeeForm, role: v })} placeholder="e.g. Jane Smith, PM" />
               <InputField label="Company" value={attendeeForm.company} onChange={(v) => setAttendeeForm({ ...attendeeForm, company: v })} placeholder="e.g. Acme Construction" />
             </div>
             <div style={{ display: 'flex', gap: spacing.sm, justifyContent: 'flex-end' }}>

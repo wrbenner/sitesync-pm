@@ -116,7 +116,7 @@ const ToolHint: React.FC<{ tool: MarkupTool; onDismiss: () => void }> = ({ tool,
     calibrate: { title: 'Calibrate scale', body: 'Click two points of a known distance' },
     pin: { title: 'Pin', body: 'Click to drop a pin' },
     highlight: { title: 'Highlight', body: 'Drag to paint a translucent band' },
-    text: { title: 'Text', body: 'Click to place text — Enter commits · Esc cancels' },
+    text: { title: 'Text', body: 'Click to place text. Enter commits, Esc cancels.' },
     draw: { title: 'Draw', body: 'Drag for a freehand stroke' },
   };
   const h = hints[tool];
@@ -2285,7 +2285,7 @@ export const DrawingTiledViewer: React.FC<DrawingTiledViewerProps> = ({
                   fontSize: 12,
                   fontWeight: 600,
                 }}
-                title="Revision cloud — drag a rectangle to scallop its edges"
+                title="Revision cloud: drag a rectangle to scallop its edges"
               >
                 Cloud
               </button>
@@ -2306,7 +2306,7 @@ export const DrawingTiledViewer: React.FC<DrawingTiledViewerProps> = ({
                   fontSize: 12,
                   fontWeight: 600,
                 }}
-                title="Place an approval stamp — click on the drawing"
+                title="Place an approval stamp: click on the drawing"
               >
                 Stamp
               </button>

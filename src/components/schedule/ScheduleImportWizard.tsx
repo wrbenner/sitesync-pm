@@ -580,7 +580,7 @@ export const ScheduleImportWizard: React.FC<ScheduleImportWizardProps> = ({
                     Analyzing PDF schedule...
                   </p>
                   <p style={{ fontSize: typography.fontSize.caption, color: colors.textSecondary, margin: `${spacing['1']} 0 0` }}>
-                    AI is analyzing the schedule — this can take up to a minute for dense PDFs. Each page is processed in parallel.
+                    AI is analyzing the schedule. This can take up to a minute for dense PDFs. Each page is processed in parallel.
                   </p>
                 </div>
               </div>

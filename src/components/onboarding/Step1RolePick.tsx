@@ -89,7 +89,7 @@ export default function Step1RolePick({ value, onChange }: Step1Props) {
       </div>
 
       <p style={{ color: '#5C5C5C', fontSize: 12, margin: 0 }}>
-        We use this to tailor the sample data and prompts — you can change it later in Settings.
+        We use this to tailor the sample data and prompts. You can change it later in Settings.
       </p>
     </div>
   )

@@ -16,7 +16,7 @@ export async function settle(page: Page, ms = 250) {
       transition-delay: 0s !important;
     }`,
   }).catch(() => undefined)
-  await page.waitForLoadState('networkidle', { timeout: 8_000 }).catch(() => undefined)
+  await page.waitForLoadState('networkidle', { timeout: 3_000 }).catch(() => undefined)
   await page.waitForTimeout(ms)
 }
 
@@ -36,7 +36,7 @@ export async function settle(page: Page, ms = 250) {
  *   • Network activity: short networkidle wait at the end so React
  *     Query has settled.
  */
-export async function waitLoad(page: Page, timeoutMs = 30_000) {
+export async function waitLoad(page: Page, timeoutMs = 10_000) {
   await page.waitForFunction(
     () => {
       const text = document.body.textContent ?? ''
@@ -59,13 +59,17 @@ export async function waitLoad(page: Page, timeoutMs = 30_000) {
   ).catch(() => undefined)
   // One more brief network-idle sip so any in-flight queries can resolve
   // and the page paints the resolved state before we capture.
-  await page.waitForLoadState('networkidle', { timeout: 4_000 }).catch(() => undefined)
+  await page.waitForLoadState('networkidle', { timeout: 2_000 }).catch(() => undefined)
 }
 
 export async function signIn(page: Page, user: string, pass: string) {
   // In dev-bypass mode (VITE_DEV_BYPASS=true, no Supabase) ProtectedRoute
   // renders without auth — navigate directly to dashboard.
-  await page.goto('#/dashboard')
+  // Use waitUntil:'domcontentloaded' so goto returns as soon as the HTML
+  // shell is parsed (~1s) rather than waiting for all lazy Vite chunks to
+  // compile/load (can be 60-100s on a cold container, consuming the whole
+  // 120s test budget before the spec even starts).
+  await page.goto('#/dashboard', { waitUntil: 'domcontentloaded' }).catch(() => undefined)
   await page.waitForLoadState('domcontentloaded', { timeout: 8_000 }).catch(() => undefined)
   await page.waitForTimeout(400)
 

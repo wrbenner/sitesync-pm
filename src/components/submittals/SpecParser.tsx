@@ -46,7 +46,7 @@ const SIMULATED_SUBMITTALS: Omit<ExtractedSubmittal, 'isSelected'>[] = [
   { id: 'ext-007', specSection: '05 12 00', specTitle: 'Structural Steel Framing', submittalType: 'certificate', description: 'Mill certificates for structural steel members', discipline: 'structural', confidence: 0.94 },
   { id: 'ext-008', specSection: '05 21 00', specTitle: 'Steel Joist Framing', submittalType: 'shop_drawing', description: 'Steel joist and joist girder shop drawings', discipline: 'structural', confidence: 0.92 },
   { id: 'ext-009', specSection: '05 31 00', specTitle: 'Steel Decking', submittalType: 'product_data', description: 'Composite steel deck product data and load tables', discipline: 'structural', confidence: 0.89 },
-  { id: 'ext-010', specSection: '05 50 00', specTitle: 'Metal Fabrications', submittalType: 'shop_drawing', description: 'Miscellaneous metals — handrails, ladders, embed plates', discipline: 'structural', confidence: 0.87 },
+  { id: 'ext-010', specSection: '05 50 00', specTitle: 'Metal Fabrications', submittalType: 'shop_drawing', description: 'Miscellaneous metals: handrails, ladders, embed plates', discipline: 'structural', confidence: 0.87 },
   // Division 07 — Thermal & Moisture
   { id: 'ext-011', specSection: '07 21 00', specTitle: 'Thermal Insulation', submittalType: 'product_data', description: 'Insulation product data with R-values and fire ratings', discipline: 'architectural', confidence: 0.86 },
   { id: 'ext-012', specSection: '07 41 00', specTitle: 'Roof Panels', submittalType: 'shop_drawing', description: 'Metal roof panel layout and flashing details', discipline: 'architectural', confidence: 0.92 },
@@ -56,13 +56,13 @@ const SIMULATED_SUBMITTALS: Omit<ExtractedSubmittal, 'isSelected'>[] = [
   { id: 'ext-016', specSection: '07 92 00', specTitle: 'Joint Sealants', submittalType: 'sample', description: 'Color samples for exposed sealant joints', discipline: 'architectural', confidence: 0.72 },
   // Division 08 — Openings
   { id: 'ext-017', specSection: '08 11 00', specTitle: 'Metal Doors and Frames', submittalType: 'shop_drawing', description: 'Hollow metal door and frame schedule with hardware', discipline: 'architectural', confidence: 0.95 },
-  { id: 'ext-018', specSection: '08 14 00', specTitle: 'Wood Doors', submittalType: 'product_data', description: 'Wood door product data — species, core type, finish', discipline: 'architectural', confidence: 0.88 },
+  { id: 'ext-018', specSection: '08 14 00', specTitle: 'Wood Doors', submittalType: 'product_data', description: 'Wood door product data: species, core type, finish', discipline: 'architectural', confidence: 0.88 },
   { id: 'ext-019', specSection: '08 41 00', specTitle: 'Entrances and Storefronts', submittalType: 'shop_drawing', description: 'Aluminum storefront system shop drawings', discipline: 'architectural', confidence: 0.93 },
   { id: 'ext-020', specSection: '08 44 00', specTitle: 'Curtain Wall', submittalType: 'shop_drawing', description: 'Curtain wall system shop drawings with structural calcs', discipline: 'architectural', confidence: 0.96 },
   { id: 'ext-021', specSection: '08 71 00', specTitle: 'Door Hardware', submittalType: 'product_data', description: 'Hardware sets schedule with manufacturer cut sheets', discipline: 'architectural', confidence: 0.91 },
   // Division 09 — Finishes
-  { id: 'ext-022', specSection: '09 21 00', specTitle: 'Plaster and Gypsum Board', submittalType: 'product_data', description: 'Gypsum board assemblies — fire-rated and acoustic', discipline: 'architectural', confidence: 0.87 },
-  { id: 'ext-023', specSection: '09 30 00', specTitle: 'Tiling', submittalType: 'sample', description: 'Tile samples — porcelain, ceramic, and natural stone', discipline: 'architectural', confidence: 0.82 },
+  { id: 'ext-022', specSection: '09 21 00', specTitle: 'Plaster and Gypsum Board', submittalType: 'product_data', description: 'Gypsum board assemblies: fire-rated and acoustic', discipline: 'architectural', confidence: 0.87 },
+  { id: 'ext-023', specSection: '09 30 00', specTitle: 'Tiling', submittalType: 'sample', description: 'Tile samples: porcelain, ceramic, and natural stone', discipline: 'architectural', confidence: 0.82 },
   { id: 'ext-024', specSection: '09 51 00', specTitle: 'Acoustical Ceilings', submittalType: 'product_data', description: 'Acoustical ceiling tile product data with NRC ratings', discipline: 'architectural', confidence: 0.85 },
   { id: 'ext-025', specSection: '09 65 00', specTitle: 'Resilient Flooring', submittalType: 'sample', description: 'LVT and rubber flooring color/pattern samples', discipline: 'architectural', confidence: 0.79 },
   { id: 'ext-026', specSection: '09 68 00', specTitle: 'Carpeting', submittalType: 'sample', description: 'Carpet tile samples with backing specifications', discipline: 'architectural', confidence: 0.76 },
@@ -80,7 +80,7 @@ const SIMULATED_SUBMITTALS: Omit<ExtractedSubmittal, 'isSelected'>[] = [
   { id: 'ext-036', specSection: '22 11 00', specTitle: 'Facility Water Distribution', submittalType: 'shop_drawing', description: 'Domestic water riser diagrams and pipe sizing calcs', discipline: 'plumbing', confidence: 0.89 },
   { id: 'ext-037', specSection: '22 13 00', specTitle: 'Facility Sanitary Sewerage', submittalType: 'shop_drawing', description: 'Sanitary waste and vent isometric drawings', discipline: 'plumbing', confidence: 0.88 },
   { id: 'ext-038', specSection: '22 34 00', specTitle: 'Fuel-Fired Domestic Water Heaters', submittalType: 'product_data', description: 'Water heater product data with efficiency ratings', discipline: 'plumbing', confidence: 0.84 },
-  { id: 'ext-039', specSection: '22 40 00', specTitle: 'Plumbing Fixtures', submittalType: 'product_data', description: 'Fixture cut sheets — lavatories, water closets, urinals', discipline: 'plumbing', confidence: 0.92 },
+  { id: 'ext-039', specSection: '22 40 00', specTitle: 'Plumbing Fixtures', submittalType: 'product_data', description: 'Fixture cut sheets: lavatories, water closets, urinals', discipline: 'plumbing', confidence: 0.92 },
   // Division 26 — Electrical
   { id: 'ext-040', specSection: '26 05 00', specTitle: 'Common Work Results for Electrical', submittalType: 'product_data', description: 'Wire and cable product data with conductor schedules', discipline: 'electrical', confidence: 0.88 },
   { id: 'ext-041', specSection: '26 24 00', specTitle: 'Switchboards and Panelboards', submittalType: 'shop_drawing', description: 'Electrical panel schedules and one-line diagrams', discipline: 'electrical', confidence: 0.96 },

@@ -35,7 +35,7 @@ export function generateOwnerWeeklyDigest(snapshot: ProjectSnapshot): GeneratedD
   }
 
   return {
-    title: `Weekly digest — ${snapshot.meta.project_name || snapshot.meta.project_id}`,
+    title: `Weekly digest: ${snapshot.meta.project_name || snapshot.meta.project_id}`,
     subtitle: `Week of ${new Date(snapshot.meta.period_start).toLocaleDateString()}`,
     as_of: snapshot.meta.snapshot_at,
     sections,

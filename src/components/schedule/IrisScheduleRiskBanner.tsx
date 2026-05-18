@@ -151,7 +151,7 @@ export const IrisScheduleRiskBanner: React.FC<Props> = ({ projectId }) => {
       >
         <Sparkles size={16} color={IRIS_INDIGO} aria-hidden />
         <span style={{ fontSize: 13, color: colors.textSecondary }}>
-          Iris is analyzing schedule risk — reading activities, weather, crew availability, open RFIs…
+          Iris is analyzing schedule risk: reading activities, weather, crew availability, open RFIs…
         </span>
       </div>
     );

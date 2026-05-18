@@ -314,7 +314,7 @@ export async function seedDemoData(projectId: string): Promise<SeedResult> {
   const photoRows = PHOTO_URLS.map((url, i) => ({
     project_id: projectId,
     url,
-    caption: `${DEMO_SEED_MARKER} Site progress — ${pick(['Level 1 framing', 'Roof TPO', 'Concrete pour', 'Storefront mockup'], i)}`,
+    caption: `${DEMO_SEED_MARKER} Site progress: ${pick(['Level 1 framing', 'Roof TPO', 'Concrete pour', 'Storefront mockup'], i)}`,
     captured_at: isoDaysFromNow(-i).slice(0, 19) + 'Z',
   }))
   // Try the canonical name first, then the field-capture variant.

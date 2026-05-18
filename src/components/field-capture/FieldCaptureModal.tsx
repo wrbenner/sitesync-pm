@@ -158,13 +158,13 @@ export const FieldCaptureModal: React.FC<FieldCaptureModalProps> = ({
                 {isOnline ? (
                   <>
                     <CloudUpload size={12} />
-                    <span>Online — photos upload immediately</span>
+                    <span>Online: photos upload immediately</span>
                   </>
                 ) : (
                   <>
                     <WifiOff size={12} color={colors.statusPending} />
                     <span style={{ color: colors.statusPending }}>
-                      Offline — photos queue for sync
+                      Offline: photos queue for sync
                     </span>
                   </>
                 )}

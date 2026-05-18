@@ -289,7 +289,7 @@ export const InviteModal: React.FC<InviteModalProps> = ({
                   <AlertCircle size={14} color={colors.statusCritical} />
                 )}
                 <span style={{ color: colors.textPrimary }}>{r.email}</span>
-                <span style={{ color: colors.textSecondary }}>— {r.status}</span>
+                <span style={{ color: colors.textSecondary }}>({r.status})</span>
                 {r.error && <span style={{ color: colors.statusCritical }}>({r.error})</span>}
               </div>
             ))}

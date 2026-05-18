@@ -108,7 +108,7 @@ const Chip: React.FC<ChipProps> = ({ node, first }) => {
         onMouseLeave={() => setHovered(false)}
         title={tooltip}
         disabled={!interactive}
-        aria-label={`${TYPE_LABEL[node.entityType]}: ${node.label}${node.detail ? ` — ${node.detail}` : ''}`}
+        aria-label={`${TYPE_LABEL[node.entityType]}: ${node.label}${node.detail ? ` (${node.detail})` : ''}`}
         style={{
           display: 'inline-flex',
           alignItems: 'center',

@@ -24,7 +24,7 @@ export const VerifyPending: React.FC = () => {
 
   const resend = async () => {
     if (!stateEmail) {
-      setResendError('We don\'t have your email here — sign in again or use the link in your original email.')
+      setResendError('We don\'t have your email here. Sign in again or use the link from your original email.')
       setResendStatus('error')
       return
     }

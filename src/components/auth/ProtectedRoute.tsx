@@ -32,7 +32,7 @@ const DevBanner: React.FC = () => (
     textAlign: 'center',
     fontFamily: typography.fontFamily,
   }}>
-    Development Mode — Authentication bypassed (VITE_DEV_BYPASS=true). Connect Supabase for real auth.
+    Development Mode: authentication bypassed (VITE_DEV_BYPASS=true). Connect Supabase for real auth.
   </div>
 )
 

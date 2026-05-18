@@ -884,7 +884,7 @@ export function parseBudgetWorkbook(
 
   const nicCount = rows.filter(r => r.isNIC).length;
   if (nicCount > 0) {
-    warnings.push(`${nicCount} line items marked as NIC (Not In Contract) — imported with $0 budget`);
+    warnings.push(`${nicCount} line items marked as NIC (Not In Contract): imported with $0 budget`);
   }
 
   return {

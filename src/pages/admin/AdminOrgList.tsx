@@ -32,7 +32,7 @@ export default function AdminOrgList() {
     <div style={{ maxWidth: 960, margin: '0 auto', padding: 24 }}>
       <h1 style={{ fontSize: 28, marginTop: 0, marginBottom: 4 }}>Organizations</h1>
       <p style={{ color: '#5C5C5C', marginTop: 0, marginBottom: 24 }}>
-        Internal admin view — visible only to SiteSync staff.
+        Internal admin view: visible only to SiteSync staff.
       </p>
 
       {isLoading && (

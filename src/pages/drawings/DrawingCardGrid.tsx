@@ -547,7 +547,7 @@ const SheetCard: React.FC<{
         <p style={S.title} title={drawing.title}>{drawing.title}</p>
         <div style={S.meta}>
           <span style={S.revPill} title={issuedDate ? `Issued ${formatRevDate(issuedDate)}` : 'No issue date recorded'}>
-            Rev {rev}{issuedShort ? ` — Issued ${issuedShort}` : ''}
+            Rev {rev}{issuedShort ? ` (Issued ${issuedShort})` : ''}
           </span>
           {markupCount > 0 && (
             <span

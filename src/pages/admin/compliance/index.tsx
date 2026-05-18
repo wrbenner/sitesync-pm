@@ -62,7 +62,7 @@ const ComplianceCockpit: React.FC = () => {
   return (
     <PageContainer
       title="Compliance"
-      subtitle="COI · certified payroll · OSHA 300 · lien rights · audit chain — one project, one screen."
+      subtitle="COI · certified payroll · OSHA 300 · lien rights · audit chain: one project, one screen."
     >
       {/* Header strip: project pill + last-refresh stamp + refresh button */}
       <div style={{

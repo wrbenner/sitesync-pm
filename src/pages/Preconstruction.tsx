@@ -53,28 +53,28 @@ const VIEWS: { key: ViewKey; label: string; icon: React.ElementType }[] = [
 ]
 
 const CSI_DIVISIONS: { code: number; label: string }[] = [
-  { code: 1, label: '01 — General Requirements' },
-  { code: 2, label: '02 — Existing Conditions' },
-  { code: 3, label: '03 — Concrete' },
-  { code: 4, label: '04 — Masonry' },
-  { code: 5, label: '05 — Metals' },
-  { code: 6, label: '06 — Wood & Plastics' },
-  { code: 7, label: '07 — Thermal & Moisture' },
-  { code: 8, label: '08 — Openings' },
-  { code: 9, label: '09 — Finishes' },
-  { code: 10, label: '10 — Specialties' },
-  { code: 11, label: '11 — Equipment' },
-  { code: 12, label: '12 — Furnishings' },
-  { code: 13, label: '13 — Special Construction' },
-  { code: 14, label: '14 — Conveying Equipment' },
-  { code: 21, label: '21 — Fire Suppression' },
-  { code: 22, label: '22 — Plumbing' },
-  { code: 23, label: '23 — HVAC' },
-  { code: 26, label: '26 — Electrical' },
-  { code: 27, label: '27 — Communications' },
-  { code: 31, label: '31 — Earthwork' },
-  { code: 32, label: '32 — Exterior Improvements' },
-  { code: 33, label: '33 — Utilities' },
+  { code: 1, label: '01: General Requirements' },
+  { code: 2, label: '02: Existing Conditions' },
+  { code: 3, label: '03: Concrete' },
+  { code: 4, label: '04: Masonry' },
+  { code: 5, label: '05: Metals' },
+  { code: 6, label: '06: Wood & Plastics' },
+  { code: 7, label: '07: Thermal & Moisture' },
+  { code: 8, label: '08: Openings' },
+  { code: 9, label: '09: Finishes' },
+  { code: 10, label: '10:Specialties' },
+  { code: 11, label: '11:Equipment' },
+  { code: 12, label: '12:Furnishings' },
+  { code: 13, label: '13:Special Construction' },
+  { code: 14, label: '14:Conveying Equipment' },
+  { code: 21, label: '21:Fire Suppression' },
+  { code: 22, label: '22:Plumbing' },
+  { code: 23, label: '23:HVAC' },
+  { code: 26, label: '26:Electrical' },
+  { code: 27, label: '27:Communications' },
+  { code: 31, label: '31:Earthwork' },
+  { code: 32, label: '32:Exterior Improvements' },
+  { code: 33, label: '33:Utilities' },
 ]
 
 const SCOPE_CATEGORIES = ['Labor', 'Material', 'Equipment', 'Subcontractor', 'General Conditions', 'Other']
@@ -291,30 +291,30 @@ export const Preconstruction: React.FC = () => {
     const insights: { type: 'warning' | 'info' | 'success'; text: string }[] = []
 
     if (selectedPackage.estimated_value && lowest.bid_amount < selectedPackage.estimated_value * 0.7) {
-      insights.push({ type: 'warning', text: `Low bid is >30% below estimate — verify scope completeness and check for potential buy-in pricing.` })
+      insights.push({ type: 'warning', text: `Low bid is >30% below estimate:verify scope completeness and check for potential buy-in pricing.` })
     }
     if (variancePct > 40) {
-      insights.push({ type: 'warning', text: `Very high spread (${variancePct.toFixed(0)}%) — likely scope interpretation differences. Request clarifications before leveling.` })
+      insights.push({ type: 'warning', text: `Very high spread (${variancePct.toFixed(0)}%):likely scope interpretation differences. Request clarifications before leveling.` })
     } else if (variancePct > 25) {
-      insights.push({ type: 'info', text: `Moderate spread (${variancePct.toFixed(0)}%) — review scope definitions for ambiguity.` })
+      insights.push({ type: 'info', text: `Moderate spread (${variancePct.toFixed(0)}%):review scope definitions for ambiguity.` })
     }
     if (unusuallyLow.length > 0) {
-      insights.push({ type: 'warning', text: `${unusuallyLow.length} bid(s) >25% below average — check for errors, missing scope, or qualification concerns.` })
+      insights.push({ type: 'warning', text: `${unusuallyLow.length} bid(s) >25% below average:check for errors, missing scope, or qualification concerns.` })
     }
     if (unusuallyHigh.length > 0) {
-      insights.push({ type: 'info', text: `${unusuallyHigh.length} bid(s) >30% above average — may include extra scope or higher qualifications.` })
+      insights.push({ type: 'info', text: `${unusuallyHigh.length} bid(s) >30% above average:may include extra scope or higher qualifications.` })
     }
     if (bids.length < 3) {
-      insights.push({ type: 'warning', text: `Only ${bids.length} bid(s) received — insufficient coverage for competitive leveling. Target 3-5 bids minimum.` })
+      insights.push({ type: 'warning', text: `Only ${bids.length} bid(s) received:insufficient coverage for competitive leveling. Target 3-5 bids minimum.` })
     }
     if (coeffVar < 10 && bids.length >= 3) {
-      insights.push({ type: 'success', text: `Tight clustering (CV: ${coeffVar.toFixed(1)}%) — pricing is competitive and scope interpretation is consistent.` })
+      insights.push({ type: 'success', text: `Tight clustering (CV: ${coeffVar.toFixed(1)}%):pricing is competitive and scope interpretation is consistent.` })
     }
 
     // Scope gap detection
     const excludedCount = scopeResponseList.filter((r) => r.response === 'excluded').length
     if (excludedCount > 0) {
-      insights.push({ type: 'warning', text: `${excludedCount} scope exclusion(s) detected across bidders — review leveling matrix for gaps.` })
+      insights.push({ type: 'warning', text: `${excludedCount} scope exclusion(s) detected across bidders:review leveling matrix for gaps.` })
     }
 
     return { bids, avg, median, lowest, highest, spread, variancePct, stdDev, coeffVar, unusuallyLow, unusuallyHigh, insights }
@@ -678,7 +678,7 @@ export const Preconstruction: React.FC = () => {
             <div>
               <label style={labelStyle}>Bid Package</label>
               <select value={bidForm.bid_package_id} onChange={(e) => setBidForm({ ...bidForm, bid_package_id: e.target.value })} style={selectStyle}>
-                <option value="">— choose —</option>
+                <option value="">Choose…</option>
                 {packageList.map((p) => <option key={p.id} value={p.id}>{p.package_number} · {p.title}</option>)}
               </select>
             </div>
@@ -735,7 +735,7 @@ export const Preconstruction: React.FC = () => {
                 }}
                 style={selectStyle}
               >
-                <option value="">— or enter manually below —</option>
+                <option value="">Or enter manually below…</option>
                 {subList.map((s) => <option key={s.id} value={s.id}>{s.company_name}{s.primary_trade ? ` (${s.primary_trade})` : ''}</option>)}
               </select>
             </div>
@@ -892,7 +892,7 @@ function DashboardView({
         </Card>
       </div>
 
-      {/* Coverage Board — which packages need attention */}
+      {/* Coverage Board:which packages need attention */}
       <Card padding={spacing['4']}>
         <SectionHeader title="Bid Coverage Board" />
         <div style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary, marginBottom: spacing['3'] }}>
@@ -1261,7 +1261,7 @@ function PackagesView({
 }
 
 // ═══════════════════════════════════════════════════════════
-// BID LEVELING VIEW — THE KILLER FEATURE
+// BID LEVELING VIEW:THE KILLER FEATURE
 // ═══════════════════════════════════════════════════════════
 
 function LevelingView({
@@ -1340,7 +1340,7 @@ function LevelingView({
               onChange={(e) => onSelectPackage(e.target.value || null)}
               style={selectStyle}
             >
-              <option value="">— choose a package —</option>
+              <option value="">Choose a package…</option>
               {packageList.map((p) => (
                 <option key={p.id} value={p.id}>
                   {p.package_number} · {p.title} ({[...new Set([])].length} bids)
@@ -1454,7 +1454,7 @@ function LevelingView({
                                 backgroundColor: responseBg(current),
                                 transition: `background ${transitions.instant}`,
                               }}
-                              title={`${current} — click to change`}
+                              title={`${current}:click to change`}
                             >
                               {responseIcon(current)}
                             </td>

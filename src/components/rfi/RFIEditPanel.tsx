@@ -300,7 +300,7 @@ export const RFIEditPanel: React.FC<RFIEditPanelProps> = ({ open, onClose, rfiId
             />
           </FieldRow>
 
-          <FieldRow label="Question" hint="Rich-text — paste screenshots, format with lists, links.">
+          <FieldRow label="Question" hint="Rich-text: paste screenshots, format with lists, links.">
             <RFIRichTextEditor
               value={draft.question}
               onChange={(html) => setField('question', html)}
@@ -542,7 +542,7 @@ export const RFIEditPanel: React.FC<RFIEditPanelProps> = ({ open, onClose, rfiId
               permission="rfis.edit"
               fallback={
                 <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>
-                  Read-only — you don&apos;t have edit permission for this {entityLabel('rfi')}.
+                  Read-only. You don&apos;t have edit permission for this {entityLabel('rfi')}.
                 </span>
               }
             >

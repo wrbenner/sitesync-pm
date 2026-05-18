@@ -79,6 +79,6 @@ export async function assertQueryP95(
     runs: counted,
     rationale: p95Ms <= threshold
       ? `P95 ${p95Ms.toFixed(1)}ms ≤ ${threshold}ms`
-      : `P95 ${p95Ms.toFixed(1)}ms > ${threshold}ms — query regression`,
+      : `P95 ${p95Ms.toFixed(1)}ms > ${threshold}ms: query regression`,
   }
 }

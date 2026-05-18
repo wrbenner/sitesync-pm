@@ -22,21 +22,21 @@ const tabs: { key: TabKey; label: string; icon: React.ElementType }[] = [
 ]
 
 const CSI_DIVISIONS: { code: number; label: string }[] = [
-  { code: 1, label: '01 — General Requirements' },
-  { code: 3, label: '03 — Concrete' },
-  { code: 4, label: '04 — Masonry' },
-  { code: 5, label: '05 — Metals' },
-  { code: 6, label: '06 — Wood & Plastics' },
-  { code: 7, label: '07 — Thermal & Moisture' },
-  { code: 8, label: '08 — Openings' },
-  { code: 9, label: '09 — Finishes' },
-  { code: 21, label: '21 — Fire Suppression' },
-  { code: 22, label: '22 — Plumbing' },
-  { code: 23, label: '23 — HVAC' },
-  { code: 26, label: '26 — Electrical' },
-  { code: 31, label: '31 — Earthwork' },
-  { code: 32, label: '32 — Exterior Improvements' },
-  { code: 33, label: '33 — Utilities' },
+  { code: 1, label: '01: General Requirements' },
+  { code: 3, label: '03: Concrete' },
+  { code: 4, label: '04: Masonry' },
+  { code: 5, label: '05: Metals' },
+  { code: 6, label: '06: Wood & Plastics' },
+  { code: 7, label: '07: Thermal & Moisture' },
+  { code: 8, label: '08: Openings' },
+  { code: 9, label: '09: Finishes' },
+  { code: 21, label: '21: Fire Suppression' },
+  { code: 22, label: '22: Plumbing' },
+  { code: 23, label: '23: HVAC' },
+  { code: 26, label: '26: Electrical' },
+  { code: 31, label: '31: Earthwork' },
+  { code: 32, label: '32: Exterior Improvements' },
+  { code: 33, label: '33: Utilities' },
 ]
 
 export const Resources: React.FC = () => {
