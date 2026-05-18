@@ -16,10 +16,14 @@ export function useProjectRFIStages(projectId: string | null | undefined) {
     queryFn: async () => {
       if (!projectId) return [...FALLBACK_STAGES]
       try {
+        // SELECT * (not 'stages' specifically) because the `stages` column is
+        // not yet live on prod — selecting it directly 400s PostgREST. Read
+        // every column the settings row has and look up `stages` from there
+        // so we degrade silently on schema drift instead of console-erroring.
         const { data } = await fromTable('project_rfi_settings')
-          .select('stages')
+          .select('*')
           .eq('project_id' as never, projectId)
-          .single()
+          .maybeSingle()
         const stages = (data as { stages?: unknown } | null)?.stages
         if (Array.isArray(stages) && stages.length > 0) {
           const cleaned = stages
