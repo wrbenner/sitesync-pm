@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState, lazy, Suspense } from 'react'
+import React, { useCallback, useMemo, useState, lazy, Suspense } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import {
@@ -17,7 +17,7 @@ import { useProjectStore } from '../stores/projectStore'
 import { useAuth } from '../hooks/useAuth'
 import { supabase } from '../lib/supabase'
 
-import { OwnerUpdateGenerator, prewarmIris } from '../components/reports/OwnerUpdateGenerator'
+import { OwnerUpdateGenerator } from '../components/reports/OwnerUpdateGenerator'
 import { OwnerLinkButton } from '../components/reports/OwnerLinkButton'
 import { ReportCard, ReportCardRow } from '../components/reports/ReportCard'
 import { PermissionGate } from '../components/auth/PermissionGate'
@@ -449,12 +449,11 @@ export const Reports: React.FC = () => {
 
   const totalReports = REPORT_TYPES.length + (customReports?.length ?? 0)
 
-  // Risk mitigation: pre-warm Anthropic prompt cache once on mount so the
-  // demo's "Generate update" hits a warm cache. Fire-and-forget — never blocks.
-  // Only fires if we have a projectId (iris-call validates project_id as UUID).
-  useEffect(() => {
-    if (projectId) prewarmIris(projectId)
-  }, [projectId])
+  // Prewarm removed — the iris-call edge function validates entity_id as a
+  // UUID and the synthetic trigger ID ('iris-prewarm') always failed that
+  // check, leaving a 400 in the console for every /reports mount. The
+  // Anthropic prompt cache has a 5-minute TTL and the first real "Generate
+  // update" call will populate it anyway.
 
   const handleRunReport = (type: ReportType) => {
     if (type === 'owner_report') {
