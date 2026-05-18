@@ -451,9 +451,10 @@ export const Reports: React.FC = () => {
 
   // Risk mitigation: pre-warm Anthropic prompt cache once on mount so the
   // demo's "Generate update" hits a warm cache. Fire-and-forget — never blocks.
+  // Only fires if we have a projectId (iris-call validates project_id as UUID).
   useEffect(() => {
-    prewarmIris()
-  }, [])
+    if (projectId) prewarmIris(projectId)
+  }, [projectId])
 
   const handleRunReport = (type: ReportType) => {
     if (type === 'owner_report') {

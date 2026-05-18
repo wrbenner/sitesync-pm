@@ -182,8 +182,12 @@ function buildDeterministicOwnerUpdate(ctx: ProjectContextSnapshot): {
  * cache TTL means a single call early in the session is enough.
  */
 // eslint-disable-next-line react-refresh/only-export-components
-export function prewarmIris(): void {
+export function prewarmIris(projectId?: string | null): void {
   if (typeof window === 'undefined') return
+  // iris-call validates project_id as a UUID. The prewarm is a no-op if we
+  // don't have a project to attribute it to — would 400 in the browser
+  // console for no demo-visible benefit.
+  if (!projectId) return
   // Build a minimal trigger that uses the same template path. We catch all
   // failures silently — pre-warm is best-effort.
   const triggerItem: StreamItem = {
@@ -209,7 +213,7 @@ export function prewarmIris(): void {
     },
   }
   const minimalCtx: ProjectContextSnapshot = {
-    projectId: null,
+    projectId,
     projectName: null,
     userName: null,
     reportingPeriodDays: 7,
