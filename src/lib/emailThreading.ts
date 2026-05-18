@@ -65,7 +65,7 @@ export function buildSubjectWithThreadHint(
   // Lead with the entity ref so subject-regex fallback hits every time.
   // Some clients drop the "Re: " prefix on long threads — don't bury the
   // identifier behind it.
-  return `${label} ${numStr} — ${base}`
+  return `${label} ${numStr}: ${base}`
 }
 
 // Tab A's outbound-email path should call this so we have a record of

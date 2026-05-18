@@ -792,7 +792,7 @@ const DrawingsPage: React.FC = () => {
       let fileUrl = path;
       try {
         const result = await smartUpload('project-files', path, file, (pct) => {
-          setUploadProgressText(`[${idx + 1}/${total}] Uploading spec "${file.name}" — ${pct}%`);
+          setUploadProgressText(`[${idx + 1}/${total}] Uploading spec "${file.name}" (${pct}%)`);
         });
         if (result.error) { addToast('error', `Spec upload failed for ${file.name}: ${result.error}`); return false; }
         fileUrl = result.storagePath || path;
@@ -895,8 +895,8 @@ const DrawingsPage: React.FC = () => {
         // and AI is running on every non-cover page, so we'd rather
         // show an obvious placeholder than a confident wrong answer.
         const filenameBasedLabel = opts.isCover
-          ? (pages.length === 1 ? `Cover Sheet — ${cleanedTitle}` : `Cover Sheet — ${cleanedTitle} (p${page.pageNumber})`)
-          : (pages.length === 1 ? cleanedTitle : `${cleanedTitle} — Page ${page.pageNumber}`);
+          ? (pages.length === 1 ? `Cover Sheet: ${cleanedTitle}` : `Cover Sheet: ${cleanedTitle} (p${page.pageNumber})`)
+          : (pages.length === 1 ? cleanedTitle : `${cleanedTitle}, Page ${page.pageNumber}`);
         const pageLabel = opts.isCover && titleBlock.title
           ? titleBlock.title
           : filenameBasedLabel;
@@ -925,7 +925,7 @@ const DrawingsPage: React.FC = () => {
         try {
           const pageFile = new window.File([page.blob], `page${page.pageNumber}.png`, { type: 'image/png' });
           const pageResult = await smartUpload('project-files', pageImagePath, pageFile, (pct) => {
-            setUploadProgressText(`Uploading page ${pi + 1}/${pages.length} — ${pct}%`);
+            setUploadProgressText(`Uploading page ${pi + 1}/${pages.length} (${pct}%)`);
           });
           if (pageResult.error) { addToast('error', `Upload failed for page ${page.pageNumber}: ${pageResult.error}`); continue; }
           pageImageStoragePath = pageResult.storagePath || pageImagePath;
@@ -1107,7 +1107,7 @@ const DrawingsPage: React.FC = () => {
 
       try {
         const uploadResult = await smartUpload('project-files', storagePath, file, (pct) => {
-          setUploadProgressText(`[${idx + 1}/${total}] Uploading "${file.name}" — ${pct}%`);
+          setUploadProgressText(`[${idx + 1}/${total}] Uploading "${file.name}" (${pct}%)`);
         });
         if (uploadResult.error) { addToast('error', `Upload failed for ${file.name}: ${uploadResult.error}`); return false; }
         fileUrl = uploadResult.storagePath || storagePath;
@@ -1237,7 +1237,7 @@ const DrawingsPage: React.FC = () => {
         );
         addToast(
           'warning',
-          `${duplicateIds.length} drawing${duplicateIds.length !== 1 ? 's' : ''} have duplicate sheet numbers — look for the "needs review" badge and fix them manually.`,
+          `${duplicateIds.length} drawing${duplicateIds.length !== 1 ? 's' : ''} have duplicate sheet numbers. Look for the "needs review" badge and fix them manually.`,
         );
       }
     }
@@ -1445,7 +1445,7 @@ const DrawingsPage: React.FC = () => {
     setShowAnalysisPanel(true);
     try {
       await intelligence.analyzeDrawingSet();
-      addToast('success', `Analysis complete — ${intelligence.state.discrepancyCount} discrepancies detected`);
+      addToast('success', `Analysis complete: ${intelligence.state.discrepancyCount} discrepancies detected`);
     } catch { addToast('error', 'Drawing analysis failed.'); }
   }, [projectId, intelligence, addToast]);
 
@@ -1524,7 +1524,7 @@ const DrawingsPage: React.FC = () => {
     for (const f of rawFiles) {
       if (/\.zip$/i.test(f.name) || f.type === 'application/zip' || f.type === 'application/x-zip-compressed') {
         try {
-          addToast('info', `Extracting "${f.name}" — this may take a moment for large archives...`);
+          addToast('info', `Extracting "${f.name}". This may take a moment for large archives...`);
           const { files, totalCandidates } = await extractDrawingFilesFromZip(f, 0, 3, (prog) => {
             if (prog.phase === 'loading') {
               setUploadProgressText(`Loading ZIP "${prog.zipName}"...`);
@@ -1918,7 +1918,7 @@ const DrawingsPage: React.FC = () => {
       {viewRevPdfUrl && (
         <PdfViewer
           file={viewRevPdfUrl}
-          title={`${selectedDrawing?.title ?? 'Drawing'} — Rev ${viewingRevisionNum ?? 'Current'}`}
+          title={`${selectedDrawing?.title ?? 'Drawing'}: Rev ${viewingRevisionNum ?? 'Current'}`}
           onClose={() => setViewRevPdfUrl(null)}
         />
       )}

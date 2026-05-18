@@ -58,7 +58,7 @@ export const DashboardCompliance: React.FC<Props> = ({ projectId }) => {
       const status = getCOIStatus(c.expiration_date);
       if (status.severity !== 'expired' && status.severity !== 'expiring') continue;
       const severity: ComplianceRow['severity'] = status.severity === 'expired' ? 'critical' : 'warning';
-      const label = `${c.company} — ${c.policy_type ? c.policy_type.replace(/_/g, ' ') : 'COI'}`;
+      const label = `${c.company}: ${c.policy_type ? c.policy_type.replace(/_/g, ' ') : 'COI'}`;
       out.push({ id: `coi-${c.id}`, kind: 'coi', label, context: status.label, severity, path: '/contracts' });
     }
     for (const insp of data?.inspections ?? []) {

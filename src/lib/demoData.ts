@@ -168,7 +168,7 @@ export const DEMO_PUNCH_ITEMS = (() => {
         out.push({
           id: `demo-punch-${String(n).padStart(3, '0')}`,
           number: n,
-          title: `${tmpl.items[i]} — Unit ${100 * f + i + 1}`,
+          title: `${tmpl.items[i]}, Unit ${100 * f + i + 1}`,
           trade: tmpl.trade,
           status,
           floor: `L${f}`,
