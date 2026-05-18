@@ -215,7 +215,6 @@ export const IrisScheduleRiskBanner: React.FC<Props> = ({ projectId }) => {
 
   return (
     <section
-      role="region"
       aria-label="Iris detected schedule risks"
       style={{
         marginBottom: spacing[4],
