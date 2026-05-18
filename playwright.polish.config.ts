@@ -71,16 +71,15 @@ export default defineConfig({
       // user flow with assertions and captures every state along the
       // way. NOT dependent on storageState — we want to hit cold pages.
       //
-      // Per-spec timeout is 90s instead of the default 30s because
-      // cold-load pages routinely consume 15-25s in `waitLoad` alone
-      // before the spec gets to its assertions; default 30s was hitting
-      // "Target page, context or browser has been closed" on the slower
-      // pages (Daily Log, Equipment, Permits) without it being a real
-      // regression. 90s also gives flaky-but-recoverable pages a chance
-      // to settle on the second wait.
+      // Per-spec timeout is 300s in cloud containers. A fresh Chromium
+      // context must parse and execute hundreds of unminified Vite modules
+      // (~2MB of JS). On slow containers this browser-side execution phase
+      // alone can take 90-115s before the spec starts its assertions.
+      // 300s gives a 185s margin for the actual test work (~60s) while
+      // still being a finite safety net against true hangs.
       name: 'page-e2e',
       testMatch: /page-\d+-[a-z-]+\.spec\.ts$/,
-      timeout: 120_000,
+      timeout: 300_000,
       use: {
         ...baseConfig.use,
         baseURL: baseConfig.use?.baseURL,
