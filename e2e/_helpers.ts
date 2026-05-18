@@ -65,7 +65,11 @@ export async function waitLoad(page: Page, timeoutMs = 10_000) {
 export async function signIn(page: Page, user: string, pass: string) {
   // In dev-bypass mode (VITE_DEV_BYPASS=true, no Supabase) ProtectedRoute
   // renders without auth — navigate directly to dashboard.
-  await page.goto('#/dashboard')
+  // Use waitUntil:'domcontentloaded' so goto returns as soon as the HTML
+  // shell is parsed (~1s) rather than waiting for all lazy Vite chunks to
+  // compile/load (can be 60-100s on a cold container, consuming the whole
+  // 120s test budget before the spec even starts).
+  await page.goto('#/dashboard', { waitUntil: 'domcontentloaded' }).catch(() => undefined)
   await page.waitForLoadState('domcontentloaded', { timeout: 8_000 }).catch(() => undefined)
   await page.waitForTimeout(400)
 
