@@ -122,7 +122,7 @@ export const FullTierProgressive: React.FC<FullTierProgressiveProps> = ({
       <Field
         label="Spec section paragraph"
         autoFromIris={autoSrc(draft, 'spec_section_paragraph')}
-        hint="e.g. §2.04.B.3 — feeds the citation backref."
+        hint="e.g. §2.04.B.3. Feeds the citation backref."
       >
         <input
           type="text"

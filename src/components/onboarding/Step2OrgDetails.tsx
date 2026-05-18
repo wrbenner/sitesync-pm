@@ -40,7 +40,7 @@ export default function Step2OrgDetails() {
   const save = async () => {
     setError(null)
     if (!orgId) {
-      setError('No active organization — sign in again to continue.')
+      setError('No active organization. Sign in again to continue.')
       return
     }
     const trimmed = name.trim()
