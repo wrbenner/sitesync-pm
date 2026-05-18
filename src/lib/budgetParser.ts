@@ -671,7 +671,7 @@ export function parseBudgetWorkbook(
 
   if (!selectedSheet || selectedSheet.score < 5) {
     // Fall back to first sheet
-    warnings.push('Could not confidently detect budget sheet — using first sheet');
+    warnings.push('Could not confidently detect budget sheet. Using first sheet.');
   }
 
   const sheetName = workbook.SheetNames[selectedSheet?.index ?? 0];
@@ -682,7 +682,7 @@ export function parseBudgetWorkbook(
   const { headerRow, columns } = detectHeaderRow(sheet, range);
 
   if (columns.length < 2) {
-    warnings.push('Could not detect column layout — results may be inaccurate');
+    warnings.push('Could not detect column layout. Results may be inaccurate.');
   }
 
   // 3. Extract metadata from rows above header

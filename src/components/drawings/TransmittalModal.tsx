@@ -305,7 +305,7 @@ export const TransmittalModal: React.FC<TransmittalModalProps> = ({
           <div>
             <h2 style={S.headerTitle}>Create Transmittal</h2>
             <p style={{ ...typography.caption, color: colors.textTertiary, margin: '4px 0 0' }}>
-              Issue "{setName}" — {drawings.length} drawing{drawings.length !== 1 ? 's' : ''}
+              Issue "{setName}": {drawings.length} drawing{drawings.length !== 1 ? 's' : ''}
             </p>
           </div>
           <button

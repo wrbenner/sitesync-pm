@@ -430,7 +430,7 @@ const Header: React.FC<HeaderProps> = ({ tier, source, onTierChange, onClose }) 
           </span>
         )}
         <span style={{ fontSize: 11, color: C.ink3 }}>
-          {tier === 'quick' ? '⌘+Enter to send. + Add details for full form.' : 'Full form — every field.'}
+          {tier === 'quick' ? '⌘+Enter to send. + Add details for full form.' : 'Full form: every field.'}
         </span>
       </div>
 

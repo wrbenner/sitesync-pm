@@ -174,7 +174,7 @@ export const RFIResponseComposer: React.FC<RFIResponseComposerProps> = ({
             marginBottom: spacing['2'],
           }}
         >
-          <Lock size={11} /> Internal — visible to GC team only
+          <Lock size={11} /> Internal (visible to GC team only)
         </div>
       )}
 

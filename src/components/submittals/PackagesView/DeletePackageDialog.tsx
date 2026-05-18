@@ -63,7 +63,7 @@ export const DeletePackageDialog: React.FC<DeletePackageDialogProps> = ({
       <form onSubmit={submit} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
         <p style={{ margin: 0, fontSize: 13, color: C.ink, fontFamily: FONT, lineHeight: 1.5 }}>
           You're about to delete <strong>{pkg.title}</strong>. Submittals belonging to this package
-          {memberCount > 0 ? ` (${memberCount})` : ''} will <strong>not</strong> be deleted — they'll move
+          {memberCount > 0 ? ` (${memberCount})` : ''} will <strong>not</strong> be deleted. They'll move
           to the Unpackaged group on the Items view.
         </p>
         <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>

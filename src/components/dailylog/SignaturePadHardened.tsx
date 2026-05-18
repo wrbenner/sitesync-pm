@@ -134,12 +134,12 @@ export const SignaturePadHardened: React.FC<SignaturePadHardenedProps> = ({
           }}
         >
           <AlertTriangle size={12} />
-          Signing requires connection — chain hash must be reserved with the server.
+          Signing requires connection. Chain hash must be reserved with the server.
         </div>
       )}
 
       <div style={{ display: 'flex', gap: spacing['2'], justifyContent: 'flex-end' }}>
-        <Btn variant="ghost" onClick={onCancel}>Not yet — review again</Btn>
+        <Btn variant="ghost" onClick={onCancel}>Not yet. Review again.</Btn>
         <Btn
           variant="primary"
           icon={<Lock size={14} />}

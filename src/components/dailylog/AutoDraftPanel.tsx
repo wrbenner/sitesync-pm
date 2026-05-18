@@ -117,7 +117,7 @@ export const AutoDraftPanel: React.FC<AutoDraftPanelProps> = ({
               fontWeight: typography.fontWeight.semibold,
             }}
           >
-            Partial — please review
+            Partial: please review
           </span>
         )}
       </div>
@@ -167,7 +167,7 @@ export const AutoDraftPanel: React.FC<AutoDraftPanelProps> = ({
                       {row.sub_company ?? '—'}
                       {row.source === 'roster_scheduled' && (
                         <span style={{ marginLeft: 6, fontSize: 10, color: colors.statusPending }}>
-                          (scheduled — attendance unconfirmed)
+                          (scheduled, attendance unconfirmed)
                         </span>
                       )}
                     </td>
