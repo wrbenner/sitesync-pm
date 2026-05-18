@@ -95,15 +95,16 @@ async function sha256Hex(input: string): Promise<string> {
   return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, '0')).join('')
 }
 
-/** Random UUID, falls back to a manual implementation in older runtimes. */
+/** Random UUID. Uses crypto.randomUUID when available, falls back to crypto.getRandomValues. */
 function makeUuid(): string {
   const c = globalThis.crypto as Crypto | undefined
   if (c?.randomUUID) return c.randomUUID()
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, ch => {
-    const r = (Math.random() * 16) | 0
-    const v = ch === 'x' ? r : (r & 0x3) | 0x8
-    return v.toString(16)
-  })
+  const bytes = new Uint8Array(16)
+  c?.getRandomValues(bytes)
+  bytes[6] = (bytes[6] & 0x0f) | 0x40
+  bytes[8] = (bytes[8] & 0x3f) | 0x80
+  const hex = Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('')
+  return `${hex.slice(0,8)}-${hex.slice(8,12)}-${hex.slice(12,16)}-${hex.slice(16,20)}-${hex.slice(20)}`
 }
 
 /**
@@ -187,7 +188,9 @@ export async function readyItems(): Promise<QueueItem[]> {
 export function nextDelayMs(attempts: number): number {
   const exp = BASE_DELAY_MS * Math.pow(2, attempts)
   const capped = Math.min(MAX_DELAY_MS, exp)
-  const jitter = Math.random() * capped * 0.2  // ±20%
+  const rand = new Uint32Array(1)
+  globalThis.crypto?.getRandomValues(rand)
+  const jitter = ((rand[0] / 0xffffffff) * capped * 0.2)
   return Math.round(capped - jitter / 2 + jitter)
 }
 
