@@ -645,6 +645,27 @@ function AppContent() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isMobile, isTablet]);
+
+  // Path-driven sidebar restore. Must live here (AppContent, always-mounted)
+  // because Sidebar is conditionally rendered and unmounts while collapsed —
+  // its own path effect is unreachable when navigation away from /day fires.
+  const lastSidebarPathRef = useRef(location.pathname);
+  useEffect(() => {
+    if (location.pathname === lastSidebarPathRef.current) return;
+    lastSidebarPathRef.current = location.pathname;
+    if (isMobile) return;
+    if (location.pathname === '/day') {
+      setSidebarCollapsed(true);
+    } else {
+      try {
+        const stored = window.localStorage.getItem('sitesync-sidebar-collapsed');
+        setSidebarCollapsed(stored === 'true');
+      } catch {
+        setSidebarCollapsed(false);
+      }
+    }
+  }, [location.pathname, isMobile, setSidebarCollapsed]);
+
   const { toggleContextPanel, contextPanelOpen } = useAIAnnotationStore();
   const { openCopilot: closeCopilot, isOpen: copilotOpen } = useCopilotStore();
 

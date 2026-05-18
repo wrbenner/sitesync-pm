@@ -87,17 +87,6 @@ const COLLAPSED_W = 72
 const EXPANDED_W = 252
 const SIDEBAR_PREF_KEY = 'sitesync-sidebar-collapsed'
 
-function readStoredCollapsed(fallback: boolean): boolean {
-  if (typeof window === 'undefined') return fallback
-  try {
-    const raw = window.localStorage.getItem(SIDEBAR_PREF_KEY)
-    if (raw == null) return fallback
-    return raw === 'true'
-  } catch {
-    return fallback
-  }
-}
-
 function writeStoredCollapsed(v: boolean) {
   if (typeof window === 'undefined') return
   try {
@@ -752,21 +741,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate, mode, 
     mq.addEventListener('change', handler)
     return () => mq.removeEventListener('change', handler)
   }, [])
-
-  // Default-collapse on /day; on every other page, reapply the user's last
-  // preference from localStorage. Track the prior pathname in a ref so we
-  // only re-sync when it actually changes (avoids cascading re-renders that
-  // a state-tracked previous value would cause).
-  const lastPathRef = useRef(location.pathname)
-  useEffect(() => {
-    if (location.pathname === lastPathRef.current) return
-    lastPathRef.current = location.pathname
-    if (location.pathname === '/day') {
-      setSidebarCollapsed(true)
-      return
-    }
-    setSidebarCollapsed(readStoredCollapsed(false))
-  }, [location.pathname, setSidebarCollapsed])
 
   // Persist user-driven changes — but only when they happen on a non-/day
   // page so the auto-collapse on /day doesn't poison the preference.
