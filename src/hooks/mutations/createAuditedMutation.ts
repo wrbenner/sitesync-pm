@@ -222,7 +222,9 @@ export function useAuditedMutation<TParams, TResult>(config: AuditedMutationConf
         const firstError = Object.values(error.fieldErrors)[0]?.[0]
         toast.error(firstError || 'Invalid input')
       } else {
-        toast.error(config.errorMessage ?? `Failed to ${config.action.replace(/_/g, ' ')}`)
+        const fallback = config.errorMessage ?? `Failed to ${config.action.replace(/_/g, ' ')}`
+        const detail = error instanceof Error ? error.message : ''
+        toast.error(detail && detail !== fallback ? `${fallback}: ${detail}` : fallback)
       }
 
       // Report to Sentry (skip permission/validation errors, those are expected)
