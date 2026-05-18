@@ -22,6 +22,7 @@ import { useProject, useWorkforceMembers } from '../../hooks/queries'
 import { useScheduleActivities } from '../../hooks/useScheduleActivities'
 import { useBudgetData } from '../../hooks/useBudgetData'
 import { useFieldCaptures } from '../../hooks/queries/field-captures'
+import { useSignedUrl } from '../../hooks/useSignedUrl'
 import { useIncidents } from '../../hooks/queries/incidents'
 import { useDailyLogs } from '../../hooks/queries/daily-logs'
 import { fetchWeatherForProject, type WeatherSnapshot } from '../../lib/weather'
@@ -121,6 +122,14 @@ function SectionDivider({ label }: { label: string }) {
 // 64×64 dignified thumbnail. Real <img> element so we can detect load failure
 // and fall back to a labeled placeholder instead of leaving a broken tile.
 // Subtle warm shadow + hairline ring; orange ring + 1.5px lift on hover.
+//
+// `src` may be:
+//   • an absolute URL (data:, blob:, third-party http(s))            → use as-is
+//   • a Supabase public-bucket URL from when the bucket was public,
+//     where the bucket is now private → extract path, sign against bucket
+//   • a bare storage path → sign against field-captures
+const ABS_URL_RE = /^(data:|blob:|https?:\/\/(?!.*\/storage\/v1\/object\/public\/))/i
+const SUPABASE_PUBLIC_RE = /\/storage\/v1\/object\/public\/([^/]+)\/(.+)$/
 
 function PhotoThumb({
   src,
@@ -132,7 +141,23 @@ function PhotoThumb({
   onClick: () => void
 }) {
   const [errored, setErrored] = React.useState(false)
-  const showImage = !!src && !errored
+  let absoluteUrl: string | null = null
+  let storagePath: string | null = null
+  let bucket = 'field-captures'
+  if (src) {
+    const m = src.match(SUPABASE_PUBLIC_RE)
+    if (m) {
+      bucket = m[1]
+      storagePath = m[2]
+    } else if (ABS_URL_RE.test(src)) {
+      absoluteUrl = src
+    } else {
+      storagePath = src
+    }
+  }
+  const signed = useSignedUrl(storagePath, bucket)
+  const resolvedSrc = absoluteUrl ?? signed
+  const showImage = !!resolvedSrc && !errored
   return (
     <button
       onClick={onClick}
@@ -168,7 +193,7 @@ function PhotoThumb({
     >
       {showImage ? (
         <img
-          src={src}
+          src={resolvedSrc!}
           alt={alt}
           loading="lazy"
           onError={() => setErrored(true)}
