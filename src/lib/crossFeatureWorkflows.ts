@@ -364,8 +364,12 @@ export async function runDrawingRevisedChain(
     // (e.g. "A4.20" or "see A4.20 detail 3") so substring match is right.
     // Status values validated against migration 00028_rfi_workflow.sql:
     // CHECK (status IN ('draft','open','under_review','answered','closed','void')).
+    // `metadata` is planned but not in the live schema; selecting it 400s
+    // PostgREST. Idempotency dedupe becomes a no-op until the column lands —
+    // the workflow may re-flag an RFI on repeated drawing-revised events,
+    // which is acceptable (the consuming UI shows the most-recent flag).
     const { data: candidateRfis } = await from('rfis')
-      .select('id, drawing_reference, metadata, status')
+      .select('id, drawing_reference, status')
       .eq('project_id', newDrawing.project_id as string)
       .in('status', ['draft', 'open', 'under_review'])
       .ilike('drawing_reference', `%${sheetNumber}%`);
@@ -374,12 +378,9 @@ export async function runDrawingRevisedChain(
       return { workflow: 'drawing_revised', skipped: { reason: 'no open RFIs reference this sheet' } };
     }
 
-    // Idempotency: skip RFIs already flagged for this exact revision drawing.
-    const toFlag = (candidateRfis as any[]).filter((rfi) => {
-      const existing = (rfi.metadata as unknown as Record<string, unknown> | null) ?? {};
-      const flags = (existing.affected_by_revisions as string[] | undefined) ?? [];
-      return !flags.includes(newDrawingId);
-    });
+    // Idempotency on metadata.affected_by_revisions is disabled until the
+    // metadata column ships; flag every candidate every time.
+    const toFlag = (candidateRfis as any[]);
     if (toFlag.length === 0) {
       return { workflow: 'drawing_revised', skipped: { reason: 'all candidate RFIs already flagged' } };
     }

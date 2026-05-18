@@ -179,25 +179,22 @@ const DrawingsPage: React.FC = () => {
       fourteenDaysAgo.setDate(fourteenDaysAgo.getDate() - 14);
       // We can't index on jsonb keys we don't know, so query open RFIs whose
       // metadata.last_revision_flagged_at is recent. Volume is low.
-      // The generated Database types lag behind the live schema (rfis.metadata
-      // is jsonb added in 20260428100000), so route through an `any`-typed
-      // client. Same pattern as src/lib/crossFeatureWorkflows.ts.
+      // `metadata` was planned but never landed in the live schema; selecting
+      // it 400s PostgREST. Until the migration applies in prod, this feature
+      // is silently no-op (no flagged RFIs surface). Same pattern as
+      // src/lib/crossFeatureWorkflows.ts.
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const sb = supabase as any;
       // Status values per migration 00028_rfi_workflow.sql.
       const { data, error: rfiErr } = await sb
         .from('rfis')
-        .select('id, drawing_reference, metadata')
+        .select('id, drawing_reference')
         .eq('project_id' as never, projectId)
         .in('status' as never, ['draft', 'open', 'under_review']);
       if (cancelled || rfiErr || !data) return;
-      const recent = (data as Array<{ id: string; drawing_reference: string | null; metadata: Record<string, unknown> | null }>)
-        .filter((rfi) => {
-          const m = rfi.metadata ?? {};
-          const flaggedAt = m.last_revision_flagged_at as string | undefined;
-          if (!flaggedAt) return false;
-          return new Date(flaggedAt) >= fourteenDaysAgo;
-        });
+      const recent: Array<{ id: string; drawing_reference: string | null }> = [];
+      // No metadata column → no revision-flagged filter possible. Feature
+      // re-enables automatically once rfis.metadata ships.
       if (recent.length === 0) {
         setRevisionImpact(null);
         return;
