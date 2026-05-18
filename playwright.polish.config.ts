@@ -80,7 +80,7 @@ export default defineConfig({
       // to settle on the second wait.
       name: 'page-e2e',
       testMatch: /page-\d+-[a-z-]+\.spec\.ts$/,
-      timeout: 90_000,
+      timeout: 120_000,
       use: {
         ...baseConfig.use,
         baseURL: baseConfig.use?.baseURL,

@@ -16,7 +16,7 @@ export async function settle(page: Page, ms = 250) {
       transition-delay: 0s !important;
     }`,
   }).catch(() => undefined)
-  await page.waitForLoadState('networkidle', { timeout: 8_000 }).catch(() => undefined)
+  await page.waitForLoadState('networkidle', { timeout: 3_000 }).catch(() => undefined)
   await page.waitForTimeout(ms)
 }
 
@@ -59,7 +59,7 @@ export async function waitLoad(page: Page, timeoutMs = 30_000) {
   ).catch(() => undefined)
   // One more brief network-idle sip so any in-flight queries can resolve
   // and the page paints the resolved state before we capture.
-  await page.waitForLoadState('networkidle', { timeout: 4_000 }).catch(() => undefined)
+  await page.waitForLoadState('networkidle', { timeout: 2_000 }).catch(() => undefined)
 }
 
 export async function signIn(page: Page, user: string, pass: string) {
