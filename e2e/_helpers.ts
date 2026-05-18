@@ -36,7 +36,7 @@ export async function settle(page: Page, ms = 250) {
  *   • Network activity: short networkidle wait at the end so React
  *     Query has settled.
  */
-export async function waitLoad(page: Page, timeoutMs = 30_000) {
+export async function waitLoad(page: Page, timeoutMs = 10_000) {
   await page.waitForFunction(
     () => {
       const text = document.body.textContent ?? ''
