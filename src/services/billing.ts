@@ -95,10 +95,12 @@ export async function getPlans(): Promise<Plan[]> {
 // ── Subscription Management ─────────────────────────────
 
 export async function getSubscription(organizationId: string): Promise<Subscription | null> {
+  // maybeSingle() returns null cleanly when the org has no subscription row
+  // (free-tier orgs). .single() would return a 406 PostgREST error.
   const { data, error } = await scoped(
     fromTable('subscriptions').select('*'),
     organizationId,
-  ).single()
+  ).maybeSingle()
 
   if (error || !data) return null
 

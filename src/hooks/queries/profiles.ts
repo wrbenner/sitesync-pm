@@ -73,8 +73,15 @@ function syntheticName(userId: string): string | null {
  * Batch-resolve profile names for a set of user IDs.
  * Dedupes and sorts so the query key is stable regardless of input order.
  */
+// PostgREST 400s on `user_id=in.(...)` when any element isn't a valid UUID.
+// Some call sites (e.g. change-orders Originator) pass free-text vendor names
+// that were never user IDs — filter them out before the query.
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
 export function useProfileNames(userIds: (string | null | undefined)[]) {
-  const unique = Array.from(new Set(userIds.filter((id): id is string => !!id))).sort()
+  const unique = Array.from(
+    new Set(userIds.filter((id): id is string => !!id && UUID_RE.test(id))),
+  ).sort()
 
   return useQuery<ProfileMap>({
     queryKey: ['profile-names', unique],
