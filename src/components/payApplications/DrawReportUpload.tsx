@@ -293,14 +293,21 @@ export function DrawReportUpload({ open, onClose, projectId, onSuccess }: DrawRe
 
   return (
     <div
+      role="button"
+      tabIndex={0}
+      aria-label="Close dialog"
       style={{
         position: 'fixed', inset: 0, zIndex: 1000,
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         backgroundColor: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)',
       }}
-      onClick={handleClose}
+      onClick={(e) => { if (e.target === e.currentTarget) handleClose(); }}
+      onKeyDown={(e) => { if (e.key === 'Escape') handleClose(); }}
     >
       <div
+        role="dialog"
+        aria-modal="true"
+        aria-label="Upload draw report"
         style={{
           backgroundColor: colors.surfaceRaised,
           borderRadius: borderRadius.lg,
@@ -313,7 +320,6 @@ export function DrawReportUpload({ open, onClose, projectId, onSuccess }: DrawRe
           fontFamily: typography.fontFamily,
           transition: `width ${transitions.base}`,
         }}
-        onClick={(e) => e.stopPropagation()}
       >
         {/* ── Header ─────────────────────────────────────────── */}
         <div style={{
@@ -387,7 +393,11 @@ export function DrawReportUpload({ open, onClose, projectId, onSuccess }: DrawRe
                 onChange={(e) => e.target.files?.[0] && handleFile(e.target.files[0])}
               />
               <div
+                role="button"
+                tabIndex={0}
+                aria-label="Upload file. Click or drop a PDF or Excel file here."
                 onClick={() => inputRef.current?.click()}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); inputRef.current?.click(); } }}
                 onDrop={onDrop}
                 onDragOver={(e) => e.preventDefault()}
                 style={{
@@ -761,7 +771,7 @@ export function DrawReportUpload({ open, onClose, projectId, onSuccess }: DrawRe
                           numeric
                         />
                         <div
-                          title={low ? `Low confidence (${Math.round(line.confidence * 100)}%) — verify values` : `Confidence ${Math.round(line.confidence * 100)}%`}
+                          title={low ? `Low confidence (${Math.round(line.confidence * 100)}%). Verify values.` : `Confidence ${Math.round(line.confidence * 100)}%`}
                           style={{
                             width: 10, height: 10, borderRadius: '50%',
                             backgroundColor: low ? colors.statusPending : colors.statusActive,
