@@ -44,7 +44,7 @@ export async function executeDraftedSubmittalTransmittal(draft: DraftedAction): 
     | { id: string; title?: string; spec_section?: string | null; number?: number | null }
     | null
   const subject = submittalRow?.title
-    ? `Transmittal — ${submittalRow.title}`
+    ? `Transmittal: ${submittalRow.title}`
     : 'Submittal Transmittal'
 
   const insertRow: Record<string, unknown> = {

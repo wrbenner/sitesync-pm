@@ -46,7 +46,7 @@ export function renderDigestText(d: Digest): string {
     return 'No new notifications.'
   }
   const lines: string[] = []
-  lines.push(`Your SiteSync digest — ${new Date(d.generated_at).toLocaleString()}`)
+  lines.push(`Your SiteSync digest: ${new Date(d.generated_at).toLocaleString()}`)
   lines.push('')
   if (d.critical_count > 0) {
     lines.push(`(${d.critical_count} critical event(s) were sent immediately and not included here.)`)
@@ -55,7 +55,7 @@ export function renderDigestText(d: Digest): string {
   for (const group of d.groups) {
     lines.push(`── ${group.entity_type.toUpperCase()} (${group.count}) ──`)
     for (const e of group.events) {
-      lines.push(`  • ${e.title}${e.body ? ` — ${e.body}` : ''}`)
+      lines.push(`  • ${e.title}${e.body ? `: ${e.body}` : ''}`)
     }
     lines.push('')
   }

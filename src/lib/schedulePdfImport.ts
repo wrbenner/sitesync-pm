@@ -271,7 +271,7 @@ async function parsePdfScheduleHeuristic(file: File): Promise<ImportResult> {
   }
 
   if (allTextItems.length === 0) {
-    throw new Error('Could not extract text from this PDF. It may be a scanned image — try using OCR first.');
+    throw new Error('Could not extract text from this PDF. It may be a scanned image. Try using OCR first.');
   }
 
   // ── Step 1: Find the timeline (month headers) ──────────────
@@ -349,7 +349,7 @@ async function parsePdfScheduleHeuristic(file: File): Promise<ImportResult> {
     const nameCandidate = topItems
       .map(t => t.text.trim())
       .filter(t => t.length > 3 && !SKIP_WORDS.has(t.toLowerCase()))
-      .join(' — ');
+      .join(' ');
     if (nameCandidate) projectName = nameCandidate.slice(0, 100);
   }
 
@@ -498,7 +498,7 @@ async function parsePdfScheduleHeuristic(file: File): Promise<ImportResult> {
 
   warnings.push(
     `Extracted ${activities.length} activities from PDF. ` +
-    `Dependencies were inferred from sequential ordering — review and adjust as needed.`
+    `Dependencies were inferred from sequential ordering. Review and adjust as needed.`
   );
 
   if (timelinePoints.length >= 2) {
@@ -705,7 +705,7 @@ async function parsePdfScheduleAI(file: File, projectId: string): Promise<Import
     const { data: sessionData } = await supabase.auth.getSession();
     const userToken = sessionData.session?.access_token;
     if (!userToken) {
-      throw new Error('No active session — please sign in again.');
+      throw new Error('No active session. Please sign in again.');
     }
 
     const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://hypxrmcppjfbtlwuoafc.supabase.co';
@@ -785,7 +785,7 @@ async function waitForScheduleImportJob(jobId: string): Promise<ImportResult> {
         }
       } catch { /* ignore */ }
       cleanup();
-      reject(new Error('AI extraction timed out after 3 minutes. The PDF may be too dense or Gemini is experiencing issues — try again, or split the PDF.'));
+      reject(new Error('AI extraction timed out after 3 minutes. The PDF may be too dense or Gemini is experiencing issues. Try again, or split the PDF.'));
     }, JOB_WAIT_TIMEOUT_MS);
 
     const channel = supabase

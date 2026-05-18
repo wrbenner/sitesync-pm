@@ -146,11 +146,10 @@ export const EmptyDetailTab: React.FC<EmptyDetailTabProps> = ({ phase, tabLabel 
     }}
   >
     <h2 style={{ margin: 0, fontSize: 14, fontWeight: 600, color: C.ink }}>
-      {tabLabel} — coming in Phase {phase}
+      {tabLabel} (coming in Phase {phase})
     </h2>
     <p style={{ margin: 0, fontSize: 12, color: C.ink3, maxWidth: 460 }}>
-      See <code style={{ fontFamily: 'inherit' }}>/Users/walkerbenner/.claude/plans/stateful-greeting-book.md</code>{' '}
-      for the rollout plan.
+      This view is planned for a future phase.
     </p>
   </div>
 )

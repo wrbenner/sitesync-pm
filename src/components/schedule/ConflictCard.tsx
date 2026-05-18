@@ -110,7 +110,7 @@ export const ConflictCard: React.FC<ConflictCardProps> = React.memo(({ conflict,
             color: colors.textSecondary,
             textDecoration: 'line-through',
           }}>
-            {conflict.phaseA.name} vs {conflict.phaseB.name} — Resolved
+            {conflict.phaseA.name} vs {conflict.phaseB.name}: Resolved
           </span>
         </div>
       </motion.div>

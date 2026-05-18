@@ -73,7 +73,7 @@ export const VersionCompareModal: React.FC<VersionCompareModalProps> = ({
               <label style={{ display: 'block', fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.medium, color: colors.textTertiary, marginBottom: spacing['1'] }}>{label}</label>
               <select value={idx} onChange={(e) => setIdx(Number(e.target.value))} aria-label={`Select ${label}`} style={{ width: '100%', padding: `${spacing['1']} ${spacing['2']}`, border: `1px solid ${colors.borderDefault}`, borderRadius: borderRadius.base, fontSize: typography.fontSize.sm, fontFamily: typography.fontFamily, color: colors.textPrimary, backgroundColor: colors.surfaceRaised, cursor: 'pointer' }}>
                 {revisionHistory.map((rev, i) => (
-                  <option key={rev.id} value={i}>Rev {rev.revision_number}{rev.issued_date ? ` — ${formatRev(rev.issued_date)}` : ''}{!rev.superseded_at ? ' (Current)' : ''}</option>
+                  <option key={rev.id} value={i}>Rev {rev.revision_number}{rev.issued_date ? ` (${formatRev(rev.issued_date)})` : ''}{!rev.superseded_at ? ' (Current)' : ''}</option>
                 ))}
               </select>
             </div>
@@ -170,7 +170,7 @@ export const ComparisonModal: React.FC<ComparisonModalProps> = ({
           <div key={rev.id} style={{ display: 'flex', flexDirection: 'column', minHeight: 0, opacity }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'], marginBottom: spacing['2'], flexShrink: 0 }}>
               <span style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold, color: colors.white, backgroundColor: badgeColor, padding: '2px 8px', borderRadius: borderRadius.full }}>{badge}</span>
-              <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary }}>Rev {rev.revision_number} — {label}</span>
+              <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary }}>Rev {rev.revision_number}: {label}</span>
               {rev.issued_by && <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>{rev.issued_by}</span>}
             </div>
             {rev.file_url ? (

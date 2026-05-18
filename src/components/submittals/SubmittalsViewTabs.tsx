@@ -140,7 +140,7 @@ export const EmptyTabPlaceholder: React.FC<EmptyTabPlaceholderProps> = ({ phase,
     }}
   >
     <h2 style={{ margin: 0, fontSize: 16, fontWeight: 600, color: C.ink }}>
-      {tabLabel} — coming in Phase {phase}
+      {tabLabel} (coming in Phase {phase})
     </h2>
     <p style={{ margin: 0, fontSize: 13, color: C.ink3, maxWidth: 460 }}>
       See <code style={{ fontFamily: 'inherit' }}>docs/audits/SUBMITTALS_PAGE_REBUILD_PLAN.md</code>{' '}

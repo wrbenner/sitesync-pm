@@ -170,7 +170,7 @@ export function integrityCheck(
         activityName: a.name,
         type: 'open_start',
         severity: 'medium',
-        message: `${a.name} has no predecessor — the schedule has an open start.`,
+        message: `${a.name} has no predecessor. The schedule has an open start.`,
         suggestedFix: 'Add a predecessor logic tie (FS, SS, or to project-start milestone).',
       });
       counts.open_start += 1;
@@ -183,7 +183,7 @@ export function integrityCheck(
         activityName: a.name,
         type: 'open_finish',
         severity: 'medium',
-        message: `${a.name} has no successor — the schedule has an open finish.`,
+        message: `${a.name} has no successor. The schedule has an open finish.`,
         suggestedFix: 'Tie this activity to a downstream successor or the project-finish milestone.',
       });
       counts.open_finish += 1;

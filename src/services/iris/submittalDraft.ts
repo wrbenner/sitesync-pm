@@ -160,8 +160,8 @@ export function buildDraftFromPin(input: BuildDraftFromPinInput): SubmittalDraft
   draft.provenance.drawing_pin_ids = 'drawing_pin'
 
   if (input.sheet_number || input.sheet_title) {
-    const label = [input.sheet_number, input.sheet_title].filter(Boolean).join(' — ')
-    draft.title = `Pin reference — ${label}`.slice(0, 80)
+    const label = [input.sheet_number, input.sheet_title].filter(Boolean).join(' ')
+    draft.title = `Pin reference: ${label}`.slice(0, 80)
     draft.provenance.title = 'drawing_pin'
   }
   if (input.csi_section) {
