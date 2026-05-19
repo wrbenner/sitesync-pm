@@ -115,13 +115,15 @@ export function analyzeScheduleHealth(phases: MappedSchedulePhase[]): HealthRepo
   // than an F-grade that would alarm users on an otherwise healthy project.
   // Only applies to larger schedules (>10 activities). small schedules should
   // still be analyzed so that genuine issues (missing preds, dangling) surface.
-  const totalLinks = phases.reduce((sum, p) => sum + (predecessorMap.get(p.id)?.length ?? 0), 0);
+  // Note: we intentionally drop the `totalLinks === 0` guard — a schedule
+  // where 80%+ of activities are orphans is effectively unlinked even if a
+  // handful of pairs happen to reference each other.
   const orphanCount = phases.filter(p =>
     (predecessorMap.get(p.id)?.length ?? 0) === 0 &&
     (successorMap.get(p.id)?.length ?? 0) === 0
   ).length;
   const orphanRate = phases.length > 0 ? orphanCount / phases.length : 0;
-  if (orphanRate >= 0.8 && totalLinks === 0 && phases.length > 10) {
+  if (orphanRate >= 0.8 && phases.length > 10) {
     return unlinkedReport(phases.length);
   }
 
@@ -291,7 +293,7 @@ export function analyzeScheduleHealth(phases: MappedSchedulePhase[]): HealthRepo
 
   // ── 6. Logic Density ──────────────────────────────────────────────────────
   // A healthy schedule has at least 1.5 links per activity on average
-  // totalLinks is already computed above for the orphan-rate early-return check
+  const totalLinks = phases.reduce((sum, p) => sum + (predecessorMap.get(p.id)?.length ?? 0), 0);
   const logicDensity = phases.length > 0 ? totalLinks / phases.length : 0;
 
   if (logicDensity < 1.0 && phases.length > 5) {
