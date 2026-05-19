@@ -100,6 +100,9 @@ const TabButton: React.FC<{
           fontFamily: typography.fontFamily,
           fontWeight: isActive ? typography.fontWeight.semibold : typography.fontWeight.medium,
           lineHeight: 1,
+          // Icon inherits the orange color for branding; label uses textPrimary
+          // to meet WCAG AA 4.5:1 contrast at 10px (primaryOrange on white = 2.71).
+          color: isActive ? colors.textPrimary : 'inherit',
         }}
       >
         {item.label}
@@ -107,6 +110,7 @@ const TabButton: React.FC<{
       {isActive && (
         <motion.span
           layoutId="mobileTabActive"
+          aria-hidden="true"
           style={{
             position: 'absolute',
             top: 0,
@@ -310,6 +314,9 @@ export const MobileTabBar: React.FC<MobileTabBarProps> = ({ streamRole, activeVi
                           fontFamily: typography.fontFamily,
                           textAlign: 'center',
                           lineHeight: 1.2,
+                          // Active items inherit primaryOrange from parent button;
+                          // force textPrimary for label readability (WCAG AA 4.5:1).
+                          color: isActive ? colors.textPrimary : 'inherit',
                         }}
                       >
                         {item.label}

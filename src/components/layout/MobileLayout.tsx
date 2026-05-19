@@ -499,7 +499,9 @@ export const MobileLayout: React.FC<MobileLayoutProps> = ({ children }) => {
                 </div>
                 <span style={{
                   fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold,
-                  color: colors.statusActive,
+                  // statusActive (#2d8a6e) on white = 4.22:1 — fails WCAG AA at 11px.
+                  // textPrimary gives >12:1 while icon retains teal branding.
+                  color: colors.textPrimary,
                 }}>
                   Check In
                 </span>
@@ -528,7 +530,7 @@ export const MobileLayout: React.FC<MobileLayoutProps> = ({ children }) => {
                 }}>
                   <Camera size={24} color="white" />
                 </div>
-                <span style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold, color: colors.orangeText, marginTop: 2 }}>
+                <span style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, marginTop: 2 }}>
                   {tab.label}
                 </span>
               </button>
