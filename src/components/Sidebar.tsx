@@ -483,7 +483,10 @@ const UserStrip: React.FC<{ collapsed: boolean; streamRole: StreamRole }> = ({
   const authProfile = useAuthStore((s) => s.profile)
   const authUser = useAuthStore((s) => s.user)
   const signOut = useAuthStore((s) => s.signOut)
-  const fullName = authProfile?.full_name?.trim() || ''
+  const rawName = authProfile?.full_name?.trim() ?? ''
+  // Treat seed-data em-dash artifacts (—, –, -, or whitespace-only) as empty
+  // so the fallback chain reaches the email-derived display name instead.
+  const fullName = /^[—–\-\s]+$/.test(rawName) ? '' : rawName
   const email = authUser?.email?.trim() || ''
   const emailLocal = email.split('@')[0] ?? ''
   const derivedFromEmail = emailLocal
