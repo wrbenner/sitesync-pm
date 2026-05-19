@@ -234,7 +234,9 @@ export const MobileLayout: React.FC<MobileLayoutProps> = ({ children }) => {
             aria-label="Notifications"
           >
             <Bell size={22} color={colors.textSecondary} />
-            <div style={{ position: 'absolute', top: 14, right: 14, width: 8, height: 8, borderRadius: '50%', backgroundColor: colors.statusCritical, border: `2px solid ${colors.surfaceRaised}` }} />
+            {unreadCount > 0 && (
+              <div style={{ position: 'absolute', top: 14, right: 14, width: 8, height: 8, borderRadius: '50%', backgroundColor: colors.statusCritical, border: `2px solid ${colors.surfaceRaised}` }} />
+            )}
           </button>
         </div>
       </header>
