@@ -1245,7 +1245,7 @@
     },
     {
       "file": "src/pages/Preconstruction.tsx",
-      "line": 1199,
+      "line": 1209,
       "reason": "Sort comparator \u2014 bid_amount subtraction produces an ordering signal, not a money value; no accumulation or rounding error possible.",
       "owner": "wrbenner",
       "added": "2026-05-19",
@@ -1253,7 +1253,7 @@
     },
     {
       "file": "src/pages/Preconstruction.tsx",
-      "line": 1201,
+      "line": 1211,
       "reason": "Variance percentage \u2014 bid_amount subtraction then division by another money value produces a dimensionless ratio \u00d7 100; result is a percentage, not money.",
       "owner": "wrbenner",
       "added": "2026-05-19",
@@ -1261,7 +1261,7 @@
     },
     {
       "file": "src/pages/Preconstruction.tsx",
-      "line": 1302,
+      "line": 1312,
       "reason": "Sort comparator \u2014 bid_amount subtraction produces an ordering signal, not a money value; no accumulation or rounding error possible.",
       "owner": "wrbenner",
       "added": "2026-05-19",
