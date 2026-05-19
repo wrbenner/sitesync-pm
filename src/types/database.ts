@@ -7345,6 +7345,11 @@ export type Database = {
           project_id: string
           received_date: string | null
           revision: string | null
+          scale_calibrated_at: string | null
+          scale_calibrated_by: string | null
+          scale_ratio: number | null
+          scale_source: string | null
+          scale_text: string | null
           search_vector: unknown
           set_name: string | null
           sheet_extent_m: Json | null
@@ -7381,6 +7386,11 @@ export type Database = {
           project_id: string
           received_date?: string | null
           revision?: string | null
+          scale_calibrated_at?: string | null
+          scale_calibrated_by?: string | null
+          scale_ratio?: number | null
+          scale_source?: string | null
+          scale_text?: string | null
           search_vector?: unknown
           set_name?: string | null
           sheet_extent_m?: Json | null
@@ -7417,6 +7427,11 @@ export type Database = {
           project_id?: string
           received_date?: string | null
           revision?: string | null
+          scale_calibrated_at?: string | null
+          scale_calibrated_by?: string | null
+          scale_ratio?: number | null
+          scale_source?: string | null
+          scale_text?: string | null
           search_vector?: unknown
           set_name?: string | null
           sheet_extent_m?: Json | null

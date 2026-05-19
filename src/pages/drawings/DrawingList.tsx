@@ -39,8 +39,15 @@ export interface DrawingItem {
   linkedRfiCount?: number;
   /** Server-side last-modified timestamp for the drawing row. */
   updated_at?: string | null;
-  /** Scale text extracted from the drawing's title block. */
+  /** Scale text extracted from the drawing's title block (e.g. "1/4\"=1'-0\""). */
   scale_text?: string | null;
+  /** Persisted user-calibrated scale (real inches per image pixel). Wins over scale_text. */
+  scale_ratio?: number | null;
+  /** "ai" = extracted from PDF text, "user" = manually calibrated, null = unknown. */
+  scale_source?: 'ai' | 'user' | null;
+  /** Last calibration audit (set only when a person calibrated). */
+  scale_calibrated_at?: string | null;
+  scale_calibrated_by?: string | null;
   /** Raw sheet number from the drawing record. */
   sheet_number?: string | null;
 }

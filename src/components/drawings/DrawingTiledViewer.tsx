@@ -339,6 +339,14 @@ export interface TiledDrawing {
   tile_status?: 'pending' | 'processing' | 'ready' | 'failed';
   tile_levels?: number;
   tile_format?: string;
+  /** Scale text extracted from the PDF title block (e.g. "1/4\"=1'-0\""). */
+  scale_text?: string | null;
+  /** Persisted user calibration (real inches per image pixel). Wins over scale_text. */
+  scale_ratio?: number | null;
+  /** "ai" = extracted from PDF text, "user" = manually calibrated, null = unknown. */
+  scale_source?: 'ai' | 'user' | null;
+  scale_calibrated_at?: string | null;
+  scale_calibrated_by?: string | null;
 }
 
 interface DrawingTiledViewerProps {
@@ -1144,27 +1152,45 @@ export const DrawingTiledViewer: React.FC<DrawingTiledViewerProps> = ({
   // to "px" output. Local state can still be updated by an in-session
   // Calibrate action; that path also writes back to the row (see below).
   const [calibrationScale, setCalibrationScale] = useState<number | null>(
-    () => {
-      const persisted = (drawing as { scale_ratio?: number | null }).scale_ratio;
-      return typeof persisted === 'number' && persisted > 0 ? persisted : null;
-    },
+    () => (typeof drawing.scale_ratio === 'number' && drawing.scale_ratio > 0 ? drawing.scale_ratio : null),
   );
   // When the user navigates between sheets in the same viewer instance, sync
   // the local calibration to the new sheet's persisted ratio.
   useEffect(() => {
-    const persisted = (drawing as { scale_ratio?: number | null }).scale_ratio;
-    setCalibrationScale(typeof persisted === 'number' && persisted > 0 ? persisted : null);
+    setCalibrationScale(
+      typeof drawing.scale_ratio === 'number' && drawing.scale_ratio > 0 ? drawing.scale_ratio : null,
+    );
   }, [drawing]);
+  const calibratedAt = drawing.scale_calibrated_at ?? null;
   const persistCalibration = useCallback(
     (ratio: number) => {
       setCalibrationScale(ratio);
       void drawingService.updateDrawing(drawing.id, {
         scale_ratio: ratio,
-      } as unknown as Partial<typeof drawing>);
+        scale_source: 'user',
+        scale_calibrated_by: user?.id ?? null,
+        scale_calibrated_at: new Date().toISOString(),
+      } as Partial<typeof drawing>);
     },
-    [drawing.id],
+    [drawing.id, user?.id],
   );
   const isMeasureTool = activeTool === 'measure' || activeTool === 'area' || activeTool === 'count' || activeTool === 'calibrate' || activeTool === 'path';
+
+  // Bugatti standard: never silently report pixels. Compute whether the sheet
+  // has a usable scale (user calibration OR AI-extracted scale_text). This drives
+  // both the "Scale not set" banner and the onUncalibrated toast prompt.
+  const hasUsableScale = (typeof calibrationScale === 'number' && calibrationScale > 0)
+    || parseScaleRatio(scaleRatioText) !== null;
+  // Tools that require scale to produce a real-world dimension. Count is exempt
+  // (just numbers things); calibrate IS the fix, so it's exempt too.
+  const measureToolNeedsScale = activeTool === 'measure' || activeTool === 'area' || activeTool === 'path';
+  const handleUncalibrated = useCallback(() => {
+    toast.error('This sheet has no scale set yet', {
+      description: 'Tap Calibrate, then click two points with a known distance.',
+      action: { label: 'Calibrate', onClick: () => setActiveTool('calibrate') },
+      duration: 6000,
+    });
+  }, []);
 
   // Viewport tracking for annotation overlay
   const [viewportBounds, setViewportBounds] = useState<{
@@ -2188,11 +2214,76 @@ export const DrawingTiledViewer: React.FC<DrawingTiledViewerProps> = ({
           calibrationScale={calibrationScale}
           onCalibrate={persistCalibration}
           onMeasurementAdd={handleMeasurementAdd}
+          onUncalibrated={handleUncalibrated}
           cursor={toolCursor(activeTool)}
           snapPoints={snapPoints}
           onSnapStateChange={setSnapActive}
           externalMeasurements={externalMeasurements}
         />
+
+        {/* Bugatti standard: top-edge banner whenever a measure tool is active
+            and no scale has been set. Tapping it switches to the calibrate tool. */}
+        {measureToolNeedsScale && !hasUsableScale && (
+          <button
+            type="button"
+            onClick={() => setActiveTool('calibrate')}
+            aria-label="Set drawing scale before measuring"
+            style={{
+              position: 'absolute',
+              top: 12,
+              left: '50%',
+              transform: 'translateX(-50%)',
+              zIndex: 35,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 10,
+              padding: '10px 16px',
+              borderRadius: 10,
+              border: '1px solid rgba(244,120,32,0.6)',
+              backgroundColor: 'rgba(28,18,8,0.92)',
+              backdropFilter: 'blur(8px)',
+              color: '#FFD9B8',
+              fontSize: 13,
+              fontWeight: 600,
+              fontFamily: 'system-ui, -apple-system, sans-serif',
+              cursor: 'pointer',
+              boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
+            }}
+          >
+            <span style={{
+              display: 'inline-block', width: 8, height: 8, borderRadius: '50%',
+              backgroundColor: '#F47820', boxShadow: '0 0 8px #F47820',
+            }} />
+            Scale not set — tap to calibrate before measuring
+          </button>
+        )}
+
+        {/* Subtle scale provenance pill — bottom-left. Shows "Scale: 1/4"=1'-0" (AI)" or
+            "Scale: calibrated by [name] on [date]" so the user trusts what they see. */}
+        {hasUsableScale && (activeTool === 'measure' || activeTool === 'area' || activeTool === 'path' || activeTool === 'calibrate') && (
+          <div
+            style={{
+              position: 'absolute',
+              bottom: 12,
+              left: 12,
+              zIndex: 30,
+              padding: '6px 10px',
+              borderRadius: 8,
+              backgroundColor: 'rgba(0,0,0,0.55)',
+              backdropFilter: 'blur(6px)',
+              color: 'rgba(255,255,255,0.85)',
+              fontSize: 11,
+              fontWeight: 500,
+              fontFamily: 'system-ui, -apple-system, sans-serif',
+              border: '1px solid rgba(255,255,255,0.08)',
+              pointerEvents: 'none',
+            }}
+          >
+            {calibrationScale && calibrationScale > 0
+              ? `Scale: calibrated${calibratedAt ? ` · ${new Date(calibratedAt).toLocaleDateString()}` : ''}`
+              : `Scale: ${scaleRatioText} · auto-detected`}
+          </div>
+        )}
 
         {/* Loading indicator */}
         {(!isLoaded || !isSourceReady) && (

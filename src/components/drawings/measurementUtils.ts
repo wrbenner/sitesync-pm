@@ -62,6 +62,43 @@ function parseFractional(s: string): number {
 }
 
 /**
+ * Parse user calibration input. Accepts:
+ *   "12"        → 12 inches
+ *   "144"       → 144 inches
+ *   "10'"       → 120 inches
+ *   "10 ft"     → 120 inches
+ *   "10'-6\""   → 126 inches
+ *   "10' 6"     → 126 inches
+ *   "12.5"      → 12.5 inches
+ *   "2.5m"      → 98.425 inches (metric)
+ *   "30cm"      → 11.811 inches
+ * Returns null if the string can't be parsed as a positive distance.
+ */
+export function parseCalibrationInput(input: string): number | null {
+  const s = input.trim().toLowerCase();
+  if (!s) return null;
+  const meters = s.match(/^(\d+(?:\.\d+)?)\s*m(?:eter|tr)?s?$/);
+  if (meters) return parseFloat(meters[1]) * 39.3701;
+  const cm = s.match(/^(\d+(?:\.\d+)?)\s*cm$/);
+  if (cm) return parseFloat(cm[1]) * 0.393701;
+  const mm = s.match(/^(\d+(?:\.\d+)?)\s*mm$/);
+  if (mm) return parseFloat(mm[1]) * 0.0393701;
+  const ftIn = s.match(/^(\d+(?:\.\d+)?)\s*(?:'|ft|feet)\s*[-\s]?\s*(\d+(?:\.\d+)?)?\s*(?:"|in|inch|inches)?$/);
+  if (ftIn) {
+    const ft = parseFloat(ftIn[1]);
+    const inch = ftIn[2] ? parseFloat(ftIn[2]) : 0;
+    const total = ft * 12 + inch;
+    return total > 0 ? total : null;
+  }
+  const inOnly = s.match(/^(\d+(?:\.\d+)?)\s*(?:"|in|inch|inches)?$/);
+  if (inOnly) {
+    const v = parseFloat(inOnly[1]);
+    return v > 0 ? v : null;
+  }
+  return null;
+}
+
+/**
  * Format inches as feet-and-inches string ("12'-6\"") with rounding
  * appropriate for construction dimensioning.
  */

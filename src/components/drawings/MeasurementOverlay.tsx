@@ -13,8 +13,8 @@
  *  - Calibrate: Two-point scale definition with smooth reveal
  */
 
-import React, { useState, useCallback, useMemo, useEffect } from 'react';
-import { parseScaleRatio, formatFeetInches } from './measurementUtils';
+import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
+import { parseScaleRatio, formatFeetInches, parseCalibrationInput } from './measurementUtils';
 import type { NormalizedPoint } from '../../lib/annotationGeometry';
 
 // ── Types ──────────────────────────────────────────────────────────────────
@@ -34,6 +34,13 @@ interface MeasurementOverlayProps {
   onCalibrate?: (realInchesPerNormUnit: number) => void;
   /** Fired when a measurement is fully drawn so the parent can persist it. */
   onMeasurementAdd?: (result: MeasurementResult) => void;
+  /**
+   * Fired when the user attempts to finalize a measurement on a sheet with no
+   * scale (neither AI-extracted scaleRatioText nor user-set calibrationScale).
+   * Parent should surface a Calibrate prompt — Bugatti standard says we never
+   * silently report pixel-distances dressed up as dimensions.
+   */
+  onUncalibrated?: () => void;
   /** Custom CSS cursor string for the SVG overlay (falls back to crosshair). */
   cursor?: string;
   /** Existing measurement endpoints to magnetically snap to. Normalized [0,1]. */
@@ -425,6 +432,7 @@ export const MeasurementOverlay: React.FC<MeasurementOverlayProps> = ({
   calibrationScale,
   onCalibrate,
   onMeasurementAdd,
+  onUncalibrated,
   cursor,
   snapPoints,
   onSnapStateChange,
@@ -445,6 +453,9 @@ export const MeasurementOverlay: React.FC<MeasurementOverlayProps> = ({
   const [measurements, setMeasurements] = useState<MeasurementResult[]>([]);
   const [inProgressPoints, setInProgressPoints] = useState<NormalizedPoint[]>([]);
   const [calibratePoints, setCalibratePoints] = useState<NormalizedPoint[]>([]);
+  // Pending calibration after two clicks — drives the inline modal that replaces
+  // the old window.prompt (broken on mobile, unstyled, no feet-inches support).
+  const [pendingCalibration, setPendingCalibration] = useState<{ pxDist: number } | null>(null);
 
   // When the user leaves any measure tool (e.g. hits Escape → select), drop any in-progress points.
   // Without this, switching tools and coming back would resume a half-drawn measurement.
@@ -524,24 +535,11 @@ export const MeasurementOverlay: React.FC<MeasurementOverlayProps> = ({
         const newPts = [...calibratePoints, pt];
         if (newPts.length === 2) {
           const pxDist = normalizedDistance(newPts[0], newPts[1], imageSize);
-          const realInStr = window.prompt(
-            'Enter the known distance between the two points (e.g. "12" for 12 inches, or "10\'" for 10 feet):',
-            '12',
-          );
-          if (realInStr) {
-            let realIn = 0;
-            // Parse feet: "10'" or "10ft"
-            const ftMatch = realInStr.match(/^(\d+(?:\.\d+)?)\s*(?:'|ft)/i);
-            if (ftMatch) {
-              realIn = parseFloat(ftMatch[1]) * 12;
-            } else {
-              realIn = parseFloat(realInStr);
-            }
-            if (realIn > 0 && pxDist > 0) {
-              onCalibrate?.(realIn / pxDist);
-            }
-          }
-          setCalibratePoints([]);
+          // Open the inline modal instead of blocking with window.prompt.
+          // Keep the two points visible while the modal is up so the user
+          // can see what they measured.
+          setPendingCalibration(pxDist > 0 ? { pxDist } : null);
+          setCalibratePoints(newPts);
         } else {
           setCalibratePoints(newPts);
         }
@@ -571,10 +569,21 @@ export const MeasurementOverlay: React.FC<MeasurementOverlayProps> = ({
       if (activeTool === 'measure') {
         const newPts = [...inProgressPoints, pt];
         if (newPts.length === 2) {
+          if (!hasScale) {
+            // Bugatti standard: never report raw pixels. Discard the in-progress
+            // measurement and let the parent surface a Calibrate affordance.
+            setInProgressPoints([]);
+            onUncalibrated?.();
+            return;
+          }
           const pxDist = normalizedDistance(newPts[0], newPts[1], imageSize);
           const realIn = pixelsToRealInches(pxDist);
-          const label = realIn !== null ? formatFeetInches(realIn) : `${Math.round(pxDist)} px`;
-          // Single clean dimension — no metric conversion unless explicitly requested.
+          if (realIn === null) {
+            setInProgressPoints([]);
+            onUncalibrated?.();
+            return;
+          }
+          const label = formatFeetInches(realIn);
           const result: MeasurementResult = { id: genId(), type: 'linear', points: newPts, label };
           setMeasurements((prev) => [...prev, result]);
           setInProgressPoints([]);
@@ -593,6 +602,11 @@ export const MeasurementOverlay: React.FC<MeasurementOverlayProps> = ({
           const dx = Math.abs(pt.x - first.x);
           const dy = Math.abs(pt.y - first.y);
           if (dx < 0.01 && dy < 0.01 && newPts.length > 3) {
+            if (!hasScale) {
+              setInProgressPoints([]);
+              onUncalibrated?.();
+              return;
+            }
             newPts.pop();
             const areaPx = polygonArea(newPts, imageSize);
             const perimPx = polygonPerimeter(newPts, imageSize);
@@ -607,7 +621,7 @@ export const MeasurementOverlay: React.FC<MeasurementOverlayProps> = ({
         setInProgressPoints(newPts);
       }
     },
-    [activeTool, inProgressPoints, calibratePoints, imageSize, pixelsToRealInches, formatArea, screenToNorm, onCalibrate, onMeasurementAdd, snapTo, externalMeasurements, measurements],
+    [activeTool, inProgressPoints, calibratePoints, imageSize, hasScale, pixelsToRealInches, formatArea, screenToNorm, onMeasurementAdd, onUncalibrated, snapTo, externalMeasurements, measurements],
   );
 
   // Detect snap range on cursor move so the parent can pulse the loupe.
@@ -622,6 +636,11 @@ export const MeasurementOverlay: React.FC<MeasurementOverlayProps> = ({
 
   const handleDoubleClick = useCallback(() => {
     if (activeTool === 'area' && inProgressPoints.length >= 3) {
+      if (!hasScale) {
+        setInProgressPoints([]);
+        onUncalibrated?.();
+        return;
+      }
       const areaPx = polygonArea(inProgressPoints, imageSize);
       const perimPx = polygonPerimeter(inProgressPoints, imageSize);
       const { area, perim } = formatArea(areaPx, perimPx);
@@ -632,13 +651,22 @@ export const MeasurementOverlay: React.FC<MeasurementOverlayProps> = ({
       return;
     }
     if (activeTool === 'path' && inProgressPoints.length >= 2) {
-      // Total length = sum of segment pixel distances × calibration
+      if (!hasScale) {
+        setInProgressPoints([]);
+        onUncalibrated?.();
+        return;
+      }
       let totalPx = 0;
       for (let i = 0; i < inProgressPoints.length - 1; i++) {
         totalPx += normalizedDistance(inProgressPoints[i], inProgressPoints[i + 1], imageSize);
       }
       const realIn = pixelsToRealInches(totalPx);
-      const label = realIn !== null ? formatFeetInches(realIn) : `${Math.round(totalPx)} px`;
+      if (realIn === null) {
+        setInProgressPoints([]);
+        onUncalibrated?.();
+        return;
+      }
+      const label = formatFeetInches(realIn);
       const segCount = inProgressPoints.length - 1;
       const result: MeasurementResult = {
         id: genId(),
@@ -651,7 +679,7 @@ export const MeasurementOverlay: React.FC<MeasurementOverlayProps> = ({
       setInProgressPoints([]);
       onMeasurementAdd?.(result);
     }
-  }, [activeTool, inProgressPoints, imageSize, formatArea, onMeasurementAdd, pixelsToRealInches]);
+  }, [activeTool, inProgressPoints, imageSize, hasScale, formatArea, onMeasurementAdd, onUncalibrated, pixelsToRealInches]);
 
   if (!viewportBounds) return null;
 
@@ -695,7 +723,23 @@ export const MeasurementOverlay: React.FC<MeasurementOverlayProps> = ({
     }
   }
 
+  const handleCalibrationSubmit = (realInches: number) => {
+    if (!pendingCalibration) return;
+    const { pxDist } = pendingCalibration;
+    if (realInches > 0 && pxDist > 0) {
+      onCalibrate?.(realInches / pxDist);
+    }
+    setPendingCalibration(null);
+    setCalibratePoints([]);
+  };
+
+  const handleCalibrationCancel = () => {
+    setPendingCalibration(null);
+    setCalibratePoints([]);
+  };
+
   return (
+    <>
     <svg
       style={{
         position: 'absolute',
@@ -913,6 +957,135 @@ export const MeasurementOverlay: React.FC<MeasurementOverlayProps> = ({
         />
       )}
     </svg>
+    {pendingCalibration && (
+      <CalibrationDialog
+        pxDist={pendingCalibration.pxDist}
+        onSubmit={handleCalibrationSubmit}
+        onCancel={handleCalibrationCancel}
+      />
+    )}
+    </>
+  );
+};
+
+// ── Calibration Dialog ──────────────────────────────────────────────────────
+// Replaces window.prompt with a styled, mobile-friendly modal that accepts
+// feet+inches mixed input ("10'-6\"") and metric ("2.5m"). Persists focus on
+// the input on mount and submits on Enter.
+const CalibrationDialog: React.FC<{
+  pxDist: number;
+  onSubmit: (realInches: number) => void;
+  onCancel: () => void;
+}> = ({ pxDist, onSubmit, onCancel }) => {
+  const [raw, setRaw] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    inputRef.current?.focus();
+  }, []);
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onCancel(); };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [onCancel]);
+  const handleSubmit = () => {
+    const inches = parseCalibrationInput(raw);
+    if (inches === null || inches <= 0) {
+      setError(`Try "10'", "10'-6"", "120", or "2.5m"`);
+      return;
+    }
+    onSubmit(inches);
+  };
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="calibration-dialog-title"
+      // The backdrop is intentionally not a button — clicking outside dismisses,
+      // but Esc (handled above) is the keyboard equivalent. Suppressed: a click
+      // handler on a backdrop is the standard modal-dismiss pattern.
+      // eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-noninteractive-element-interactions
+      onClick={(e) => { if (e.target === e.currentTarget) onCancel(); }}
+      style={{
+        position: 'fixed', inset: 0, zIndex: 1500,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        backgroundColor: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(6px)',
+      }}
+    >
+      <div
+        style={{
+          width: 'min(420px, calc(100vw - 32px))',
+          backgroundColor: '#1a1410',
+          borderRadius: 16,
+          border: '1px solid rgba(244,120,32,0.25)',
+          boxShadow: '0 20px 60px rgba(0,0,0,0.6)',
+          padding: 24,
+          color: '#FFD9B8',
+          fontFamily: 'system-ui, -apple-system, sans-serif',
+        }}
+      >
+        <h2 id="calibration-dialog-title" style={{ margin: 0, fontSize: 18, fontWeight: 700, color: '#fff' }}>
+          Set drawing scale
+        </h2>
+        <p style={{ marginTop: 8, marginBottom: 18, fontSize: 13, color: 'rgba(255,217,184,0.7)', lineHeight: 1.4 }}>
+          What's the real-world distance between the two points you just clicked?
+        </p>
+        <input
+          ref={inputRef}
+          value={raw}
+          onChange={(e) => { setRaw(e.target.value); setError(null); }}
+          onKeyDown={(e) => { if (e.key === 'Enter') handleSubmit(); }}
+          placeholder={`e.g. 10'-6"  or  120  or  2.5m`}
+          aria-label="Real-world distance"
+          aria-invalid={!!error}
+          style={{
+            width: '100%',
+            padding: '12px 14px',
+            fontSize: 16,
+            borderRadius: 10,
+            border: `1px solid ${error ? '#F47820' : 'rgba(255,255,255,0.12)'}`,
+            backgroundColor: 'rgba(0,0,0,0.4)',
+            color: '#fff',
+            outline: 'none',
+            boxSizing: 'border-box',
+          }}
+        />
+        {error && (
+          <div role="alert" style={{ marginTop: 8, fontSize: 12, color: '#F47820' }}>{error}</div>
+        )}
+        <div style={{ marginTop: 8, fontSize: 11, color: 'rgba(255,217,184,0.45)' }}>
+          Measured {Math.round(pxDist)} image pixels
+        </div>
+        <div style={{ marginTop: 20, display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+          <button
+            type="button"
+            onClick={onCancel}
+            style={{
+              padding: '10px 18px', fontSize: 14, fontWeight: 600,
+              borderRadius: 10, border: '1px solid rgba(255,255,255,0.12)',
+              backgroundColor: 'transparent', color: 'rgba(255,255,255,0.8)',
+              cursor: 'pointer',
+            }}
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={handleSubmit}
+            disabled={!raw.trim()}
+            style={{
+              padding: '10px 22px', fontSize: 14, fontWeight: 700,
+              borderRadius: 10, border: 'none',
+              backgroundColor: raw.trim() ? '#F47820' : 'rgba(244,120,32,0.3)',
+              color: '#fff',
+              cursor: raw.trim() ? 'pointer' : 'not-allowed',
+            }}
+          >
+            Set scale
+          </button>
+        </div>
+      </div>
+    </div>
   );
 };
 
