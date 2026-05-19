@@ -184,8 +184,12 @@ export const BudgetKPIs: React.FC<BudgetKPIProps> = ({
       trendInvert: false,
     },
     {
-      label: 'REMAINING',
-      value: remaining,
+      // When the project is over budget, "REMAINING −$500" reads as a broken
+      // number rather than a clear overrun signal. Flip the label to "OVER
+      // BUDGET" and display the absolute value so the card reads "OVER BUDGET /
+      // $500" — unambiguous for field supers and GCs scanning the budget page.
+      label: remaining >= 0 ? 'REMAINING' : 'OVER BUDGET',
+      value: Math.abs(remaining),
       formatter: fmtCurrency,
       icon: ShieldCheck,
       color: remaining >= 0 ? '#16A34A' : '#DC2626',
@@ -286,7 +290,7 @@ export const BudgetKPIs: React.FC<BudgetKPIProps> = ({
                   </span>
                 ) : i === 3 ? (
                   <span style={{ fontSize: 11, color: remaining >= 0 ? '#16A34A' : '#DC2626', fontWeight: 500 }}>
-                    {totalBudget <= 0 ? '—' : remaining >= 0 ? 'Under budget' : 'Over budget'}
+                    {totalBudget <= 0 ? '—' : remaining >= 0 ? 'Under budget' : `${fmtPct(Math.abs(remaining) / totalBudget * 100)} over`}
                   </span>
                 ) : (
                   <span />
