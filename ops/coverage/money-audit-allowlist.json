@@ -14,7 +14,7 @@
     {
       "file": "src/api/endpoints/ai.ts",
       "line": 275,
-      "reason": "BASELINE — pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
+      "reason": "BASELINE \u2014 pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
       "owner": "unowned",
       "added": "2026-05-15",
       "expires": "2026-08-13"
@@ -22,7 +22,7 @@
     {
       "file": "src/api/endpoints/ai.ts",
       "line": 275,
-      "reason": "BASELINE — pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
+      "reason": "BASELINE \u2014 pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
       "owner": "unowned",
       "added": "2026-05-15",
       "expires": "2026-08-13"
@@ -30,7 +30,7 @@
     {
       "file": "src/api/endpoints/ai.ts",
       "line": 276,
-      "reason": "BASELINE — pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
+      "reason": "BASELINE \u2014 pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
       "owner": "unowned",
       "added": "2026-05-15",
       "expires": "2026-08-13"
@@ -38,7 +38,7 @@
     {
       "file": "src/api/endpoints/budget.ts",
       "line": 354,
-      "reason": "BASELINE — pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
+      "reason": "BASELINE \u2014 pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
       "owner": "unowned",
       "added": "2026-05-15",
       "expires": "2026-08-13"
@@ -46,7 +46,7 @@
     {
       "file": "src/api/endpoints/budget.ts",
       "line": 355,
-      "reason": "BASELINE — pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
+      "reason": "BASELINE \u2014 pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
       "owner": "unowned",
       "added": "2026-05-15",
       "expires": "2026-08-13"
@@ -54,7 +54,7 @@
     {
       "file": "src/api/endpoints/budget.ts",
       "line": 358,
-      "reason": "BASELINE — pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
+      "reason": "BASELINE \u2014 pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
       "owner": "unowned",
       "added": "2026-05-15",
       "expires": "2026-08-13"
@@ -62,7 +62,7 @@
     {
       "file": "src/api/endpoints/budget.ts",
       "line": 361,
-      "reason": "BASELINE — pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
+      "reason": "BASELINE \u2014 pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
       "owner": "unowned",
       "added": "2026-05-15",
       "expires": "2026-08-13"
@@ -70,7 +70,7 @@
     {
       "file": "src/api/endpoints/budget.ts",
       "line": 374,
-      "reason": "BASELINE — pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
+      "reason": "BASELINE \u2014 pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
       "owner": "unowned",
       "added": "2026-05-15",
       "expires": "2026-08-13"
@@ -78,7 +78,7 @@
     {
       "file": "src/api/endpoints/budget.ts",
       "line": 393,
-      "reason": "BASELINE — pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
+      "reason": "BASELINE \u2014 pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
       "owner": "unowned",
       "added": "2026-05-15",
       "expires": "2026-08-13"
@@ -86,7 +86,7 @@
     {
       "file": "src/api/endpoints/budget.ts",
       "line": 771,
-      "reason": "BASELINE — pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
+      "reason": "BASELINE \u2014 pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
       "owner": "unowned",
       "added": "2026-05-15",
       "expires": "2026-08-13"
@@ -94,7 +94,7 @@
     {
       "file": "src/components/analytics/AICostDashboard.tsx",
       "line": 110,
-      "reason": "BASELINE — pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
+      "reason": "BASELINE \u2014 pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
       "owner": "unowned",
       "added": "2026-05-15",
       "expires": "2026-08-13"
@@ -102,7 +102,7 @@
     {
       "file": "src/components/analytics/AICostDashboard.tsx",
       "line": 161,
-      "reason": "BASELINE — pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
+      "reason": "BASELINE \u2014 pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
       "owner": "unowned",
       "added": "2026-05-15",
       "expires": "2026-08-13"
@@ -110,7 +110,7 @@
     {
       "file": "src/components/analytics/AICostDashboard.tsx",
       "line": 379,
-      "reason": "BASELINE — pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
+      "reason": "BASELINE \u2014 pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
       "owner": "unowned",
       "added": "2026-05-15",
       "expires": "2026-08-13"
@@ -118,7 +118,7 @@
     {
       "file": "src/components/budget/BudgetUpload.tsx",
       "line": 113,
-      "reason": "BASELINE — pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
+      "reason": "BASELINE \u2014 pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
       "owner": "unowned",
       "added": "2026-05-15",
       "expires": "2026-08-13"
@@ -126,7 +126,7 @@
     {
       "file": "src/components/budget/BudgetUpload.tsx",
       "line": 448,
-      "reason": "BASELINE — pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
+      "reason": "BASELINE \u2014 pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
       "owner": "unowned",
       "added": "2026-05-15",
       "expires": "2026-08-13"
@@ -134,7 +134,7 @@
     {
       "file": "src/components/budget/EarnedValueDashboard.tsx",
       "line": 97,
-      "reason": "BASELINE — pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
+      "reason": "BASELINE \u2014 pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
       "owner": "unowned",
       "added": "2026-05-15",
       "expires": "2026-08-13"
@@ -142,7 +142,7 @@
     {
       "file": "src/components/dashboard/MorningBriefing.tsx",
       "line": 125,
-      "reason": "BASELINE — pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
+      "reason": "BASELINE \u2014 pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
       "owner": "unowned",
       "added": "2026-05-15",
       "expires": "2026-08-13"
@@ -150,7 +150,7 @@
     {
       "file": "src/components/dashboard/MorningBriefing.tsx",
       "line": 126,
-      "reason": "BASELINE — pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
+      "reason": "BASELINE \u2014 pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
       "owner": "unowned",
       "added": "2026-05-15",
       "expires": "2026-08-13"
@@ -158,7 +158,7 @@
     {
       "file": "src/components/export/CostReport.tsx",
       "line": 49,
-      "reason": "BASELINE — pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
+      "reason": "BASELINE \u2014 pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
       "owner": "unowned",
       "added": "2026-05-15",
       "expires": "2026-08-13"
@@ -166,7 +166,7 @@
     {
       "file": "src/components/export/CostReport.tsx",
       "line": 87,
-      "reason": "BASELINE — pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
+      "reason": "BASELINE \u2014 pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
       "owner": "unowned",
       "added": "2026-05-15",
       "expires": "2026-08-13"
@@ -174,7 +174,7 @@
     {
       "file": "src/components/export/CostReport.tsx",
       "line": 87,
-      "reason": "BASELINE — pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
+      "reason": "BASELINE \u2014 pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
       "owner": "unowned",
       "added": "2026-05-15",
       "expires": "2026-08-13"
@@ -182,7 +182,7 @@
     {
       "file": "src/components/export/G703ContinuationPDF.tsx",
       "line": 60,
-      "reason": "BASELINE — pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
+      "reason": "BASELINE \u2014 pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
       "owner": "unowned",
       "added": "2026-05-15",
       "expires": "2026-08-13"
@@ -190,7 +190,7 @@
     {
       "file": "src/components/export/G703ContinuationPDF.tsx",
       "line": 62,
-      "reason": "BASELINE — pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
+      "reason": "BASELINE \u2014 pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
       "owner": "unowned",
       "added": "2026-05-15",
       "expires": "2026-08-13"
@@ -198,7 +198,7 @@
     {
       "file": "src/components/export/G703ContinuationPDF.tsx",
       "line": 63,
-      "reason": "BASELINE — pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
+      "reason": "BASELINE \u2014 pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
       "owner": "unowned",
       "added": "2026-05-15",
       "expires": "2026-08-13"
@@ -206,7 +206,7 @@
     {
       "file": "src/components/export/G703ContinuationPDF.tsx",
       "line": 65,
-      "reason": "BASELINE — pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
+      "reason": "BASELINE \u2014 pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
       "owner": "unowned",
       "added": "2026-05-15",
       "expires": "2026-08-13"
@@ -214,7 +214,7 @@
     {
       "file": "src/components/export/G703ContinuationPDF.tsx",
       "line": 66,
-      "reason": "BASELINE — pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
+      "reason": "BASELINE \u2014 pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
       "owner": "unowned",
       "added": "2026-05-15",
       "expires": "2026-08-13"
@@ -222,7 +222,7 @@
     {
       "file": "src/components/export/G703ContinuationPDF.tsx",
       "line": 69,
-      "reason": "BASELINE — pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
+      "reason": "BASELINE \u2014 pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
       "owner": "unowned",
       "added": "2026-05-15",
       "expires": "2026-08-13"
@@ -230,7 +230,7 @@
     {
       "file": "src/components/financial/PaySubFlow.tsx",
       "line": 79,
-      "reason": "BASELINE — pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
+      "reason": "BASELINE \u2014 pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
       "owner": "unowned",
       "added": "2026-05-15",
       "expires": "2026-08-13"
@@ -238,7 +238,7 @@
     {
       "file": "src/components/financial/PaySubFlow.tsx",
       "line": 81,
-      "reason": "BASELINE — pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
+      "reason": "BASELINE \u2014 pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
       "owner": "unowned",
       "added": "2026-05-15",
       "expires": "2026-08-13"
@@ -246,7 +246,7 @@
     {
       "file": "src/components/reports/OwnerReport.tsx",
       "line": 40,
-      "reason": "BASELINE — pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
+      "reason": "BASELINE \u2014 pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
       "owner": "unowned",
       "added": "2026-05-15",
       "expires": "2026-08-13"
@@ -254,7 +254,7 @@
     {
       "file": "src/components/reports/OwnerReport.tsx",
       "line": 41,
-      "reason": "BASELINE — pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
+      "reason": "BASELINE \u2014 pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
       "owner": "unowned",
       "added": "2026-05-15",
       "expires": "2026-08-13"
@@ -262,7 +262,7 @@
     {
       "file": "src/hooks/mutations/change-orders.ts",
       "line": 148,
-      "reason": "BASELINE — pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
+      "reason": "BASELINE \u2014 pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
       "owner": "unowned",
       "added": "2026-05-15",
       "expires": "2026-08-13"
@@ -270,7 +270,7 @@
     {
       "file": "src/hooks/mutations/change-orders.ts",
       "line": 167,
-      "reason": "BASELINE — pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
+      "reason": "BASELINE \u2014 pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
       "owner": "unowned",
       "added": "2026-05-15",
       "expires": "2026-08-13"
@@ -278,7 +278,7 @@
     {
       "file": "src/hooks/mutations/change-orders.ts",
       "line": 191,
-      "reason": "BASELINE — pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
+      "reason": "BASELINE \u2014 pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
       "owner": "unowned",
       "added": "2026-05-15",
       "expires": "2026-08-13"
@@ -286,7 +286,7 @@
     {
       "file": "src/hooks/mutations/draw-reports.ts",
       "line": 375,
-      "reason": "BASELINE — pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
+      "reason": "BASELINE \u2014 pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
       "owner": "unowned",
       "added": "2026-05-15",
       "expires": "2026-08-13"
@@ -294,7 +294,7 @@
     {
       "file": "src/hooks/mutations/draw-reports.ts",
       "line": 375,
-      "reason": "BASELINE — pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
+      "reason": "BASELINE \u2014 pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
       "owner": "unowned",
       "added": "2026-05-15",
       "expires": "2026-08-13"
@@ -302,7 +302,7 @@
     {
       "file": "src/hooks/mutations/draw-reports.ts",
       "line": 450,
-      "reason": "BASELINE — pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
+      "reason": "BASELINE \u2014 pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
       "owner": "unowned",
       "added": "2026-05-15",
       "expires": "2026-08-13"
@@ -310,7 +310,7 @@
     {
       "file": "src/hooks/mutations/draw-reports.ts",
       "line": 450,
-      "reason": "BASELINE — pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
+      "reason": "BASELINE \u2014 pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
       "owner": "unowned",
       "added": "2026-05-15",
       "expires": "2026-08-13"
@@ -318,7 +318,7 @@
     {
       "file": "src/hooks/useAICostTracking.ts",
       "line": 107,
-      "reason": "BASELINE — pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
+      "reason": "BASELINE \u2014 pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
       "owner": "unowned",
       "added": "2026-05-15",
       "expires": "2026-08-13"
@@ -326,7 +326,7 @@
     {
       "file": "src/hooks/useAICostTracking.ts",
       "line": 111,
-      "reason": "BASELINE — pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
+      "reason": "BASELINE \u2014 pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
       "owner": "unowned",
       "added": "2026-05-15",
       "expires": "2026-08-13"
@@ -334,7 +334,7 @@
     {
       "file": "src/hooks/useAICostTracking.ts",
       "line": 121,
-      "reason": "BASELINE — pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
+      "reason": "BASELINE \u2014 pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
       "owner": "unowned",
       "added": "2026-05-15",
       "expires": "2026-08-13"
@@ -342,7 +342,7 @@
     {
       "file": "src/lib/aiObservability.ts",
       "line": 288,
-      "reason": "BASELINE — pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
+      "reason": "BASELINE \u2014 pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
       "owner": "unowned",
       "added": "2026-05-15",
       "expires": "2026-08-13"
@@ -350,7 +350,7 @@
     {
       "file": "src/lib/aiObservability.ts",
       "line": 289,
-      "reason": "BASELINE — pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
+      "reason": "BASELINE \u2014 pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
       "owner": "unowned",
       "added": "2026-05-15",
       "expires": "2026-08-13"
@@ -358,7 +358,7 @@
     {
       "file": "src/lib/aiService.ts",
       "line": 237,
-      "reason": "BASELINE — pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
+      "reason": "BASELINE \u2014 pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
       "owner": "unowned",
       "added": "2026-05-15",
       "expires": "2026-08-13"
@@ -366,7 +366,7 @@
     {
       "file": "src/lib/budgetComputations.ts",
       "line": 187,
-      "reason": "BASELINE — pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
+      "reason": "BASELINE \u2014 pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
       "owner": "unowned",
       "added": "2026-05-15",
       "expires": "2026-08-13"
@@ -374,7 +374,7 @@
     {
       "file": "src/lib/budgetComputations.ts",
       "line": 267,
-      "reason": "BASELINE — pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
+      "reason": "BASELINE \u2014 pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
       "owner": "unowned",
       "added": "2026-05-15",
       "expires": "2026-08-13"
@@ -382,7 +382,7 @@
     {
       "file": "src/lib/coAutoDraft/costEstimator.ts",
       "line": 89,
-      "reason": "BASELINE — pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
+      "reason": "BASELINE \u2014 pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
       "owner": "unowned",
       "added": "2026-05-15",
       "expires": "2026-08-13"
@@ -390,7 +390,7 @@
     {
       "file": "src/lib/coAutoDraft/costEstimator.ts",
       "line": 106,
-      "reason": "BASELINE — pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
+      "reason": "BASELINE \u2014 pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
       "owner": "unowned",
       "added": "2026-05-15",
       "expires": "2026-08-13"
@@ -398,7 +398,7 @@
     {
       "file": "src/lib/compliance/prevailingWage/index.ts",
       "line": 127,
-      "reason": "BASELINE — pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
+      "reason": "BASELINE \u2014 pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
       "owner": "unowned",
       "added": "2026-05-15",
       "expires": "2026-08-13"
@@ -406,7 +406,7 @@
     {
       "file": "src/lib/compliance/wh347/index.ts",
       "line": 119,
-      "reason": "BASELINE — pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
+      "reason": "BASELINE \u2014 pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
       "owner": "unowned",
       "added": "2026-05-15",
       "expires": "2026-08-13"
@@ -414,7 +414,7 @@
     {
       "file": "src/lib/financialEngine.ts",
       "line": 58,
-      "reason": "BASELINE — pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
+      "reason": "BASELINE \u2014 pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
       "owner": "unowned",
       "added": "2026-05-15",
       "expires": "2026-08-13"
@@ -422,7 +422,7 @@
     {
       "file": "src/lib/financialEngine.ts",
       "line": 63,
-      "reason": "BASELINE — pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
+      "reason": "BASELINE \u2014 pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
       "owner": "unowned",
       "added": "2026-05-15",
       "expires": "2026-08-13"
@@ -430,7 +430,7 @@
     {
       "file": "src/lib/financialEngine.ts",
       "line": 114,
-      "reason": "BASELINE — pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
+      "reason": "BASELINE \u2014 pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
       "owner": "unowned",
       "added": "2026-05-15",
       "expires": "2026-08-13"
@@ -438,7 +438,7 @@
     {
       "file": "src/lib/financialEngine.ts",
       "line": 312,
-      "reason": "BASELINE — pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
+      "reason": "BASELINE \u2014 pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
       "owner": "unowned",
       "added": "2026-05-15",
       "expires": "2026-08-13"
@@ -446,7 +446,7 @@
     {
       "file": "src/lib/hudCompliance.ts",
       "line": 190,
-      "reason": "BASELINE — pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
+      "reason": "BASELINE \u2014 pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
       "owner": "unowned",
       "added": "2026-05-15",
       "expires": "2026-08-13"
@@ -454,7 +454,7 @@
     {
       "file": "src/lib/hudCompliance.ts",
       "line": 223,
-      "reason": "BASELINE — pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
+      "reason": "BASELINE \u2014 pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
       "owner": "unowned",
       "added": "2026-05-15",
       "expires": "2026-08-13"
@@ -462,7 +462,7 @@
     {
       "file": "src/lib/hudCompliance.ts",
       "line": 289,
-      "reason": "BASELINE — pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
+      "reason": "BASELINE \u2014 pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
       "owner": "unowned",
       "added": "2026-05-15",
       "expires": "2026-08-13"
@@ -470,7 +470,7 @@
     {
       "file": "src/lib/hudCompliance.ts",
       "line": 324,
-      "reason": "BASELINE — pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
+      "reason": "BASELINE \u2014 pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
       "owner": "unowned",
       "added": "2026-05-15",
       "expires": "2026-08-13"
@@ -478,7 +478,7 @@
     {
       "file": "src/lib/payApp/g702Audited.ts",
       "line": 197,
-      "reason": "BASELINE — pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
+      "reason": "BASELINE \u2014 pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
       "owner": "unowned",
       "added": "2026-05-15",
       "expires": "2026-08-13"
@@ -486,7 +486,7 @@
     {
       "file": "src/lib/payApp/g702Audited.ts",
       "line": 233,
-      "reason": "BASELINE — pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
+      "reason": "BASELINE \u2014 pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
       "owner": "unowned",
       "added": "2026-05-15",
       "expires": "2026-08-13"
@@ -494,7 +494,7 @@
     {
       "file": "src/lib/payApp/g702Audited.ts",
       "line": 249,
-      "reason": "BASELINE — pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
+      "reason": "BASELINE \u2014 pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
       "owner": "unowned",
       "added": "2026-05-15",
       "expires": "2026-08-13"
@@ -502,7 +502,7 @@
     {
       "file": "src/lib/payApp/g702Audited.ts",
       "line": 254,
-      "reason": "BASELINE — pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
+      "reason": "BASELINE \u2014 pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
       "owner": "unowned",
       "added": "2026-05-15",
       "expires": "2026-08-13"
@@ -510,7 +510,7 @@
     {
       "file": "src/lib/payApp/g702Audited.ts",
       "line": 259,
-      "reason": "BASELINE — pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
+      "reason": "BASELINE \u2014 pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
       "owner": "unowned",
       "added": "2026-05-15",
       "expires": "2026-08-13"
@@ -518,7 +518,7 @@
     {
       "file": "src/lib/payApp/g702Audited.ts",
       "line": 261,
-      "reason": "BASELINE — pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
+      "reason": "BASELINE \u2014 pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
       "owner": "unowned",
       "added": "2026-05-15",
       "expires": "2026-08-13"
@@ -526,7 +526,7 @@
     {
       "file": "src/lib/payApp/g703Audited.ts",
       "line": 51,
-      "reason": "BASELINE — pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
+      "reason": "BASELINE \u2014 pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
       "owner": "unowned",
       "added": "2026-05-15",
       "expires": "2026-08-13"
@@ -534,7 +534,7 @@
     {
       "file": "src/lib/reconciliation/scheduleVsPayApp.ts",
       "line": 150,
-      "reason": "BASELINE — pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
+      "reason": "BASELINE \u2014 pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
       "owner": "unowned",
       "added": "2026-05-15",
       "expires": "2026-08-13"
@@ -542,7 +542,7 @@
     {
       "file": "src/lib/rfi/listFilters.ts",
       "line": 202,
-      "reason": "BASELINE — pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
+      "reason": "BASELINE \u2014 pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
       "owner": "unowned",
       "added": "2026-05-15",
       "expires": "2026-08-13"
@@ -550,7 +550,7 @@
     {
       "file": "src/lib/rfi/listFilters.ts",
       "line": 203,
-      "reason": "BASELINE — pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
+      "reason": "BASELINE \u2014 pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
       "owner": "unowned",
       "added": "2026-05-15",
       "expires": "2026-08-13"
@@ -558,7 +558,7 @@
     {
       "file": "src/machines/paymentMachine.ts",
       "line": 208,
-      "reason": "BASELINE — pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
+      "reason": "BASELINE \u2014 pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
       "owner": "unowned",
       "added": "2026-05-15",
       "expires": "2026-08-13"
@@ -566,7 +566,7 @@
     {
       "file": "src/machines/paymentMachine.ts",
       "line": 250,
-      "reason": "BASELINE — pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
+      "reason": "BASELINE \u2014 pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
       "owner": "unowned",
       "added": "2026-05-15",
       "expires": "2026-08-13"
@@ -574,7 +574,7 @@
     {
       "file": "src/machines/paymentMachine.ts",
       "line": 252,
-      "reason": "BASELINE — pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
+      "reason": "BASELINE \u2014 pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
       "owner": "unowned",
       "added": "2026-05-15",
       "expires": "2026-08-13"
@@ -582,7 +582,7 @@
     {
       "file": "src/machines/paymentMachine.ts",
       "line": 253,
-      "reason": "BASELINE — pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
+      "reason": "BASELINE \u2014 pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
       "owner": "unowned",
       "added": "2026-05-15",
       "expires": "2026-08-13"
@@ -590,7 +590,7 @@
     {
       "file": "src/pages/Budget.tsx",
       "line": 130,
-      "reason": "BASELINE — pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
+      "reason": "BASELINE \u2014 pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
       "owner": "unowned",
       "added": "2026-05-15",
       "expires": "2026-08-13"
@@ -598,7 +598,7 @@
     {
       "file": "src/pages/Contracts.tsx",
       "line": 227,
-      "reason": "BASELINE — pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
+      "reason": "BASELINE \u2014 pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
       "owner": "unowned",
       "added": "2026-05-15",
       "expires": "2026-08-13"
@@ -606,7 +606,7 @@
     {
       "file": "src/pages/Contracts.tsx",
       "line": 227,
-      "reason": "BASELINE — pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
+      "reason": "BASELINE \u2014 pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
       "owner": "unowned",
       "added": "2026-05-15",
       "expires": "2026-08-13"
@@ -614,7 +614,7 @@
     {
       "file": "src/pages/Contracts.tsx",
       "line": 229,
-      "reason": "BASELINE — pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
+      "reason": "BASELINE \u2014 pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
       "owner": "unowned",
       "added": "2026-05-15",
       "expires": "2026-08-13"
@@ -622,7 +622,7 @@
     {
       "file": "src/pages/Contracts.tsx",
       "line": 230,
-      "reason": "BASELINE — pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
+      "reason": "BASELINE \u2014 pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
       "owner": "unowned",
       "added": "2026-05-15",
       "expires": "2026-08-13"
@@ -630,7 +630,7 @@
     {
       "file": "src/pages/Contracts.tsx",
       "line": 279,
-      "reason": "BASELINE — pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
+      "reason": "BASELINE \u2014 pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
       "owner": "unowned",
       "added": "2026-05-15",
       "expires": "2026-08-13"
@@ -638,7 +638,7 @@
     {
       "file": "src/pages/Contracts.tsx",
       "line": 279,
-      "reason": "BASELINE — pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
+      "reason": "BASELINE \u2014 pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
       "owner": "unowned",
       "added": "2026-05-15",
       "expires": "2026-08-13"
@@ -646,7 +646,7 @@
     {
       "file": "src/pages/Contracts.tsx",
       "line": 281,
-      "reason": "BASELINE — pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
+      "reason": "BASELINE \u2014 pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
       "owner": "unowned",
       "added": "2026-05-15",
       "expires": "2026-08-13"
@@ -654,7 +654,7 @@
     {
       "file": "src/pages/Contracts.tsx",
       "line": 282,
-      "reason": "BASELINE — pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
+      "reason": "BASELINE \u2014 pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
       "owner": "unowned",
       "added": "2026-05-15",
       "expires": "2026-08-13"
@@ -662,7 +662,7 @@
     {
       "file": "src/pages/Contracts.tsx",
       "line": 297,
-      "reason": "BASELINE — pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
+      "reason": "BASELINE \u2014 pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
       "owner": "unowned",
       "added": "2026-05-15",
       "expires": "2026-08-13"
@@ -670,7 +670,7 @@
     {
       "file": "src/pages/Contracts.tsx",
       "line": 304,
-      "reason": "BASELINE — pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
+      "reason": "BASELINE \u2014 pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
       "owner": "unowned",
       "added": "2026-05-15",
       "expires": "2026-08-13"
@@ -678,7 +678,7 @@
     {
       "file": "src/pages/Contracts.tsx",
       "line": 310,
-      "reason": "BASELINE — pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
+      "reason": "BASELINE \u2014 pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
       "owner": "unowned",
       "added": "2026-05-15",
       "expires": "2026-08-13"
@@ -686,7 +686,7 @@
     {
       "file": "src/pages/Contracts.tsx",
       "line": 311,
-      "reason": "BASELINE — pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
+      "reason": "BASELINE \u2014 pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
       "owner": "unowned",
       "added": "2026-05-15",
       "expires": "2026-08-13"
@@ -694,7 +694,7 @@
     {
       "file": "src/pages/Contracts.tsx",
       "line": 325,
-      "reason": "BASELINE — pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
+      "reason": "BASELINE \u2014 pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
       "owner": "unowned",
       "added": "2026-05-15",
       "expires": "2026-08-13"
@@ -702,7 +702,7 @@
     {
       "file": "src/pages/Contracts.tsx",
       "line": 1187,
-      "reason": "BASELINE — pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
+      "reason": "BASELINE \u2014 pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
       "owner": "unowned",
       "added": "2026-05-15",
       "expires": "2026-08-13"
@@ -710,7 +710,7 @@
     {
       "file": "src/pages/Contracts.tsx",
       "line": 1188,
-      "reason": "BASELINE — pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
+      "reason": "BASELINE \u2014 pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
       "owner": "unowned",
       "added": "2026-05-15",
       "expires": "2026-08-13"
@@ -718,7 +718,7 @@
     {
       "file": "src/pages/Contracts.tsx",
       "line": 1189,
-      "reason": "BASELINE — pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
+      "reason": "BASELINE \u2014 pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
       "owner": "unowned",
       "added": "2026-05-15",
       "expires": "2026-08-13"
@@ -726,7 +726,7 @@
     {
       "file": "src/pages/Contracts.tsx",
       "line": 1190,
-      "reason": "BASELINE — pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
+      "reason": "BASELINE \u2014 pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
       "owner": "unowned",
       "added": "2026-05-15",
       "expires": "2026-08-13"
@@ -734,7 +734,7 @@
     {
       "file": "src/pages/Contracts.tsx",
       "line": 1191,
-      "reason": "BASELINE — pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
+      "reason": "BASELINE \u2014 pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
       "owner": "unowned",
       "added": "2026-05-15",
       "expires": "2026-08-13"
@@ -742,7 +742,7 @@
     {
       "file": "src/pages/Estimating.tsx",
       "line": 843,
-      "reason": "BASELINE — pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
+      "reason": "BASELINE \u2014 pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
       "owner": "unowned",
       "added": "2026-05-15",
       "expires": "2026-08-13"
@@ -750,7 +750,7 @@
     {
       "file": "src/pages/Preconstruction.tsx",
       "line": 278,
-      "reason": "BASELINE — pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
+      "reason": "BASELINE \u2014 pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
       "owner": "unowned",
       "added": "2026-05-15",
       "expires": "2026-08-13"
@@ -758,7 +758,7 @@
     {
       "file": "src/pages/Preconstruction.tsx",
       "line": 284,
-      "reason": "BASELINE — pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
+      "reason": "BASELINE \u2014 pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
       "owner": "unowned",
       "added": "2026-05-15",
       "expires": "2026-08-13"
@@ -766,7 +766,7 @@
     {
       "file": "src/pages/Preconstruction.tsx",
       "line": 1183,
-      "reason": "BASELINE — pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
+      "reason": "BASELINE \u2014 pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
       "owner": "unowned",
       "added": "2026-05-15",
       "expires": "2026-08-13"
@@ -774,7 +774,7 @@
     {
       "file": "src/pages/Preconstruction.tsx",
       "line": 1185,
-      "reason": "BASELINE — pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
+      "reason": "BASELINE \u2014 pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
       "owner": "unowned",
       "added": "2026-05-15",
       "expires": "2026-08-13"
@@ -782,7 +782,7 @@
     {
       "file": "src/pages/Preconstruction.tsx",
       "line": 1286,
-      "reason": "BASELINE — pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
+      "reason": "BASELINE \u2014 pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
       "owner": "unowned",
       "added": "2026-05-15",
       "expires": "2026-08-13"
@@ -790,7 +790,7 @@
     {
       "file": "src/pages/Preconstruction.tsx",
       "line": 1309,
-      "reason": "BASELINE — pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
+      "reason": "BASELINE \u2014 pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
       "owner": "unowned",
       "added": "2026-05-15",
       "expires": "2026-08-13"
@@ -798,7 +798,7 @@
     {
       "file": "src/pages/Procurement.tsx",
       "line": 452,
-      "reason": "BASELINE — pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
+      "reason": "BASELINE \u2014 pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
       "owner": "unowned",
       "added": "2026-05-15",
       "expires": "2026-08-13"
@@ -806,7 +806,7 @@
     {
       "file": "src/pages/Procurement.tsx",
       "line": 1074,
-      "reason": "BASELINE — pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
+      "reason": "BASELINE \u2014 pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
       "owner": "unowned",
       "added": "2026-05-15",
       "expires": "2026-08-13"
@@ -814,7 +814,7 @@
     {
       "file": "src/pages/Procurement.tsx",
       "line": 1075,
-      "reason": "BASELINE — pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
+      "reason": "BASELINE \u2014 pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
       "owner": "unowned",
       "added": "2026-05-15",
       "expires": "2026-08-13"
@@ -822,7 +822,7 @@
     {
       "file": "src/pages/Procurement.tsx",
       "line": 1112,
-      "reason": "BASELINE — pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
+      "reason": "BASELINE \u2014 pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
       "owner": "unowned",
       "added": "2026-05-15",
       "expires": "2026-08-13"
@@ -830,7 +830,7 @@
     {
       "file": "src/pages/Procurement.tsx",
       "line": 1113,
-      "reason": "BASELINE — pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
+      "reason": "BASELINE \u2014 pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
       "owner": "unowned",
       "added": "2026-05-15",
       "expires": "2026-08-13"
@@ -838,7 +838,7 @@
     {
       "file": "src/pages/Resources.tsx",
       "line": 305,
-      "reason": "BASELINE — pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
+      "reason": "BASELINE \u2014 pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
       "owner": "unowned",
       "added": "2026-05-15",
       "expires": "2026-08-13"
@@ -846,7 +846,7 @@
     {
       "file": "src/pages/TimeTracking.tsx",
       "line": 823,
-      "reason": "BASELINE — pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
+      "reason": "BASELINE \u2014 pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
       "owner": "unowned",
       "added": "2026-05-15",
       "expires": "2026-08-13"
@@ -854,7 +854,7 @@
     {
       "file": "src/pages/TimeTracking.tsx",
       "line": 826,
-      "reason": "BASELINE — pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
+      "reason": "BASELINE \u2014 pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
       "owner": "unowned",
       "added": "2026-05-15",
       "expires": "2026-08-13"
@@ -862,7 +862,7 @@
     {
       "file": "src/pages/TimeTracking.tsx",
       "line": 827,
-      "reason": "BASELINE — pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
+      "reason": "BASELINE \u2014 pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
       "owner": "unowned",
       "added": "2026-05-15",
       "expires": "2026-08-13"
@@ -870,7 +870,7 @@
     {
       "file": "src/pages/TimeTracking.tsx",
       "line": 872,
-      "reason": "BASELINE — pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
+      "reason": "BASELINE \u2014 pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
       "owner": "unowned",
       "added": "2026-05-15",
       "expires": "2026-08-13"
@@ -878,7 +878,7 @@
     {
       "file": "src/pages/dashboard/types.ts",
       "line": 8,
-      "reason": "BASELINE — pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
+      "reason": "BASELINE \u2014 pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
       "owner": "unowned",
       "added": "2026-05-15",
       "expires": "2026-08-13"
@@ -886,7 +886,7 @@
     {
       "file": "src/pages/dashboard/types.ts",
       "line": 9,
-      "reason": "BASELINE — pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
+      "reason": "BASELINE \u2014 pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
       "owner": "unowned",
       "added": "2026-05-15",
       "expires": "2026-08-13"
@@ -894,7 +894,7 @@
     {
       "file": "src/pages/dashboard/useDecisionEngine.ts",
       "line": 241,
-      "reason": "BASELINE — pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
+      "reason": "BASELINE \u2014 pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
       "owner": "unowned",
       "added": "2026-05-15",
       "expires": "2026-08-13"
@@ -902,7 +902,7 @@
     {
       "file": "src/pages/payment-applications/LienWaiverPanel.tsx",
       "line": 423,
-      "reason": "BASELINE — pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
+      "reason": "BASELINE \u2014 pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
       "owner": "unowned",
       "added": "2026-05-15",
       "expires": "2026-08-13"
@@ -910,7 +910,7 @@
     {
       "file": "src/pages/payment-applications/LienWaiverPanel.tsx",
       "line": 441,
-      "reason": "BASELINE — pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
+      "reason": "BASELINE \u2014 pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
       "owner": "unowned",
       "added": "2026-05-15",
       "expires": "2026-08-13"
@@ -918,7 +918,7 @@
     {
       "file": "src/pages/payment-applications/SOVEditor.tsx",
       "line": 94,
-      "reason": "BASELINE — pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
+      "reason": "BASELINE \u2014 pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
       "owner": "unowned",
       "added": "2026-05-15",
       "expires": "2026-08-13"
@@ -926,7 +926,7 @@
     {
       "file": "src/pages/payment-applications/SOVEditor.tsx",
       "line": 95,
-      "reason": "BASELINE — pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
+      "reason": "BASELINE \u2014 pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
       "owner": "unowned",
       "added": "2026-05-15",
       "expires": "2026-08-13"
@@ -934,7 +934,7 @@
     {
       "file": "src/pages/payment-applications/SOVEditor.tsx",
       "line": 139,
-      "reason": "BASELINE — pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
+      "reason": "BASELINE \u2014 pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
       "owner": "unowned",
       "added": "2026-05-15",
       "expires": "2026-08-13"
@@ -942,7 +942,7 @@
     {
       "file": "src/pages/payment-applications/SOVEditor.tsx",
       "line": 140,
-      "reason": "BASELINE — pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
+      "reason": "BASELINE \u2014 pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
       "owner": "unowned",
       "added": "2026-05-15",
       "expires": "2026-08-13"
@@ -950,7 +950,7 @@
     {
       "file": "src/pages/payment-applications/SOVEditor.tsx",
       "line": 143,
-      "reason": "BASELINE — pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
+      "reason": "BASELINE \u2014 pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
       "owner": "unowned",
       "added": "2026-05-15",
       "expires": "2026-08-13"
@@ -958,7 +958,7 @@
     {
       "file": "src/pages/payment-applications/auditChecks.ts",
       "line": 240,
-      "reason": "BASELINE — pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
+      "reason": "BASELINE \u2014 pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
       "owner": "unowned",
       "added": "2026-05-15",
       "expires": "2026-08-13"
@@ -966,7 +966,7 @@
     {
       "file": "src/pages/payment-applications/auditChecks.ts",
       "line": 240,
-      "reason": "BASELINE — pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
+      "reason": "BASELINE \u2014 pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
       "owner": "unowned",
       "added": "2026-05-15",
       "expires": "2026-08-13"
@@ -974,7 +974,7 @@
     {
       "file": "src/pages/payment-applications/auditChecks.ts",
       "line": 266,
-      "reason": "BASELINE — pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
+      "reason": "BASELINE \u2014 pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
       "owner": "unowned",
       "added": "2026-05-15",
       "expires": "2026-08-13"
@@ -982,7 +982,7 @@
     {
       "file": "src/pages/payment-applications/auditChecks.ts",
       "line": 266,
-      "reason": "BASELINE — pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
+      "reason": "BASELINE \u2014 pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
       "owner": "unowned",
       "added": "2026-05-15",
       "expires": "2026-08-13"
@@ -990,7 +990,7 @@
     {
       "file": "src/pages/payment-applications/auditChecks.ts",
       "line": 267,
-      "reason": "BASELINE — pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
+      "reason": "BASELINE \u2014 pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
       "owner": "unowned",
       "added": "2026-05-15",
       "expires": "2026-08-13"
@@ -998,7 +998,7 @@
     {
       "file": "src/pages/payment-applications/auditChecks.ts",
       "line": 293,
-      "reason": "BASELINE — pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
+      "reason": "BASELINE \u2014 pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
       "owner": "unowned",
       "added": "2026-05-15",
       "expires": "2026-08-13"
@@ -1006,7 +1006,7 @@
     {
       "file": "src/pages/payment-applications/index.tsx",
       "line": 276,
-      "reason": "BASELINE — pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
+      "reason": "BASELINE \u2014 pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
       "owner": "unowned",
       "added": "2026-05-15",
       "expires": "2026-08-13"
@@ -1014,7 +1014,7 @@
     {
       "file": "src/pages/payment-applications/index.tsx",
       "line": 1219,
-      "reason": "BASELINE — pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
+      "reason": "BASELINE \u2014 pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
       "owner": "unowned",
       "added": "2026-05-15",
       "expires": "2026-08-13"
@@ -1022,7 +1022,7 @@
     {
       "file": "src/services/iris/ingestion/chunkers/change-order.ts",
       "line": 54,
-      "reason": "BASELINE — pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
+      "reason": "BASELINE \u2014 pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
       "owner": "unowned",
       "added": "2026-05-15",
       "expires": "2026-08-13"
@@ -1030,7 +1030,7 @@
     {
       "file": "src/services/iris/ingestion/chunkers/change-order.ts",
       "line": 87,
-      "reason": "BASELINE — pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
+      "reason": "BASELINE \u2014 pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
       "owner": "unowned",
       "added": "2026-05-15",
       "expires": "2026-08-13"
@@ -1038,7 +1038,7 @@
     {
       "file": "src/services/iris/ingestion/chunkers/change-order.ts",
       "line": 89,
-      "reason": "BASELINE — pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
+      "reason": "BASELINE \u2014 pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
       "owner": "unowned",
       "added": "2026-05-15",
       "expires": "2026-08-13"
@@ -1046,7 +1046,7 @@
     {
       "file": "src/services/payments/stripe.ts",
       "line": 54,
-      "reason": "BASELINE — pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
+      "reason": "BASELINE \u2014 pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
       "owner": "unowned",
       "added": "2026-05-15",
       "expires": "2026-08-13"
@@ -1054,7 +1054,7 @@
     {
       "file": "src/services/pdf/paymentAppPdf.ts",
       "line": 553,
-      "reason": "BASELINE — pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
+      "reason": "BASELINE \u2014 pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
       "owner": "unowned",
       "added": "2026-05-15",
       "expires": "2026-08-13"
@@ -1062,7 +1062,7 @@
     {
       "file": "src/services/pdf/paymentAppPdf.ts",
       "line": 555,
-      "reason": "BASELINE — pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
+      "reason": "BASELINE \u2014 pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
       "owner": "unowned",
       "added": "2026-05-15",
       "expires": "2026-08-13"
@@ -1070,7 +1070,7 @@
     {
       "file": "src/services/pdf/paymentAppPdf.ts",
       "line": 556,
-      "reason": "BASELINE — pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
+      "reason": "BASELINE \u2014 pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
       "owner": "unowned",
       "added": "2026-05-15",
       "expires": "2026-08-13"
@@ -1078,7 +1078,7 @@
     {
       "file": "src/services/pdf/paymentAppPdf.ts",
       "line": 558,
-      "reason": "BASELINE — pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
+      "reason": "BASELINE \u2014 pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
       "owner": "unowned",
       "added": "2026-05-15",
       "expires": "2026-08-13"
@@ -1086,7 +1086,7 @@
     {
       "file": "src/services/pdf/paymentAppPdf.ts",
       "line": 559,
-      "reason": "BASELINE — pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
+      "reason": "BASELINE \u2014 pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
       "owner": "unowned",
       "added": "2026-05-15",
       "expires": "2026-08-13"
@@ -1094,7 +1094,7 @@
     {
       "file": "src/services/pdf/paymentAppPdf.ts",
       "line": 710,
-      "reason": "BASELINE — pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
+      "reason": "BASELINE \u2014 pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
       "owner": "unowned",
       "added": "2026-05-15",
       "expires": "2026-08-13"
@@ -1102,7 +1102,7 @@
     {
       "file": "src/services/pdf/paymentAppPdf.ts",
       "line": 712,
-      "reason": "BASELINE — pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
+      "reason": "BASELINE \u2014 pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
       "owner": "unowned",
       "added": "2026-05-15",
       "expires": "2026-08-13"
@@ -1110,7 +1110,7 @@
     {
       "file": "src/services/pdf/paymentAppPdf.ts",
       "line": 713,
-      "reason": "BASELINE — pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
+      "reason": "BASELINE \u2014 pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
       "owner": "unowned",
       "added": "2026-05-15",
       "expires": "2026-08-13"
@@ -1118,7 +1118,7 @@
     {
       "file": "src/services/pdf/paymentAppPdf.ts",
       "line": 715,
-      "reason": "BASELINE — pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
+      "reason": "BASELINE \u2014 pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
       "owner": "unowned",
       "added": "2026-05-15",
       "expires": "2026-08-13"
@@ -1126,7 +1126,7 @@
     {
       "file": "src/services/pdf/paymentAppPdf.ts",
       "line": 728,
-      "reason": "BASELINE — pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
+      "reason": "BASELINE \u2014 pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
       "owner": "unowned",
       "added": "2026-05-15",
       "expires": "2026-08-13"
@@ -1134,7 +1134,7 @@
     {
       "file": "src/services/pdf/paymentAppPdf.ts",
       "line": 733,
-      "reason": "BASELINE — pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
+      "reason": "BASELINE \u2014 pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
       "owner": "unowned",
       "added": "2026-05-15",
       "expires": "2026-08-13"
@@ -1142,7 +1142,7 @@
     {
       "file": "src/services/pdf/paymentAppPdf.ts",
       "line": 734,
-      "reason": "BASELINE — pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
+      "reason": "BASELINE \u2014 pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
       "owner": "unowned",
       "added": "2026-05-15",
       "expires": "2026-08-13"
@@ -1150,7 +1150,7 @@
     {
       "file": "src/services/pdf/paymentAppPdf.ts",
       "line": 740,
-      "reason": "BASELINE — pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
+      "reason": "BASELINE \u2014 pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
       "owner": "unowned",
       "added": "2026-05-15",
       "expires": "2026-08-13"
@@ -1158,7 +1158,7 @@
     {
       "file": "src/services/pdf/paymentAppPdf.ts",
       "line": 744,
-      "reason": "BASELINE — pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
+      "reason": "BASELINE \u2014 pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
       "owner": "unowned",
       "added": "2026-05-15",
       "expires": "2026-08-13"
@@ -1166,7 +1166,7 @@
     {
       "file": "src/services/pdf/paymentAppPdf.ts",
       "line": 752,
-      "reason": "BASELINE — pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
+      "reason": "BASELINE \u2014 pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
       "owner": "unowned",
       "added": "2026-05-15",
       "expires": "2026-08-13"
@@ -1174,7 +1174,7 @@
     {
       "file": "src/services/pdf/paymentAppPdf.ts",
       "line": 753,
-      "reason": "BASELINE — pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
+      "reason": "BASELINE \u2014 pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
       "owner": "unowned",
       "added": "2026-05-15",
       "expires": "2026-08-13"
@@ -1182,7 +1182,7 @@
     {
       "file": "src/services/pdf/paymentAppPdf.ts",
       "line": 754,
-      "reason": "BASELINE — pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
+      "reason": "BASELINE \u2014 pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
       "owner": "unowned",
       "added": "2026-05-15",
       "expires": "2026-08-13"
@@ -1190,7 +1190,7 @@
     {
       "file": "src/services/pdf/paymentAppPdf.ts",
       "line": 755,
-      "reason": "BASELINE — pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
+      "reason": "BASELINE \u2014 pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
       "owner": "unowned",
       "added": "2026-05-15",
       "expires": "2026-08-13"
@@ -1198,7 +1198,7 @@
     {
       "file": "src/services/pdf/paymentAppPdf.ts",
       "line": 757,
-      "reason": "BASELINE — pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
+      "reason": "BASELINE \u2014 pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
       "owner": "unowned",
       "added": "2026-05-15",
       "expires": "2026-08-13"
@@ -1206,7 +1206,7 @@
     {
       "file": "src/services/pdf/paymentAppPdf.ts",
       "line": 758,
-      "reason": "BASELINE — pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
+      "reason": "BASELINE \u2014 pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
       "owner": "unowned",
       "added": "2026-05-15",
       "expires": "2026-08-13"
@@ -1214,7 +1214,7 @@
     {
       "file": "src/services/pdf/paymentAppPdf.ts",
       "line": 759,
-      "reason": "BASELINE — pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
+      "reason": "BASELINE \u2014 pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
       "owner": "unowned",
       "added": "2026-05-15",
       "expires": "2026-08-13"
@@ -1222,7 +1222,7 @@
     {
       "file": "src/services/pdf/paymentAppPdf.ts",
       "line": 760,
-      "reason": "BASELINE — pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
+      "reason": "BASELINE \u2014 pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
       "owner": "unowned",
       "added": "2026-05-15",
       "expires": "2026-08-13"
@@ -1230,10 +1230,42 @@
     {
       "file": "src/services/pdf/paymentAppPdf.ts",
       "line": 761,
-      "reason": "BASELINE — pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
+      "reason": "BASELINE \u2014 pre-existing at allowlist creation; migrate per MONEY_CENTS_AUDIT_2026-05-01.md",
       "owner": "unowned",
       "added": "2026-05-15",
       "expires": "2026-08-13"
+    },
+    {
+      "file": "src/pages/Preconstruction.tsx",
+      "line": 294,
+      "reason": "Sort comparator \u2014 bid_amount subtraction produces an ordering signal, not a money value; no accumulation or rounding error possible.",
+      "owner": "wrbenner",
+      "added": "2026-05-19",
+      "expires": "2026-11-19"
+    },
+    {
+      "file": "src/pages/Preconstruction.tsx",
+      "line": 1199,
+      "reason": "Sort comparator \u2014 bid_amount subtraction produces an ordering signal, not a money value; no accumulation or rounding error possible.",
+      "owner": "wrbenner",
+      "added": "2026-05-19",
+      "expires": "2026-11-19"
+    },
+    {
+      "file": "src/pages/Preconstruction.tsx",
+      "line": 1201,
+      "reason": "Variance percentage \u2014 bid_amount subtraction then division by another money value produces a dimensionless ratio \u00d7 100; result is a percentage, not money.",
+      "owner": "wrbenner",
+      "added": "2026-05-19",
+      "expires": "2026-11-19"
+    },
+    {
+      "file": "src/pages/Preconstruction.tsx",
+      "line": 1302,
+      "reason": "Sort comparator \u2014 bid_amount subtraction produces an ordering signal, not a money value; no accumulation or rounding error possible.",
+      "owner": "wrbenner",
+      "added": "2026-05-19",
+      "expires": "2026-11-19"
     }
   ]
 }

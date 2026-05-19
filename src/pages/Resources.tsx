@@ -12,6 +12,7 @@ import {
   useImportDavisBacon,
   type LaborRate, type MaterialRate, type EquipmentRate,
 } from '../hooks/queries/resources'
+import { centsToDisplay, type Cents } from '../types/money'
 
 type TabKey = 'labor' | 'materials' | 'equipment' | 'csi'
 
@@ -271,8 +272,8 @@ const ResourcesImpl: React.FC = () => {
             <SectionHeader title="Cost Calculator" />
             <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr auto', gap: spacing['3'], marginTop: spacing['3'], alignItems: 'end' }}>
               <div>
-                <label style={labelStyle}>Select Rate</label>
-                <select value={calc.laborId} onChange={(e) => setCalc({ ...calc, laborId: e.target.value })} style={selectStyle}>
+                <label htmlFor="calc-labor-select" style={labelStyle}>Select Rate</label>
+                <select id="calc-labor-select" value={calc.laborId} onChange={(e) => setCalc({ ...calc, laborId: e.target.value })} style={selectStyle}>
                   <option value="">— choose —</option>
                   {(labor ?? []).map((l) => <option key={l.id} value={l.id}>{l.trade} · {l.classification} · ${(l.hourly_rate / 100).toFixed(2)}/hr</option>)}
                 </select>
@@ -311,7 +312,7 @@ const ResourcesImpl: React.FC = () => {
                   <tr key={m.id} style={{ borderBottom: `1px solid ${colors.borderSubtle}` }}>
                     <td style={tdStyle}>{m.item_name}</td>
                     <td style={tdStyle}>{m.unit}</td>
-                    <td style={tdStyle}>${(m.unit_cost / 100).toFixed(2)}</td>
+                    <td style={tdStyle}>{centsToDisplay(m.unit_cost as Cents)}</td>
                     <td style={tdStyle}>{m.supplier || '—'}</td>
                     <td style={tdStyle}>{m.lead_time_days != null ? `${m.lead_time_days}d` : '—'}</td>
                     <td style={tdStyle}>{m.csi_division != null ? String(m.csi_division).padStart(2, '0') : '—'}</td>
@@ -393,8 +394,8 @@ const ResourcesImpl: React.FC = () => {
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: spacing['3'] }}>
             <InputField label="Effective Date" type="date" value={laborForm.effective_date} onChange={(v) => setLaborForm({ ...laborForm, effective_date: v })} />
             <div>
-              <label style={labelStyle}>Source</label>
-              <select value={laborForm.source} onChange={(e) => setLaborForm({ ...laborForm, source: e.target.value as LaborRate['source'] })} style={selectStyle}>
+              <label htmlFor="labor-source-select" style={labelStyle}>Source</label>
+              <select id="labor-source-select" value={laborForm.source} onChange={(e) => setLaborForm({ ...laborForm, source: e.target.value as LaborRate['source'] })} style={selectStyle}>
                 <option value="manual">Manual</option>
                 <option value="davis_bacon">Davis-Bacon</option>
                 <option value="prevailing_wage">Prevailing Wage</option>
@@ -419,8 +420,8 @@ const ResourcesImpl: React.FC = () => {
           </div>
           <InputField label="Supplier" value={materialForm.supplier} onChange={(v) => setMaterialForm({ ...materialForm, supplier: v })} placeholder="Home Depot" />
           <div>
-            <label style={labelStyle}>CSI Division</label>
-            <select value={materialForm.csi_division} onChange={(e) => setMaterialForm({ ...materialForm, csi_division: e.target.value })} style={selectStyle}>
+            <label htmlFor="material-csi-select" style={labelStyle}>CSI Division</label>
+            <select id="material-csi-select" value={materialForm.csi_division} onChange={(e) => setMaterialForm({ ...materialForm, csi_division: e.target.value })} style={selectStyle}>
               <option value="">—</option>
               {CSI_DIVISIONS.map((d) => <option key={d.code} value={d.code}>{d.label}</option>)}
             </select>

@@ -41,6 +41,7 @@ import {
   type PreconBidScopeResponse,
 } from '../hooks/queries/precon-extended'
 import { useCreateContract } from '../hooks/queries/enterprise-modules'
+import { addCents, subtractCents, type Cents } from '../types/money'
 
 // ── Constants ─────────────────────────────────────────────
 
@@ -296,7 +297,7 @@ const PreconstructionImpl: React.FC = () => {
     const median = amounts[Math.floor(amounts.length / 2)]
     const lowest = bids[0]
     const highest = bids[bids.length - 1]
-    const spread = highest.bid_amount - lowest.bid_amount
+    const spread = subtractCents(highest.bid_amount as Cents, lowest.bid_amount as Cents)
     const variancePct = avg > 0 ? (spread / avg) * 100 : 0
     const stdDev = Math.sqrt(amounts.reduce((s, a) => s + Math.pow(a - avg, 2), 0) / amounts.length)
     const coeffVar = avg > 0 ? (stdDev / avg) * 100 : 0
@@ -662,13 +663,13 @@ const PreconstructionImpl: React.FC = () => {
             <InputField label="Title" value={pkgForm.title} onChange={(v) => setPkgForm({ ...pkgForm, title: v })} placeholder="Electrical rough-in" />
           </div>
           <div>
-            <label style={labelStyle}>Description / Scope Summary</label>
-            <textarea value={pkgForm.description} onChange={(e) => setPkgForm({ ...pkgForm, description: e.target.value })} rows={3} style={textareaStyle} placeholder="Describe the scope of work for this bid package..." />
+            <label htmlFor="pkg-description-textarea" style={labelStyle}>Description / Scope Summary</label>
+            <textarea id="pkg-description-textarea" value={pkgForm.description} onChange={(e) => setPkgForm({ ...pkgForm, description: e.target.value })} rows={3} style={textareaStyle} placeholder="Describe the scope of work for this bid package..." />
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: spacing['3'] }}>
             <div>
-              <label style={labelStyle}>CSI Division</label>
-              <select value={pkgForm.csi_division} onChange={(e) => setPkgForm({ ...pkgForm, csi_division: e.target.value })} style={selectStyle}>
+              <label htmlFor="pkg-csi-select" style={labelStyle}>CSI Division</label>
+              <select id="pkg-csi-select" value={pkgForm.csi_division} onChange={(e) => setPkgForm({ ...pkgForm, csi_division: e.target.value })} style={selectStyle}>
                 <option value="">-</option>
                 {CSI_DIVISIONS.map((d) => <option key={d.code} value={d.code}>{d.label}</option>)}
               </select>
@@ -691,8 +692,8 @@ const PreconstructionImpl: React.FC = () => {
         <div style={{ display: 'flex', flexDirection: 'column', gap: spacing['4'] }}>
           {!selectedPackageId && (
             <div>
-              <label style={labelStyle}>Bid Package</label>
-              <select value={bidForm.bid_package_id} onChange={(e) => setBidForm({ ...bidForm, bid_package_id: e.target.value })} style={selectStyle}>
+              <label htmlFor="bid-package-select" style={labelStyle}>Bid Package</label>
+              <select id="bid-package-select" value={bidForm.bid_package_id} onChange={(e) => setBidForm({ ...bidForm, bid_package_id: e.target.value })} style={selectStyle}>
                 <option value="">- choose -</option>
                 {packageList.map((p) => <option key={p.id} value={p.id}>{p.package_number} · {p.title}</option>)}
               </select>
@@ -707,16 +708,16 @@ const PreconstructionImpl: React.FC = () => {
             <InputField label="Schedule (days)" value={bidForm.schedule_days} onChange={(v) => setBidForm({ ...bidForm, schedule_days: v })} placeholder="90" />
           </div>
           <div>
-            <label style={labelStyle}>Exclusions</label>
-            <textarea value={bidForm.exclusions} onChange={(e) => setBidForm({ ...bidForm, exclusions: e.target.value })} rows={2} style={textareaStyle} placeholder="List any exclusions from this bid..." />
+            <label htmlFor="bid-exclusions-textarea" style={labelStyle}>Exclusions</label>
+            <textarea id="bid-exclusions-textarea" value={bidForm.exclusions} onChange={(e) => setBidForm({ ...bidForm, exclusions: e.target.value })} rows={2} style={textareaStyle} placeholder="List any exclusions from this bid..." />
           </div>
           <div>
-            <label style={labelStyle}>Inclusions / Qualifications</label>
-            <textarea value={bidForm.qualifications} onChange={(e) => setBidForm({ ...bidForm, qualifications: e.target.value })} rows={2} style={textareaStyle} placeholder="Special qualifications, alternates, or included items..." />
+            <label htmlFor="bid-qualifications-textarea" style={labelStyle}>Inclusions / Qualifications</label>
+            <textarea id="bid-qualifications-textarea" value={bidForm.qualifications} onChange={(e) => setBidForm({ ...bidForm, qualifications: e.target.value })} rows={2} style={textareaStyle} placeholder="Special qualifications, alternates, or included items..." />
           </div>
           <div>
-            <label style={labelStyle}>Notes</label>
-            <textarea value={bidForm.notes} onChange={(e) => setBidForm({ ...bidForm, notes: e.target.value })} rows={2} style={textareaStyle} placeholder="Additional notes..." />
+            <label htmlFor="bid-notes-textarea" style={labelStyle}>Notes</label>
+            <textarea id="bid-notes-textarea" value={bidForm.notes} onChange={(e) => setBidForm({ ...bidForm, notes: e.target.value })} rows={2} style={textareaStyle} placeholder="Additional notes..." />
           </div>
           <div style={{ display: 'flex', gap: spacing['2'], justifyContent: 'flex-end' }}>
             <Btn variant="secondary" onClick={() => setBidModalOpen(false)}>Cancel</Btn>
@@ -730,8 +731,9 @@ const PreconstructionImpl: React.FC = () => {
         <div style={{ display: 'flex', flexDirection: 'column', gap: spacing['4'] }}>
           {subList.length > 0 && (
             <div>
-              <label style={labelStyle}>Select from Sub Database</label>
+              <label htmlFor="invite-sub-select" style={labelStyle}>Select from Sub Database</label>
               <select
+                id="invite-sub-select"
                 value={inviteForm.subcontractor_id}
                 onChange={(e) => {
                   const sub = subList.find((s) => s.id === e.target.value)
@@ -775,8 +777,8 @@ const PreconstructionImpl: React.FC = () => {
         <div style={{ display: 'flex', flexDirection: 'column', gap: spacing['4'] }}>
           <InputField label="Scope Item Description" value={scopeForm.description} onChange={(v) => setScopeForm({ ...scopeForm, description: v })} placeholder="Provide and install all conduit and wiring..." />
           <div>
-            <label style={labelStyle}>Category</label>
-            <select value={scopeForm.category} onChange={(e) => setScopeForm({ ...scopeForm, category: e.target.value })} style={selectStyle}>
+            <label htmlFor="scope-category-select" style={labelStyle}>Category</label>
+            <select id="scope-category-select" value={scopeForm.category} onChange={(e) => setScopeForm({ ...scopeForm, category: e.target.value })} style={selectStyle}>
               {SCOPE_CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
             </select>
           </div>
@@ -804,8 +806,8 @@ const PreconstructionImpl: React.FC = () => {
             <InputField label="State" value={subForm.state} onChange={(v) => setSubForm({ ...subForm, state: v })} placeholder="TX" />
           </div>
           <div>
-            <label style={labelStyle}>Notes</label>
-            <textarea value={subForm.notes} onChange={(e) => setSubForm({ ...subForm, notes: e.target.value })} rows={2} style={textareaStyle} placeholder="Internal notes about this sub..." />
+            <label htmlFor="sub-notes-textarea" style={labelStyle}>Notes</label>
+            <textarea id="sub-notes-textarea" value={subForm.notes} onChange={(e) => setSubForm({ ...subForm, notes: e.target.value })} rows={2} style={textareaStyle} placeholder="Internal notes about this sub..." />
           </div>
           <div style={{ display: 'flex', gap: spacing['2'], justifyContent: 'flex-end' }}>
             <Btn variant="secondary" onClick={() => setSubModalOpen(false)}>Cancel</Btn>
@@ -857,7 +859,10 @@ function DashboardView({
               {metrics.upcomingDue.slice(0, 8).map(({ pkg, days }) => (
                 <div
                   key={pkg.id}
+                  role="button"
+                  tabIndex={0}
                   onClick={() => onSelectPackage(pkg.id, 'packages')}
+                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSelectPackage(pkg.id, 'packages'); } }}
                   style={{
                     display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                     padding: `${spacing['2']} ${spacing['3']}`, borderRadius: borderRadius.base,
@@ -928,7 +933,10 @@ function DashboardView({
               return (
                 <div
                   key={pkg.id}
+                  role="button"
+                  tabIndex={0}
                   onClick={() => onSelectPackage(pkg.id, 'packages')}
+                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSelectPackage(pkg.id, 'packages'); } }}
                   style={{
                     padding: spacing['3'], borderRadius: borderRadius.base,
                     border: `1px solid ${colors.borderSubtle}`, cursor: 'pointer',
@@ -1031,7 +1039,10 @@ function PackagesView({
               return (
                 <div
                   key={pkg.id}
+                  role="button"
+                  tabIndex={0}
                   onClick={() => onSelectPackage(pkg.id)}
+                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSelectPackage(pkg.id); } }}
                   style={{
                     padding: spacing['3'], borderRadius: borderRadius.base,
                     border: `1px solid ${isSelected ? colors.primaryOrange : colors.borderSubtle}`,
@@ -1314,14 +1325,15 @@ function LevelingView({
   // Calculate adjusted totals (estimate excluded item costs)
   const adjustedTotals = useMemo(() => {
     return sortedBids.map((bid) => {
-      let adjustment = 0
+      let adjustment = 0 as Cents
       for (const item of scopeItemList) {
         const resp = responseLookup[`${item.id}:${bid.id}`]
         if (resp?.response === 'excluded' && resp.cost_impact) {
-          adjustment += resp.cost_impact
+          adjustment = addCents(adjustment, resp.cost_impact as Cents)
         }
       }
-      return { bidId: bid.id, baseAmount: bid.bid_amount, adjustment, adjustedTotal: bid.bid_amount + adjustment }
+      const base = bid.bid_amount as Cents
+      return { bidId: bid.id, baseAmount: base, adjustment, adjustedTotal: addCents(base, adjustment) }
     })
   }, [sortedBids, scopeItemList, responseLookup])
 
@@ -1349,8 +1361,9 @@ function LevelingView({
       <Card padding={spacing['4']}>
         <div style={{ display: 'flex', alignItems: 'center', gap: spacing['4'] }}>
           <div style={{ flex: 1 }}>
-            <label style={labelStyle}>Select Bid Package to Level</label>
+            <label htmlFor="level-package-select" style={labelStyle}>Select Bid Package to Level</label>
             <select
+              id="level-package-select"
               value={selectedPackageId || ''}
               onChange={(e) => onSelectPackage(e.target.value || null)}
               style={selectStyle}
@@ -1593,7 +1606,10 @@ function SubcontractorsView({
               return (
                 <div
                   key={sub.id}
+                  role="button"
+                  tabIndex={0}
                   onClick={() => onSelectSub(isSelected ? null : sub.id)}
+                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSelectSub(isSelected ? null : sub.id); } }}
                   style={{
                     display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                     padding: spacing['3'], borderRadius: borderRadius.base,
@@ -1690,7 +1706,10 @@ function SubcontractorsView({
               <div>
                 <div style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>Prequalified</div>
                 <div
+                  role="button"
+                  tabIndex={0}
                   onClick={() => handleTogglePrequal(selectedSub)}
+                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleTogglePrequal(selectedSub); } }}
                   style={{
                     display: 'flex', alignItems: 'center', gap: spacing['1'], cursor: 'pointer',
                     fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium,
