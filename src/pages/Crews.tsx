@@ -24,6 +24,7 @@ import { useDeleteCrew } from '../hooks/mutations';
 import { useCrewSchedules, useSchedulePhasesForAssignment } from '../hooks/queries/crew-schedules';
 import { useCreateCrewSchedule, useDeleteCrewSchedule } from '../hooks/mutations/crew-schedules';
 import { useTimesheets } from '../hooks/queries/timesheets';
+import { useLoadingTimeout } from '../hooks/useLoadingTimeout';
 
 // ── Types ──────────────────────────────────────────────────────
 
@@ -223,6 +224,7 @@ export const Crews: React.FC = () => {
   const { loadItems: loadCrews } = useEntityActions<Crew>('crews');
   const { activeProject } = useProjectStore();
   const projectId = activeProject?.id;
+  const crewLoadTimedOut = useLoadingTimeout(loading, 5000);
   const deleteCrew = useDeleteCrew();
   const { confirm: confirmDeleteCrew, dialog: deleteCrewDialog } = useConfirm();
 
@@ -458,7 +460,7 @@ export const Crews: React.FC = () => {
           </div>
         )}
 
-        {loading && visibleCrews.length === 0 ? (
+        {loading && !crewLoadTimedOut && visibleCrews.length === 0 ? (
           <div role="status" style={{ padding: spacing[8], textAlign: 'center', color: colors.textTertiary, fontSize: 13 }}>Loading crews…</div>
         ) : (
           <CrewTable

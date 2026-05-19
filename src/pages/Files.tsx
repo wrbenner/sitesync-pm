@@ -18,6 +18,7 @@ import { useConfirm } from '../components/ConfirmDialog';
 import { supabase} from '../lib/supabase';
 import { PermissionGate } from '../components/auth/PermissionGate';
 import { usePermissions } from '../hooks/usePermissions';
+import { useLoadingTimeout } from '../hooks/useLoadingTimeout';
 import { useTableKeyboardNavigation } from '../hooks/useTableKeyboardNavigation';
 import { useRealtimeInvalidation } from '../hooks/useRealtimeInvalidation';
 import { PageInsightBanners } from '../components/ai/PredictiveAlert';
@@ -98,6 +99,7 @@ const FilesPage: React.FC = () => {
   const deleteFile = useDeleteFile();
   const { hasPermission } = usePermissions();
   const { data: rawFiles, isPending: loading, isError, error, refetch } = useFiles(projectId);
+  const fileLoadTimedOut = useLoadingTimeout(loading, 5000);
   useRealtimeInvalidation(projectId);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [nowMs] = useState(() => Date.now());
@@ -505,7 +507,7 @@ const FilesPage: React.FC = () => {
     );
   }
 
-  if (loading) {
+  if (loading && !fileLoadTimedOut) {
     const skeletonPulse: React.CSSProperties = {
       backgroundColor: colors.borderLight,
       animation: 'pulse 1.5s ease-in-out infinite',

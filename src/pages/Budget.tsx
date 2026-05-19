@@ -18,6 +18,7 @@ import { toast } from 'sonner'
 import { ErrorBoundary } from '../components/ErrorBoundary'
 import { PermissionGate } from '../components/auth/PermissionGate'
 import { useQuery } from '../hooks/useQuery'
+import { useLoadingTimeout } from '../hooks/useLoadingTimeout'
 import { useProjectId } from '../hooks/useProjectId'
 import { useUpdateBudgetItem } from '../hooks/mutations'
 import { usePermissions } from '../hooks/usePermissions'
@@ -184,6 +185,7 @@ const BudgetPage: React.FC = () => {
   )
 
   const updateBudgetItem = useUpdateBudgetItem()
+  const costLoadTimedOut = useLoadingTimeout(costLoading, 5000)
 
   // ── Derived rows ─────────────────────────────────────────────────────────
 
@@ -362,7 +364,7 @@ const BudgetPage: React.FC = () => {
   if (!projectId) {
     return <PageEmpty title="Select a project to view its budget" />
   }
-  if (costLoading) {
+  if (costLoading && !costLoadTimedOut) {
     return <PageEmpty title="Loading budget…" />
   }
   if (costError) {
