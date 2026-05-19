@@ -25,6 +25,7 @@ import { useSubmittals, useProject } from '../../hooks/queries'
 import { useCreateSubmittal, useUpdateSubmittal } from '../../hooks/mutations'
 import { useProjectId } from '../../hooks/useProjectId'
 import { useRealtimeInvalidation } from '../../hooks/useRealtimeInvalidation'
+import { useLoadingTimeout } from '../../hooks/useLoadingTimeout'
 import { useNavigate } from 'react-router-dom'
 import { useScheduleActivities } from '../../hooks/useScheduleActivities'
 import { useCopilotStore } from '../../stores/copilotStore'
@@ -130,6 +131,7 @@ const SubmittalsPage: React.FC = () => {
   const currentUserId = useAuthStore((s) => s.user?.id)
 
   const { data: submittalsResult, isPending: loading, error, refetch } = useSubmittals(projectId)
+  const submittalLoadTimedOut = useLoadingTimeout(loading, 5000)
   const { data: project } = useProject(projectId)
   // scheduleActivities is no longer consumed at this layer (the new
   // SubmittalsItemsView reads from submittals_log_mv which already carries
@@ -417,7 +419,7 @@ const SubmittalsPage: React.FC = () => {
         )}
       </header>
 
-      {loading ? (
+      {loading && !submittalLoadTimedOut ? (
         <SkeletonRows />
       ) : error ? (
         <div

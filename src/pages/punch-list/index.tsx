@@ -25,6 +25,7 @@ import { usePermissions } from '../../hooks/usePermissions';
 import { useAuth } from '../../hooks/useAuth';
 import { useProjectId } from '../../hooks/useProjectId';
 import { useRealtimeInvalidation } from '../../hooks/useRealtimeInvalidation';
+import { useLoadingTimeout } from '../../hooks/useLoadingTimeout';
 import {
   useCreatePunchItem,
   useUpdatePunchItem,
@@ -124,6 +125,7 @@ const PunchListPage: React.FC = () => {
   } = usePunchItems(projectId);
   useRealtimeInvalidation(projectId);
   const loading = queryLoading && fetchStatus === 'fetching';
+  const punchLoadTimedOut = useLoadingTimeout(loading, 5000);
 
   const createPunchItem = useCreatePunchItem();
   const updatePunchItem = useUpdatePunchItem();
@@ -681,7 +683,7 @@ const PunchListPage: React.FC = () => {
               Retry
             </button>
           </div>
-        ) : loading && allItems.length === 0 ? (
+        ) : loading && !punchLoadTimedOut && allItems.length === 0 ? (
           <div
             role="status"
             style={{

@@ -50,6 +50,7 @@ import {
 import { useProjectId } from '../hooks/useProjectId';
 import { useRealtimeInvalidation } from '../hooks/useRealtimeInvalidation';
 import { useCopilotStore } from '../stores/copilotStore';
+import { useLoadingTimeout } from '../hooks/useLoadingTimeout';
 
 import { exportRFILogXlsx } from '../lib/exportXlsx';
 import { exportRFIs as exportRFIsModule, type RFIExportMode } from '../lib/rfi/exportRFIs';
@@ -341,6 +342,7 @@ const RFIsPage: React.FC = () => {
   }, []);
 
   const { data: rfisResult, isPending: rfisLoading, error: rfisError, refetch } = useRFIs(projectId);
+  const rfiLoadTimedOut = useLoadingTimeout(rfisLoading, 5000);
   const { data: project } = useProject(projectId);
   const { data: drafts } = useIrisDrafts(projectId, { status: ['pending'] });
   useRealtimeInvalidation(projectId);
@@ -1412,7 +1414,7 @@ const RFIsPage: React.FC = () => {
               borderRadius: 8,
               overflow: 'hidden',
             }}>
-          {rfisLoading && rfis.length === 0 ? (
+          {rfisLoading && !rfiLoadTimedOut && rfis.length === 0 ? (
             <div style={{ padding: 24 }}>
               {Array.from({ length: 8 }).map((_, i) => (
                 <div key={i} style={{
