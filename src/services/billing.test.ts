@@ -46,6 +46,7 @@ function makeChain(data: unknown, error: { message: string } | null = null) {
   chain.order = vi.fn().mockReturnValue(chain)
   chain.gte = vi.fn().mockReturnValue(chain)
   chain.single = vi.fn().mockResolvedValue(resolved)
+  chain.maybeSingle = vi.fn().mockResolvedValue(resolved)
   chain.insert = vi.fn().mockResolvedValue({ data: null, error })
   // Make chain thenable so `await query` resolves to { data, error }
   chain.then = (resolve: (v: unknown) => unknown, reject?: (r: unknown) => unknown) =>
@@ -114,11 +115,11 @@ describe('getSubscription', () => {
 
   it('returns mapped subscription when found', async () => {
     // Use explicit non-thenable chain to avoid Promise resolution edge cases
-    const singleFn = vi.fn().mockResolvedValue({ data: SUB, error: null })
+    const maybeSingleFn = vi.fn().mockResolvedValue({ data: SUB, error: null })
     const chain: Record<string, unknown> = {}
     chain.select = vi.fn().mockReturnValue(chain)
     chain.eq = vi.fn().mockReturnValue(chain)
-    chain.single = singleFn
+    chain.maybeSingle = maybeSingleFn
     mockFrom.mockReturnValue(chain)
 
     const sub = await getSubscription('org-1')
@@ -131,7 +132,7 @@ describe('getSubscription', () => {
 
   it('returns null when subscription not found', async () => {
     const chain = makeChain(null)
-    chain.single = vi.fn().mockResolvedValue({ data: null, error: { message: 'not found', code: 'PGRST116' } })
+    chain.maybeSingle = vi.fn().mockResolvedValue({ data: null, error: { message: 'not found', code: 'PGRST116' } })
     mockFrom.mockReturnValue(chain)
 
     const sub = await getSubscription('org-missing')
@@ -140,7 +141,7 @@ describe('getSubscription', () => {
 
   it('returns null on any DB error', async () => {
     const chain = makeChain(null)
-    chain.single = vi.fn().mockResolvedValue({ data: null, error: { message: 'permission denied' } })
+    chain.maybeSingle = vi.fn().mockResolvedValue({ data: null, error: { message: 'permission denied' } })
     mockFrom.mockReturnValue(chain)
 
     const sub = await getSubscription('org-bad')
