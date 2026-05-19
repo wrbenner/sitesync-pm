@@ -632,12 +632,14 @@ function AppContent() {
 
   useEffect(() => {
     // Mobile uses MobileLayout entirely — collapse so any flicker through the
-    // desktop tree doesn't widen the layout. iPad keeps the full sidebar
-    // because (a) the Sidebar component renders at a fixed 252px regardless of
-    // the `collapsed` flag, so collapsing only desyncs the main margin and
-    // hides content behind the sidebar, and (b) 1024px viewports comfortably
-    // fit 252px sidebar + 772px content.
+    // desktop tree doesn't widen the layout.
+    // Tablet (769–1024px): auto-collapse to 72px icon rail so the 252px
+    // sidebar doesn't cover page content at narrow viewport widths.
+    // Desktop: restore the user's last explicit sidebar preference.
     if (isMobile) {
+      prevDesktopCollapsed.current = sidebarCollapsed;
+      setSidebarCollapsed(true);
+    } else if (isTablet) {
       prevDesktopCollapsed.current = sidebarCollapsed;
       setSidebarCollapsed(true);
     } else {
@@ -731,7 +733,10 @@ function AppContent() {
           // auto-flow and push <main> into column 1 — that exact bug
           // collapsed the entire viewport when the sidebar was hidden.
           display: 'grid',
-          gridTemplateColumns: `${sidebarCollapsed ? '0' : '252px'} minmax(0, 1fr)`,
+          // Tablet: keep a 72px icon rail even when collapsed so content is
+          // never obscured by the sidebar. Desktop: 0px when collapsed
+          // (hamburger shown instead), 252px when expanded.
+          gridTemplateColumns: `${sidebarCollapsed ? (isTablet ? '72px' : '0') : '252px'} minmax(0, 1fr)`,
           height: '100vh',
           backgroundColor: colorVars.surfacePage,
           fontFamily: typographyConfig.fontFamily,
@@ -741,7 +746,7 @@ function AppContent() {
       >
         <SkipToContent />
         {user && <AuthenticatedProviders activeView={activeView} />}
-        {!sidebarCollapsed && (
+        {(!sidebarCollapsed || isTablet) && (
           <div style={{ gridColumn: '1 / 2', minWidth: 0, overflow: 'hidden' }}>
             <Sidebar activeView={activeView} onNavigate={handleNavigate} />
           </div>
@@ -768,18 +773,19 @@ function AppContent() {
             minWidth: 0,
             overflow: 'auto',
             position: 'relative',
-            // When the sidebar is collapsed a fixed hamburger button appears
-            // at viewport left:16, width:40 (right edge at x=56). Page content
-            // starts at x=0 here; PageContainer adds pagePaddingX=36px, putting
-            // headings at x=36 — inside the button zone. Add 28px so headings
+            // On desktop when collapsed: a hamburger button appears at left:16
+            // (right edge x=56). PageContainer adds pagePaddingX=36px, putting
+            // headings at x=36 inside the button zone. Add 28px so headings
             // land at x=64, safely past the button's right edge.
-            paddingLeft: sidebarCollapsed && !isMobile ? 28 : undefined,
+            // On tablet the icon rail is a grid column (72px), not a floating
+            // button, so content starts at x=72 — no extra padding needed.
+            paddingLeft: sidebarCollapsed && !isMobile && !isTablet ? 28 : undefined,
           }}
         >
           {/* Floating "show menu" button when sidebar is collapsed.
               Without this, hiding the sidebar via Cmd+B left the user
               with no visible affordance to bring it back. */}
-          {sidebarCollapsed && !isMobile && (
+          {sidebarCollapsed && !isMobile && !isTablet && (
             <button
               type="button"
               onClick={() => setSidebarCollapsed(false)}
