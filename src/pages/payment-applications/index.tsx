@@ -968,15 +968,18 @@ const PaymentApplicationsPage: React.FC = () => {
                   <div key={row.label} style={{
                     display: 'flex', justifyContent: 'space-between', alignItems: 'center',
                     padding: `${spacing['2.5']} ${spacing['4']}`,
+                    // Highlighted row: subtle orange tint + left accent border.
+                    // Text stays textPrimary — primaryOrange on orangeSubtle = 2.56:1 fails WCAG AA.
                     backgroundColor: row.highlight ? colors.orangeSubtle : (i % 2 === 0 ? colors.white : colors.surfacePage),
                     borderBottom: `1px solid ${colors.borderSubtle}`,
+                    borderLeft: row.highlight ? `3px solid ${colors.primaryOrange}` : '3px solid transparent',
                   }}>
                     <span style={{ fontSize: typography.fontSize.sm, color: row.bold ? colors.textPrimary : colors.textSecondary, fontWeight: row.bold ? typography.fontWeight.semibold : typography.fontWeight.normal }}>
                       {row.label}
                     </span>
                     <span style={{
                       fontSize: row.highlight ? typography.fontSize.title : typography.fontSize.sm,
-                      color: row.highlight ? colors.primaryOrange : row.bold ? colors.textPrimary : colors.textSecondary,
+                      color: row.highlight ? colors.textPrimary : row.bold ? colors.textPrimary : colors.textSecondary,
                       fontWeight: row.bold ? typography.fontWeight.bold : typography.fontWeight.medium,
                       fontFamily: typography.fontFamilyMono,
                     }}>
