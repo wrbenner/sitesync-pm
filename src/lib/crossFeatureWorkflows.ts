@@ -25,7 +25,7 @@ import { supabase } from './supabase';
 // 20260428100000_cross_feature_metadata.sql but not yet regenerated into
 // types/database.ts). Returning `any` from this helper sidesteps the deep
 // keyof-union noise; the actual schema validation happens server-side.
-const from = (table: string): any => (supabase as any).from(table);
+const from = (table: string): any => (supabase as any).from(table); // type-safe-ok
 
 export interface WorkflowResult {
   workflow: string;
