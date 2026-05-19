@@ -27,6 +27,7 @@ import { useProjectId } from '../../hooks/useProjectId'
 import { InboxSessionProvider } from '../../hooks/useInboxSession'
 import { CitationPanel } from '../../components/iris/CitationPanel'
 import { IrisInsightsCard } from '../../components/cockpit/IrisInsightsCard'
+import ErrorState from '../../components/ui/ErrorState'
 import { colors, spacing, typography, borderRadius } from '../../styles/theme'
 import { toast } from 'sonner'
 import type { DraftedAction, DraftedActionType } from '../../types/draftedActions'
@@ -103,12 +104,27 @@ const IrisInboxPage: React.FC = () => {
     isLoading: insightsLoading,
   } = useIrisInsights(projectId)
 
-  // Drafts tab feeds — pending only
-  const { data: pendingDrafts = [], isLoading: pendingLoading } = useDraftedActionsForProject({
+  // Drafts tab feeds — pending only.
+  // Bugatti Sev-1: surface query errors via ErrorState instead of falling
+  // through to the empty branch (which previously claimed "No drafts pending"
+  // even when the query failed).
+  const {
+    data: pendingDrafts = [],
+    isLoading: pendingLoading,
+    isError: pendingError,
+    error: pendingErrorObj,
+    refetch: refetchPending,
+  } = useDraftedActionsForProject({
     status: 'pending',
   })
   // History tab feeds — approved + rejected (and their downstream executed/failed)
-  const { data: historyDrafts = [], isLoading: historyLoading } = useDraftedActionsForProject({
+  const {
+    data: historyDrafts = [],
+    isLoading: historyLoading,
+    isError: historyError,
+    error: historyErrorObj,
+    refetch: refetchHistory,
+  } = useDraftedActionsForProject({
     status: ['approved', 'rejected'],
     limit: 50,
   })
@@ -199,7 +215,14 @@ const IrisInboxPage: React.FC = () => {
       {/* Drafts tab */}
       {tab === 'drafts' && (
         <div id="iris-inbox-drafts" role="tabpanel">
-          {pendingLoading ? (
+          {pendingError ? (
+            <ErrorState
+              title="Couldn’t load drafts."
+              description="The draft queue isn’t reachable right now. Your data is safe — try again."
+              error={pendingErrorObj}
+              onRetry={() => void refetchPending()}
+            />
+          ) : pendingLoading ? (
             <SkeletonStack />
           ) : groupedPending.length === 0 ? (
             <EmptyState
@@ -280,7 +303,7 @@ const IrisInboxPage: React.FC = () => {
           ) : filteredInsights.length === 0 ? (
             <EmptyState
               icon={<Sparkles size={28} />}
-              title="No risks detected — Iris is watching."
+              title="No risks detected. Iris is watching."
               description="Iris monitors RFIs, submittals, schedule, budget, staffing, and weather. Risks appear here as they emerge."
             />
           ) : (
@@ -302,7 +325,14 @@ const IrisInboxPage: React.FC = () => {
       {/* History tab */}
       {tab === 'history' && (
         <div id="iris-inbox-history" role="tabpanel">
-          {historyLoading ? (
+          {historyError ? (
+            <ErrorState
+              title="Couldn’t load history."
+              description="The decision history isn’t reachable right now. Try again."
+              error={historyErrorObj}
+              onRetry={() => void refetchHistory()}
+            />
+          ) : historyLoading ? (
             <SkeletonStack />
           ) : sortedHistory.length === 0 ? (
             <EmptyState

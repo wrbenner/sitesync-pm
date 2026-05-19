@@ -23,6 +23,7 @@ import { useSearchParams } from 'react-router-dom'
 import { colors, spacing, typography, borderRadius, shadows } from '../../styles/theme'
 import { supabase, isSupabaseConfigured } from '../../lib/supabase'
 import { citationDeepLink, citationLabel, isCitationKind } from '../../lib/iris/citationRouting'
+import { useIsMobile } from '../../hooks/useWindowSize'
 import type { DraftedAction, DraftedActionCitation } from '../../types/draftedActions'
 import { useCloseCitationPanel, parseCiteParam } from '../../hooks/useOpenCitationPanel'
 import { RfiCitationPanelContent } from './citations/RfiCitationPanelContent'
@@ -97,6 +98,12 @@ interface InnerProps {
 const CitationPanelInner: React.FC<InnerProps> = ({ citation, onClose }) => {
   const [resolved, setResolved] = useState<ResolvedCitation | null>(null)
   const [loading, setLoading] = useState(true)
+  // Bugatti Sev-1 (cat 7 Mobile): ADR-004 specifies bottom-sheet on mobile,
+  // side panel on desktop. The previous slide-from-right at full mobile width
+  // was functional but hostile — users had to scroll horizontally to dismiss
+  // and the panel covered the originating chip context. Mobile now animates
+  // up from the bottom like a native sheet.
+  const isMobile = useIsMobile()
 
   useEffect(() => {
     let cancelled = false
@@ -152,25 +159,69 @@ const CitationPanelInner: React.FC<InnerProps> = ({ citation, onClose }) => {
         role="dialog"
         aria-modal="true"
         aria-label={`Citation: ${citation.label}`}
-        initial={{ x: PANEL_WIDTH }}
-        animate={{ x: 0 }}
-        exit={{ x: PANEL_WIDTH }}
-        transition={{ type: 'tween', duration: 0.2, ease: 'easeOut' }}
-        style={{
-          position: 'fixed',
-          top: 0,
-          right: 0,
-          bottom: 0,
-          width: 'min(480px, 100vw)',
-          backgroundColor: colors.surfaceRaised,
-          borderLeft: `1px solid ${colors.borderSubtle}`,
-          boxShadow: shadows.lg,
-          zIndex: 71,
-          display: 'flex',
-          flexDirection: 'column',
-          fontFamily: typography.fontFamily,
-        }}
+        initial={isMobile ? { y: '100%' } : { x: PANEL_WIDTH }}
+        animate={isMobile ? { y: 0 } : { x: 0 }}
+        exit={isMobile ? { y: '100%' } : { x: PANEL_WIDTH }}
+        transition={{ type: 'tween', duration: 0.22, ease: [0.32, 0.72, 0, 1] }}
+        style={
+          isMobile
+            ? {
+                position: 'fixed',
+                left: 0,
+                right: 0,
+                bottom: 0,
+                // 88vh leaves a ~12% backdrop strip at the top so the
+                // originating chip stays visible and tappable for dismissal.
+                maxHeight: '88vh',
+                backgroundColor: colors.surfaceRaised,
+                borderTopLeftRadius: borderRadius['2xl'],
+                borderTopRightRadius: borderRadius['2xl'],
+                boxShadow: shadows.lg,
+                zIndex: 71,
+                display: 'flex',
+                flexDirection: 'column',
+                fontFamily: typography.fontFamily,
+                paddingBottom: 'env(safe-area-inset-bottom, 0px)',
+              }
+            : {
+                position: 'fixed',
+                top: 0,
+                right: 0,
+                bottom: 0,
+                width: 'min(480px, 100vw)',
+                backgroundColor: colors.surfaceRaised,
+                borderLeft: `1px solid ${colors.borderSubtle}`,
+                boxShadow: shadows.lg,
+                zIndex: 71,
+                display: 'flex',
+                flexDirection: 'column',
+                fontFamily: typography.fontFamily,
+              }
+        }
       >
+        {isMobile && (
+          // Drag handle affordance — visual only; users dismiss via X, Esc,
+          // or backdrop tap. A real drag-to-dismiss gesture is a Phase K+
+          // refinement; today the handle just signals "this is a sheet."
+          <div
+            aria-hidden="true"
+            style={{
+              display: 'flex',
+              justifyContent: 'center',
+              padding: `${spacing['2']} 0 ${spacing['1']} 0`,
+            }}
+          >
+            <div
+              style={{
+                width: 40,
+                height: 4,
+                borderRadius: 9999,
+                backgroundColor: colors.ink4,
+                opacity: 0.5,
+              }}
+            />
+          </div>
+        )}
         {/* Header */}
         <header
           style={{

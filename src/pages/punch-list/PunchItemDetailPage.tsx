@@ -878,14 +878,14 @@ const PunchItemDetailPage: React.FC = () => {
           {item.sub_completed_at && (
             <TimelineEvent
               icon={<Eye size={10} style={{ color: colors.statusReview }} />}
-              label="Marked complete — ready for verification"
+              label="Marked complete. Ready for verification."
               time={item.sub_completed_at}
             />
           )}
           {item.rejection_reason && (
             <TimelineEvent
               icon={<XCircle size={10} style={{ color: colors.statusCritical }} />}
-              label="Rejected — returned to sub"
+              label="Rejected. Returned to sub."
               detail={item.rejection_reason}
               time=""
               accent={colors.statusCritical}

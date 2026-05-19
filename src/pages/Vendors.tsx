@@ -372,7 +372,7 @@ export const Vendors: React.FC = () => {
             <MetricBox label="Vendors" value={stats.total} />
             <MetricBox label="Active" value={stats.active} />
             <MetricBox label="Insurance Expired" value={stats.expired} />
-            <MetricBox label="Avg Score" value={stats.avgScore > 0 ? stats.avgScore.toFixed(1) : '—'} />
+            <MetricBox label="Avg Score" value={stats.avgScore > 0 ? stats.avgScore.toFixed(1) : '-'} />
           </div>
 
           {/* ── Tab Navigation ──────────────────────────── */}
@@ -433,7 +433,7 @@ export const Vendors: React.FC = () => {
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', gap: spacing['2'] }}>
                         <div>
                           <div style={{ fontWeight: typography.fontWeight.medium, color: colors.textPrimary }}>{v.company_name}</div>
-                          <div style={{ color: colors.textSecondary, fontSize: typography.fontSize.caption }}>{v.trade || '—'}</div>
+                          <div style={{ color: colors.textSecondary, fontSize: typography.fontSize.caption }}>{v.trade || '-'}</div>
                         </div>
                         <PermissionGate permission="directory.manage" fallback={
                           <span style={{
@@ -465,12 +465,12 @@ export const Vendors: React.FC = () => {
                       <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'] }}>
                         <Stars value={v.performance_score} />
                         <span style={{ color: colors.textSecondary, fontSize: typography.fontSize.caption }}>
-                          {v.performance_score != null ? v.performance_score.toFixed(1) : '—'}
+                          {v.performance_score != null ? v.performance_score.toFixed(1) : '-'}
                         </span>
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'], fontSize: typography.fontSize.caption, color: insuranceColor }}>
                         {expired || expiringSoon ? <ShieldAlert size={14} /> : <Shield size={14} />}
-                        Insurance: {v.insurance_expiry ? `exp ${new Date(v.insurance_expiry).toLocaleDateString()}` : '—'}
+                        Insurance: {v.insurance_expiry ? `exp ${new Date(v.insurance_expiry).toLocaleDateString()}` : '-'}
                         {expired && <span style={{ fontWeight: typography.fontWeight.medium }}>· expired</span>}
                         {expiringSoon && <span style={{ fontWeight: typography.fontWeight.medium }}>· {daysToExpiry}d left</span>}
                       </div>
@@ -532,7 +532,7 @@ export const Vendors: React.FC = () => {
                         <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'] }}>
                           <span style={{ fontSize: typography.fontSize.caption, color: colors.textSecondary }}>Overall Score:</span>
                           <span style={{ fontWeight: typography.fontWeight.semibold, color: pq.overallScore >= 4 ? colors.statusActive : pq.overallScore >= 3 ? colors.statusPending : colors.textTertiary, fontSize: typography.fontSize.sm }}>
-                            {pq.overallScore > 0 ? `${pq.overallScore.toFixed(1)} / 5.0` : '—'}
+                            {pq.overallScore > 0 ? `${pq.overallScore.toFixed(1)} / 5.0` : '-'}
                           </span>
                         </div>
                         <div style={{ display: 'flex', gap: spacing['1'], flexWrap: 'wrap' }}>
@@ -792,23 +792,23 @@ export const Vendors: React.FC = () => {
             {/* Financial & Experience */}
             <SectionHeader title="Financial Stability" />
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: spacing['2'], fontSize: typography.fontSize.sm }}>
-              <div><span style={{ color: colors.textSecondary }}>Annual Revenue: </span><span style={{ color: colors.textPrimary }}>{selectedPrequal.annualRevenue || '—'}</span></div>
-              <div><span style={{ color: colors.textSecondary }}>Bonding Capacity: </span><span style={{ color: colors.textPrimary }}>{selectedPrequal.bondingCapacity || '—'}</span></div>
-              <div><span style={{ color: colors.textSecondary }}>Bank Reference: </span><span style={{ color: colors.textPrimary }}>{selectedPrequal.bankRef || '—'}</span></div>
-              <div><span style={{ color: colors.textSecondary }}>Years in Business: </span><span style={{ color: colors.textPrimary }}>{selectedPrequal.companyYears > 0 ? selectedPrequal.companyYears : '—'}</span></div>
+              <div><span style={{ color: colors.textSecondary }}>Annual Revenue: </span><span style={{ color: colors.textPrimary }}>{selectedPrequal.annualRevenue || '-'}</span></div>
+              <div><span style={{ color: colors.textSecondary }}>Bonding Capacity: </span><span style={{ color: colors.textPrimary }}>{selectedPrequal.bondingCapacity || '-'}</span></div>
+              <div><span style={{ color: colors.textSecondary }}>Bank Reference: </span><span style={{ color: colors.textPrimary }}>{selectedPrequal.bankRef || '-'}</span></div>
+              <div><span style={{ color: colors.textSecondary }}>Years in Business: </span><span style={{ color: colors.textPrimary }}>{selectedPrequal.companyYears > 0 ? selectedPrequal.companyYears : '-'}</span></div>
             </div>
             <SectionHeader title="Safety Record" />
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: spacing['2'], fontSize: typography.fontSize.sm }}>
-              <div><span style={{ color: colors.textSecondary }}>EMR: </span><span style={{ color: selectedPrequal.emr > 0 && selectedPrequal.emr <= 1.0 ? colors.statusActive : selectedPrequal.emr > 1.0 ? colors.statusPending : colors.textTertiary, fontWeight: typography.fontWeight.medium }}>{selectedPrequal.emr > 0 ? selectedPrequal.emr.toFixed(2) : '—'}</span></div>
-              <div><span style={{ color: colors.textSecondary }}>TRIR: </span><span style={{ color: colors.textPrimary }}>{selectedPrequal.trir > 0 ? selectedPrequal.trir.toFixed(1) : '—'}</span></div>
+              <div><span style={{ color: colors.textSecondary }}>EMR: </span><span style={{ color: selectedPrequal.emr > 0 && selectedPrequal.emr <= 1.0 ? colors.statusActive : selectedPrequal.emr > 1.0 ? colors.statusPending : colors.textTertiary, fontWeight: typography.fontWeight.medium }}>{selectedPrequal.emr > 0 ? selectedPrequal.emr.toFixed(2) : '-'}</span></div>
+              <div><span style={{ color: colors.textSecondary }}>TRIR: </span><span style={{ color: colors.textPrimary }}>{selectedPrequal.trir > 0 ? selectedPrequal.trir.toFixed(1) : '-'}</span></div>
               <div><span style={{ color: colors.textSecondary }}>OSHA Citations: </span><span style={{ color: selectedPrequal.oshaCitations > 0 ? colors.statusCritical : colors.statusActive, fontWeight: typography.fontWeight.medium }}>{selectedPrequal.oshaCitations}</span></div>
             </div>
             <SectionHeader title="Insurance Limits" />
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: spacing['2'], fontSize: typography.fontSize.sm }}>
-              <div><span style={{ color: colors.textSecondary }}>General Liability: </span><span style={{ color: colors.textPrimary }}>{selectedPrequal.glLimit || '—'}</span></div>
-              <div><span style={{ color: colors.textSecondary }}>Auto: </span><span style={{ color: colors.textPrimary }}>{selectedPrequal.autoLimit || '—'}</span></div>
-              <div><span style={{ color: colors.textSecondary }}>Workers Comp: </span><span style={{ color: colors.textPrimary }}>{selectedPrequal.wcLimit || '—'}</span></div>
-              <div><span style={{ color: colors.textSecondary }}>Umbrella: </span><span style={{ color: colors.textPrimary }}>{selectedPrequal.umbrellaLimit || '—'}</span></div>
+              <div><span style={{ color: colors.textSecondary }}>General Liability: </span><span style={{ color: colors.textPrimary }}>{selectedPrequal.glLimit || '-'}</span></div>
+              <div><span style={{ color: colors.textSecondary }}>Auto: </span><span style={{ color: colors.textPrimary }}>{selectedPrequal.autoLimit || '-'}</span></div>
+              <div><span style={{ color: colors.textSecondary }}>Workers Comp: </span><span style={{ color: colors.textPrimary }}>{selectedPrequal.wcLimit || '-'}</span></div>
+              <div><span style={{ color: colors.textSecondary }}>Umbrella: </span><span style={{ color: colors.textPrimary }}>{selectedPrequal.umbrellaLimit || '-'}</span></div>
             </div>
             {selectedPrequal.references.length > 0 && (
               <>
@@ -816,7 +816,7 @@ export const Vendors: React.FC = () => {
                 {selectedPrequal.references.map((ref, i) => (
                   <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: spacing['2'], border: `1px solid ${colors.borderLight}`, borderRadius: borderRadius.base, fontSize: typography.fontSize.sm }}>
                     <span style={{ color: colors.textPrimary }}>{ref.project}</span>
-                    <span style={{ color: colors.textSecondary }}>{ref.contact} — {ref.phone}</span>
+                    <span style={{ color: colors.textSecondary }}>{ref.contact}. {ref.phone}</span>
                   </div>
                 ))}
               </>
@@ -869,7 +869,7 @@ export const Vendors: React.FC = () => {
       {/* ── Create Bid List Modal ── */}
       <Modal open={bidListModalOpen} onClose={() => { setBidListModalOpen(false); setBidListForm({ name: '', scope: '', selectedVendorIds: [] }) }} title="Create Bid Invitation List" width="680px">
         <div style={{ display: 'flex', flexDirection: 'column', gap: spacing['4'] }}>
-          <InputField label="Bid List Name" value={bidListForm.name} onChange={(v) => setBidListForm({ ...bidListForm, name: v })} placeholder="e.g. Electrical – Building A" />
+          <InputField label="Bid List Name" value={bidListForm.name} onChange={(v) => setBidListForm({ ...bidListForm, name: v })} placeholder="e.g. Electrical. Building A" />
           <InputField label="Scope Description" value={bidListForm.scope} onChange={(v) => setBidListForm({ ...bidListForm, scope: v })} placeholder="Describe the work scope for this bid invitation" />
 
           <div>
@@ -1007,7 +1007,7 @@ function EvaluationModal({ open, onClose, vendor, evaluatorId, projectId }: { op
               <div key={e.id} style={{ padding: spacing['2'], border: `1px solid ${colors.borderSubtle}`, borderRadius: borderRadius.base }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: typography.fontSize.caption, color: colors.textSecondary }}>
                   <span>{new Date(e.evaluated_at).toLocaleDateString()}</span>
-                  <span>Overall: {e.overall_score?.toFixed(2) ?? '—'}</span>
+                  <span>Overall: {e.overall_score?.toFixed(2) ?? '-'}</span>
                 </div>
                 {e.comments && <div style={{ marginTop: spacing['1'], fontSize: typography.fontSize.sm, color: colors.textPrimary }}>{e.comments}</div>}
               </div>

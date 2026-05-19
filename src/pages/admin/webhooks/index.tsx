@@ -180,7 +180,7 @@ export const WebhooksAdminPage: React.FC<Props> = ({ organizationId }) => {
                   <td style={td}>{new Date(d.created_at).toLocaleString()}</td>
                   <td style={td}>{d.event_type}</td>
                   <td style={td}>{d.status}</td>
-                  <td style={td}>{d.last_response_status ?? '—'}</td>
+                  <td style={td}>{d.last_response_status ?? '-'}</td>
                   <td style={td}>{d.attempt_count}</td>
                 </tr>
               ))}

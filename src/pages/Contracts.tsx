@@ -328,7 +328,7 @@ const SovSection: React.FC<SovSectionProps> = ({ contractId, contractTitle, onCl
     <Card padding={spacing['4']} style={{ marginTop: spacing['4'] }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing['4'] }}>
         <div>
-          <SectionHeader title={`Schedule of Values — ${contractTitle}`} />
+          <SectionHeader title={`Schedule of Values. ${contractTitle}`} />
         </div>
         <div style={{ display: 'flex', gap: spacing['2'], alignItems: 'center' }}>
           <Btn variant="primary" size="sm" icon={<Plus size={14} />} onClick={() => setShowAddForm(true)}>
@@ -399,7 +399,7 @@ const SovSection: React.FC<SovSectionProps> = ({ contractId, contractTitle, onCl
                   onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.backgroundColor = colors.surfaceHover }}
                   onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.backgroundColor = 'transparent' }}
                 >
-                  <td style={{ ...sovTableCellStyle, color: colors.textSecondary }}>{item.item_number || '—'}</td>
+                  <td style={{ ...sovTableCellStyle, color: colors.textSecondary }}>{item.item_number || '-'}</td>
                   <td style={{ ...sovTableCellStyle, fontWeight: typography.fontWeight.medium }}>{item.description}</td>
                   <td style={{ ...sovTableCellStyle, textAlign: 'right', fontWeight: typography.fontWeight.medium }}>{formatCurrency(item.scheduled_value)}</td>
                   <td style={{ ...sovTableCellStyle, textAlign: 'right' }}>{formatCurrency(item.previous_completed)}</td>
@@ -690,7 +690,7 @@ const SignaturesTab: React.FC<SignaturesTabProps> = ({ projectId }) => {
                       backgroundColor: colors.surfaceInset, fontSize: typography.fontSize.caption,
                       fontWeight: typography.fontWeight.medium, color: colors.textSecondary,
                     }}>
-                      {req.metadata?.signer_count != null ? String(req.metadata.signer_count) : '—'}
+                      {req.metadata?.signer_count != null ? String(req.metadata.signer_count) : '-'}
                     </span>
                   </td>
                   <td style={{ ...sigTableCellStyle, color: colors.textSecondary }}>
@@ -732,7 +732,7 @@ const SignaturesTab: React.FC<SignaturesTabProps> = ({ projectId }) => {
 
       <Modal open={showModal} onClose={() => { setShowModal(false); resetForm() }} title="Request Signature" width="640px">
         <div style={{ display: 'flex', flexDirection: 'column', gap: spacing['4'] }}>
-          <InputField label="Title" value={sigTitle} onChange={setSigTitle} placeholder="e.g. Subcontract Agreement — ABC Electric" />
+          <InputField label="Title" value={sigTitle} onChange={setSigTitle} placeholder="e.g. Subcontract Agreement. ABC Electric" />
           <InputField label="Document URL" value={sigUrl} onChange={setSigUrl} placeholder="https://... or select a contract" />
 
           <div>
@@ -1021,7 +1021,7 @@ const InsuranceSection: React.FC<{ projectId: string; contract: Contract; onClos
   return (
     <Card padding={spacing['4']} style={{ marginTop: spacing['4'] }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing['4'] }}>
-        <SectionHeader title={`Insurance Certificates — ${contract.title}`} />
+        <SectionHeader title={`Insurance Certificates. ${contract.title}`} />
         <div style={{ display: 'flex', gap: spacing['2'] }}>
           <Btn variant="primary" size="sm" icon={<Plus size={14} />} onClick={() => setUploadOpen(true)} data-testid="upload-coi-button">
             Upload COI
@@ -1031,7 +1031,7 @@ const InsuranceSection: React.FC<{ projectId: string; contract: Contract; onClos
       </div>
       {!company && (
         <div style={{ padding: spacing['3'], marginBottom: spacing['3'], backgroundColor: colors.statusPendingSubtle, borderRadius: borderRadius.base, color: colors.statusPending, fontSize: typography.fontSize.sm }}>
-          Contract has no counterparty name — add one to track insurance certificates.
+          Contract has no counterparty name. add one to track insurance certificates.
         </div>
       )}
       {certsLoading ? (
@@ -1056,11 +1056,11 @@ const InsuranceSection: React.FC<{ projectId: string; contract: Contract; onClos
                 const styleCfg = COI_SEVERITY_STYLES[status.severity]
                 return (
                   <tr key={cert.id} style={{ transition: `background ${transitions.instant}` }} onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.backgroundColor = colors.surfaceHover }} onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.backgroundColor = 'transparent' }}>
-                    <td style={{ ...sovTableCellStyle, fontWeight: typography.fontWeight.medium }}>{POLICY_TYPE_LABELS[cert.policy_type ?? ''] ?? (cert.policy_type ?? '—')}</td>
-                    <td style={sovTableCellStyle}>{cert.carrier ?? '—'}</td>
-                    <td style={{ ...sovTableCellStyle, fontFamily: 'monospace', fontSize: typography.fontSize.caption }}>{cert.policy_number ?? '—'}</td>
-                    <td style={{ ...sovTableCellStyle, textAlign: 'right', fontWeight: typography.fontWeight.medium }}>{cert.coverage_amount != null ? formatCurrency(cert.coverage_amount) : '—'}</td>
-                    <td style={sovTableCellStyle}>{cert.expiration_date ? new Date(cert.expiration_date).toLocaleDateString() : '—'}</td>
+                    <td style={{ ...sovTableCellStyle, fontWeight: typography.fontWeight.medium }}>{POLICY_TYPE_LABELS[cert.policy_type ?? ''] ?? (cert.policy_type ?? '-')}</td>
+                    <td style={sovTableCellStyle}>{cert.carrier ?? '-'}</td>
+                    <td style={{ ...sovTableCellStyle, fontFamily: 'monospace', fontSize: typography.fontSize.caption }}>{cert.policy_number ?? '-'}</td>
+                    <td style={{ ...sovTableCellStyle, textAlign: 'right', fontWeight: typography.fontWeight.medium }}>{cert.coverage_amount != null ? formatCurrency(cert.coverage_amount) : '-'}</td>
+                    <td style={sovTableCellStyle}>{cert.expiration_date ? new Date(cert.expiration_date).toLocaleDateString() : '-'}</td>
                     <td style={sovTableCellStyle}>
                       <span style={{ padding: `1px ${spacing.sm}`, borderRadius: borderRadius.full, fontSize: typography.fontSize.caption, color: cert.additional_insured ? colors.statusActive : colors.textTertiary, backgroundColor: cert.additional_insured ? colors.statusActiveSubtle : colors.surfaceInset }}>
                         {cert.additional_insured ? 'Yes' : 'No'}
@@ -1076,7 +1076,7 @@ const InsuranceSection: React.FC<{ projectId: string; contract: Contract; onClos
                       {cert.document_url ? (
                         <a href={cert.document_url} target="_blank" rel="noopener noreferrer" style={{ color: colors.statusInfo, textDecoration: 'none', fontSize: typography.fontSize.caption }}>View</a>
                       ) : (
-                        <span style={{ color: colors.textTertiary }}>—</span>
+                        <span style={{ color: colors.textTertiary }}>-</span>
                       )}
                     </td>
                     <td style={sovTableCellStyle}>
@@ -1193,7 +1193,7 @@ const PaymentScheduleSection: React.FC<{ contractId: string; contractTitle: stri
   return (
     <Card padding={spacing['4']} style={{ marginTop: spacing['4'] }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing['4'] }}>
-        <SectionHeader title={`Payment Schedule — ${contractTitle}`} />
+        <SectionHeader title={`Payment Schedule. ${contractTitle}`} />
         <Btn variant="ghost" size="sm" onClick={onClose}><X size={16} /></Btn>
       </div>
       {/* Progress bar */}
@@ -1282,7 +1282,7 @@ const ComplianceAlertBar: React.FC<{ contracts: Contract[]; projectId: string | 
     const result: ComplianceAlert[] = []
     const now = new Date()
 
-    // Insurance certificate alerts — expired or expiring within 30 days
+    // Insurance certificate alerts. expired or expiring within 30 days
     for (const cert of certs) {
       const status = getCOIStatus(cert.expiration_date)
       if (status.severity === 'expired') {
@@ -1474,7 +1474,7 @@ const baseColumns = [
   }),
   col.accessor('end_date', {
     header: 'End',
-    cell: (info) => <span style={{ color: colors.textSecondary }}>{info.getValue() ? new Date(info.getValue()!).toLocaleDateString() : '—'}</span>,
+    cell: (info) => <span style={{ color: colors.textSecondary }}>{info.getValue() ? new Date(info.getValue()!).toLocaleDateString() : '-'}</span>,
   }),
   col.accessor('payment_terms', {
     header: 'Terms',
@@ -1580,15 +1580,15 @@ const VendorsTab: React.FC<{ projectId: string; search: string }> = ({ projectId
                   return (
                     <tr key={v.id}>
                       <td style={{ padding: spacing['2'], borderBottom: `1px solid ${colors.borderSubtle}`, fontWeight: typography.fontWeight.medium }}>{v.company_name}</td>
-                      <td style={{ padding: spacing['2'], borderBottom: `1px solid ${colors.borderSubtle}`, color: colors.textSecondary }}>{v.trade ?? '—'}</td>
+                      <td style={{ padding: spacing['2'], borderBottom: `1px solid ${colors.borderSubtle}`, color: colors.textSecondary }}>{v.trade ?? '-'}</td>
                       <td style={{ padding: spacing['2'], borderBottom: `1px solid ${colors.borderSubtle}`, color: colors.textSecondary }}>
-                        {v.contact_name ?? '—'}{v.email ? ` · ${v.email}` : ''}
+                        {v.contact_name ?? '-'}{v.email ? ` · ${v.email}` : ''}
                       </td>
                       <td style={{ padding: spacing['2'], borderBottom: `1px solid ${colors.borderSubtle}` }}>
                         <Tag label={v.status} color={sc.c} backgroundColor={sc.bg} />
                       </td>
                       <td style={{ padding: spacing['2'], borderBottom: `1px solid ${colors.borderSubtle}`, color: colors.textSecondary }}>
-                        {v.performance_score != null ? v.performance_score.toFixed(1) : '—'}
+                        {v.performance_score != null ? v.performance_score.toFixed(1) : '-'}
                       </td>
                       <td style={{ padding: spacing['2'], borderBottom: `1px solid ${colors.borderSubtle}`, textAlign: 'right' }}>
                         <Link
@@ -1722,11 +1722,11 @@ const InsuranceTab: React.FC<{ projectId: string; search: string; userId: string
                     <tr key={c.id}>
                       <td style={{ padding: spacing['2'], borderBottom: `1px solid ${colors.borderSubtle}`, fontWeight: typography.fontWeight.medium }}>{c.company}</td>
                       <td style={{ padding: spacing['2'], borderBottom: `1px solid ${colors.borderSubtle}`, color: colors.textSecondary }}>
-                        {c.policy_type ? c.policy_type.replace(/_/g, ' ') : '—'}
+                        {c.policy_type ? c.policy_type.replace(/_/g, ' ') : '-'}
                       </td>
-                      <td style={{ padding: spacing['2'], borderBottom: `1px solid ${colors.borderSubtle}`, color: colors.textSecondary }}>{c.carrier ?? '—'}</td>
+                      <td style={{ padding: spacing['2'], borderBottom: `1px solid ${colors.borderSubtle}`, color: colors.textSecondary }}>{c.carrier ?? '-'}</td>
                       <td style={{ padding: spacing['2'], borderBottom: `1px solid ${colors.borderSubtle}`, color: colors.textSecondary }}>
-                        {c.coverage_amount != null ? `$${c.coverage_amount.toLocaleString()}` : '—'}
+                        {c.coverage_amount != null ? `$${c.coverage_amount.toLocaleString()}` : '-'}
                       </td>
                       <td style={{ padding: spacing['2'], borderBottom: `1px solid ${colors.borderSubtle}`, color: expiryColor }}>{s.label}</td>
                       <td style={{ padding: spacing['2'], borderBottom: `1px solid ${colors.borderSubtle}` }}>
@@ -1853,7 +1853,7 @@ const ChangeOrdersTab: React.FC<{ projectId: string; contracts: Contract[]; sear
                 {breakdown.map(({ contract, original, revised, delta }) => (
                   <tr key={contract.id}>
                     <td style={{ padding: spacing['2'], borderBottom: `1px solid ${colors.borderSubtle}`, fontWeight: typography.fontWeight.medium }}>{contract.title}</td>
-                    <td style={{ padding: spacing['2'], borderBottom: `1px solid ${colors.borderSubtle}`, color: colors.textSecondary }}>{contract.counterparty_name ?? contract.counterparty ?? '—'}</td>
+                    <td style={{ padding: spacing['2'], borderBottom: `1px solid ${colors.borderSubtle}`, color: colors.textSecondary }}>{contract.counterparty_name ?? contract.counterparty ?? '-'}</td>
                     <td style={{ padding: spacing['2'], borderBottom: `1px solid ${colors.borderSubtle}`, textAlign: 'right', color: colors.textSecondary }}>
                       ${original.toLocaleString()}
                     </td>
@@ -1905,7 +1905,7 @@ const ChangeOrdersTab: React.FC<{ projectId: string; contracts: Contract[]; sear
                       {co.title ?? co.description}
                     </td>
                     <td style={{ padding: spacing['2'], borderBottom: `1px solid ${colors.borderSubtle}`, color: colors.textSecondary }}>
-                      {(co.status ?? '—').replace(/_/g, ' ')}
+                      {(co.status ?? '-').replace(/_/g, ' ')}
                     </td>
                     <td style={{ padding: spacing['2'], borderBottom: `1px solid ${colors.borderSubtle}`, textAlign: 'right' }}>
                       ${((co.approved_cost ?? co.amount ?? 0) as number).toLocaleString()}
@@ -1949,7 +1949,7 @@ export const Contracts: React.FC = () => {
   // Real-time subscription for contracts table (#7)
   useRealtimeInvalidation(projectId ?? undefined)
 
-  // Single typed reference — eliminates repeated `as Contract[]` casts (#6)
+  // Single typed reference. eliminates repeated `as Contract[]` casts (#6)
   const typedContracts = useMemo<Contract[]>(() => (contracts ?? []) as unknown as Contract[], [contracts])
 
   // Roll retainage (from schedule_of_values) up per contract so the
@@ -2348,7 +2348,7 @@ export const Contracts: React.FC = () => {
             )}
           </Card>
 
-          {/* Contract Detail Sections — shown when a contract is selected */}
+          {/* Contract Detail Sections. shown when a contract is selected */}
           {selectedContract && (
             <>
               {/* Detail sub-tabs */}

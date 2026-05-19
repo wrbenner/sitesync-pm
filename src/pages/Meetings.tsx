@@ -794,7 +794,7 @@ const MeetingDetailView: React.FC<{
         {showAttendeeForm && (
           <div style={{ marginTop: spacing.md, padding: spacing.md, background: colors.surfaceInset, borderRadius: borderRadius.lg }}>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: spacing.sm, marginBottom: spacing.sm }}>
-              <InputField label="Name / Role" value={attendeeForm.role} onChange={(v) => setAttendeeForm({ ...attendeeForm, role: v })} placeholder="e.g. Jane Smith — PM" />
+              <InputField label="Name / Role" value={attendeeForm.role} onChange={(v) => setAttendeeForm({ ...attendeeForm, role: v })} placeholder="e.g. Jane Smith. PM" />
               <InputField label="Company" value={attendeeForm.company} onChange={(v) => setAttendeeForm({ ...attendeeForm, company: v })} placeholder="e.g. Acme Construction" />
             </div>
             <div style={{ display: 'flex', gap: spacing.sm, justifyContent: 'flex-end' }}>
@@ -1690,7 +1690,7 @@ export const Meetings: React.FC = () => {
                             key={item.id}
                             style={{
                               transition: transitions.quick,
-                              // 3px red rail across action items — same
+                              // 3px red rail across action items. same
                               // visual grammar as RFIs / Submittals /
                               // Punch / COs so the Conversation reads
                               // as one consistent ball-in-court signal.
@@ -1839,7 +1839,7 @@ export const Meetings: React.FC = () => {
               </div>
             );
           })}
-          {/* Sticky action footer — keeps Cancel / Create from Template
+          {/* Sticky action footer. keeps Cancel / Create from Template
               visible without forcing the user to scroll past the
               template list, which on iPhone clipped both buttons below
               the modal fold. */}

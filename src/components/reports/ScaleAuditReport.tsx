@@ -99,7 +99,7 @@ export const ScaleAuditReport: React.FC<{ data: ScaleAuditReportData }> = ({ dat
   const ordered = [...mismatches, ...matches]
 
   return (
-    <Document title={`${projectName} — Scale Audit`}>
+    <Document title={`${projectName}. Scale Audit`}>
       <Page size="A4" style={styles.page}>
         {/* Brand bar */}
         <View style={styles.brand}>
@@ -168,12 +168,12 @@ export const ScaleAuditReport: React.FC<{ data: ScaleAuditReportData }> = ({ dat
             ? row.archScaleRatio
               ? `${row.archScale} (${row.archScaleRatio.toFixed(1)})`
               : row.archScale
-            : '—'
+            : '-'
           const structScaleLabel = row.structScale
             ? row.structScaleRatio
               ? `${row.structScale} (${row.structScaleRatio.toFixed(1)})`
               : row.structScale
-            : '—'
+            : '-'
           return (
             <View key={row.pairId} style={rowStyle} wrap={false}>
               <Text style={styles.cellArch}>{row.archSheet}</Text>
@@ -194,7 +194,7 @@ export const ScaleAuditReport: React.FC<{ data: ScaleAuditReportData }> = ({ dat
         })}
 
         <View style={styles.footer} fixed>
-          <Text>{projectName} — SiteSync PM</Text>
+          <Text>{projectName}. SiteSync PM</Text>
           <Text render={({ pageNumber, totalPages }) => `Page ${pageNumber} of ${totalPages}`} />
         </View>
       </Page>
@@ -295,15 +295,15 @@ export async function generateScaleAuditReport(
       )
       return {
         pairId: p.id,
-        archSheet: arch?.sheet_number ?? '—',
-        structSheet: struct?.sheet_number ?? '—',
+        archSheet: arch?.sheet_number ?? '-',
+        structSheet: struct?.sheet_number ?? '-',
         archScale: archClass?.scale_text ?? null,
         structScale: structClass?.scale_text ?? null,
         archScaleRatio: archClass?.scale_ratio ?? null,
         structScaleRatio: structClass?.scale_ratio ?? null,
         isMismatch: mismatch,
         note: mismatch
-          ? 'Detected scales disagree beyond tolerance — confirm before issuing for construction.'
+          ? 'Detected scales disagree beyond tolerance. confirm before issuing for construction.'
           : null,
       }
     })

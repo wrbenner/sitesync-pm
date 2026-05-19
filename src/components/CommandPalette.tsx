@@ -1,5 +1,5 @@
 // ─────────────────────────────────────────────────────────────────────────────
-// CommandPalette — role-aware Cmd+K (Tab C / Wave 1)
+// CommandPalette. role-aware Cmd+K (Tab C / Wave 1)
 // ─────────────────────────────────────────────────────────────────────────────
 // Wave 1 scope:
 //   • Empty state shows the role-filtered nav items as top results
@@ -44,7 +44,7 @@ import { toStreamRole } from '../types/stream'
 import { getNavForRole, type NavItem } from '../config/navigation'
 import { colors, spacing, typography, borderRadius, shadows, zIndex } from '../styles/theme'
 
-// Lucide icon registry — kept tight to the 14 nav glyphs so tree-shaking
+// Lucide icon registry. kept tight to the 14 nav glyphs so tree-shaking
 // doesn't pull the whole icon set just for the palette.
 const ICONS: Record<string, LucideIcon> = {
   Zap,
@@ -68,7 +68,7 @@ interface CommandPaletteProps {
   onClose: () => void
 }
 
-// ── Recent-item shape — kept tiny, hook-agnostic. ───────────────────────────
+// ── Recent-item shape. kept tiny, hook-agnostic. ───────────────────────────
 
 interface RecentResult {
   kind: 'rfi' | 'submittal' | 'punch'
@@ -80,7 +80,7 @@ interface RecentResult {
 
 function useRecentItems(): { results: RecentResult[]; loading: boolean } {
   const projectId = useProjectId()
-  // Cap each pull at 20 — Wave 1 scope says "last 20 by [identifier]".
+  // Cap each pull at 20. Wave 1 scope says "last 20 by [identifier]".
   const rfis = useRFIs(projectId ?? undefined, { page: 1, pageSize: 20 })
   const submittals = useSubmittals(projectId ?? undefined, { page: 1, pageSize: 20 })
   const punchItems = usePunchItems(projectId ?? undefined, { page: 1, pageSize: 20 })
@@ -94,7 +94,7 @@ function useRecentItems(): { results: RecentResult[]; loading: boolean } {
       out.push({
         kind: 'rfi',
         id: String(rec.id),
-        title: number ? `RFI #${number} — ${subject}` : subject,
+        title: number ? `RFI #${number}. ${subject}` : subject,
         subtitle: 'RFI',
         route: `/rfis/${rec.id}`,
       })
@@ -106,7 +106,7 @@ function useRecentItems(): { results: RecentResult[]; loading: boolean } {
       out.push({
         kind: 'submittal',
         id: String(rec.id),
-        title: spec ? `${spec} — ${title}` : title,
+        title: spec ? `${spec}. ${title}` : title,
         subtitle: 'Submittal',
         route: `/submittals/${rec.id}`,
       })
@@ -239,7 +239,7 @@ function ensureSelectedRowStyles() {
 
 // ── Component ───────────────────────────────────────────────────────────────
 
-// Outer is a thin gate — only renders the body when the palette is open.
+// Outer is a thin gate. only renders the body when the palette is open.
 // Conditional mounting means the body's local state (query, focus) resets
 // naturally on each open, with no in-effect setState reset gymnastics.
 export const CommandPalette: React.FC<CommandPaletteProps> = ({ open, onClose }) => {
@@ -314,7 +314,7 @@ const CommandPaletteBody: React.FC<{ onClose: () => void }> = ({ onClose }) => {
             <Search size={20} color={colors.textTertiary} style={{ flexShrink: 0 }} />
             <Command.Input
               ref={inputRef}
-              placeholder="Search for anything — RFIs, sheets, people, pages…"
+              placeholder="Search for anything. RFIs, sheets, people, pages…"
               value={query}
               onValueChange={setQuery}
               style={inputStyle}
@@ -333,7 +333,7 @@ const CommandPaletteBody: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                 the recents query stalled (auth outage), implying the
                 whole palette was broken. Nav items + Account group render
                 independent of recents, so a clearer "No matches" is honest
-                — recent items still surface as they arrive. */}
+               . recent items still surface as they arrive. */}
             <Command.Empty
               style={{
                 padding: `${spacing.xl} ${spacing.lg}`,
@@ -365,7 +365,7 @@ const CommandPaletteBody: React.FC<{ onClose: () => void }> = ({ onClose }) => {
               })}
             </Command.Group>
 
-            {/* Account group — Audit P0-4: the palette is the only escape
+            {/* Account group. Audit P0-4: the palette is the only escape
                 hatch when the sidebar is collapsed or the user is on a
                 stuck route. "Sign out" needs to be reachable here so
                 users typing "sign out" / "log out" can recover their

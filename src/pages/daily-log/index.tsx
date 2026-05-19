@@ -41,6 +41,7 @@ import { dailyLogService } from '../../services/dailyLogService';
 
 import { useCopilotStore } from '../../stores/copilotStore';
 import { useAuthStore } from '../../stores/authStore';
+import { useIsMobile } from '../../hooks/useWindowSize';
 import { useProjectId } from '../../hooks/useProjectId';
 import { useDailyLogs, useDailyLogEntries, useProject } from '../../hooks/queries';
 import {
@@ -411,6 +412,12 @@ const PhotoTile: React.FC<{ photo: PhotoRecord }> = React.memo(({ photo }) => (
 const DailyLogPage: React.FC = () => {
   const projectId = useProjectId();
   const { setPageContext } = useCopilotStore();
+  // Bugatti Sev-1 (Field-test rig category): on mobile, the sticky header
+  // with title + date stepper + status pill + iris pill + action cluster
+  // wrapped to ~5 rows and ate ~40% of the iPhone viewport before any log
+  // content was visible. Mobile drops sticky behavior and tightens padding
+  // so the header occupies its natural ~88px and scrolls away normally.
+  const isMobile = useIsMobile();
   useEffect(() => { setPageContext('daily-log'); }, [setPageContext]);
 
   // Mount telemetry. Ref guard so StrictMode's intentional double-mount in
@@ -961,15 +968,21 @@ const DailyLogPage: React.FC = () => {
   // ── Render ───────────────────────────────────────────────────────────────
   return (
     <PageShell>
-      {/* Sticky page header ─────────────────────────────────────────────── */}
+      {/* Page header ────────────────────────────────────────────────────
+          Desktop keeps the sticky-on-scroll behavior. Mobile drops sticky
+          (Bugatti Sev-1: previously ate ~40% of the iPhone viewport when
+          the action cluster wrapped onto extra rows). Reduced horizontal
+          padding on mobile so action chips fit on one row before wrapping. */}
       <header
         style={{
-          position: 'sticky', top: 0, zIndex: 30,
+          position: isMobile ? 'static' : 'sticky',
+          top: 0,
+          zIndex: 30,
           backgroundColor: PAGE_BG,
           borderBottom: `1px solid ${BORDER}`,
-          padding: '12px 24px',
+          padding: isMobile ? '10px 16px' : '12px 24px',
           display: 'flex', alignItems: 'center',
-          flexWrap: 'wrap', gap: 14,
+          flexWrap: 'wrap', gap: isMobile ? 8 : 14,
         }}
       >
         <h1 style={{
@@ -1042,7 +1055,7 @@ const DailyLogPage: React.FC = () => {
           <button
             type="button"
             onClick={() => setShowIrisDraftSheet(true)}
-            aria-label="Iris drafted this log from field data — open to review"
+            aria-label="Iris drafted this log from field data. Open to review."
             style={{
               display: 'inline-flex', alignItems: 'center', gap: 6,
               padding: '5px 11px', borderRadius: 999,
@@ -1334,7 +1347,7 @@ const DailyLogPage: React.FC = () => {
           {crewRows.length === 0 ? (
             <EmptyState icon={<Users size={20} />} message="No crew rows logged yet" />
           ) : (
-            <table style={tableStyle}>
+            <TableScroll><table style={tableStyle}>
               <thead>
                 <tr>
                   <th style={thStyle}>Trade</th>
@@ -1383,7 +1396,7 @@ const DailyLogPage: React.FC = () => {
                   <td style={tdStyleAction} />
                 </tr>
               </tbody>
-            </table>
+            </table></TableScroll>
           )}
         </ZonePanel>
 
@@ -1403,7 +1416,7 @@ const DailyLogPage: React.FC = () => {
           {equipmentRows.length === 0 ? (
             <EmptyState icon={<Truck size={20} />} message="No equipment logged yet" />
           ) : (
-            <table style={tableStyle}>
+            <TableScroll><table style={tableStyle}>
               <thead>
                 <tr>
                   <th style={thStyle}>Type</th>
@@ -1441,7 +1454,7 @@ const DailyLogPage: React.FC = () => {
                   </tr>
                 ))}
               </tbody>
-            </table>
+            </table></TableScroll>
           )}
         </ZonePanel>
 
@@ -1461,7 +1474,7 @@ const DailyLogPage: React.FC = () => {
           {fieldEntries.length === 0 ? (
             <EmptyState icon={<FileText size={20} />} message="No field entries yet" />
           ) : (
-            <table style={tableStyle}>
+            <TableScroll><table style={tableStyle}>
               <thead>
                 <tr>
                   <th style={{ ...thStyle, width: 110 }}>Time</th>
@@ -1512,7 +1525,7 @@ const DailyLogPage: React.FC = () => {
                   );
                 })}
               </tbody>
-            </table>
+            </table></TableScroll>
           )}
         </ZonePanel>
 
@@ -1557,7 +1570,7 @@ const DailyLogPage: React.FC = () => {
             {visitorRows.length === 0 ? (
               <EmptyState message="No visitors today" />
             ) : (
-              <table style={tableStyle}>
+              <TableScroll><table style={tableStyle}>
                 <thead>
                   <tr>
                     <th style={thStyle}>Name</th>
@@ -1605,7 +1618,7 @@ const DailyLogPage: React.FC = () => {
                     </tr>
                   ))}
                 </tbody>
-              </table>
+              </table></TableScroll>
             )}
           </ZonePanel>
 
@@ -1623,7 +1636,7 @@ const DailyLogPage: React.FC = () => {
             {deliveryRows.length === 0 ? (
               <EmptyState message="No deliveries today" />
             ) : (
-              <table style={tableStyle}>
+              <TableScroll><table style={tableStyle}>
                 <thead>
                   <tr>
                     <th style={thStyle}>Description</th>
@@ -1661,7 +1674,7 @@ const DailyLogPage: React.FC = () => {
                     </tr>
                   ))}
                 </tbody>
-              </table>
+              </table></TableScroll>
             )}
           </ZonePanel>
         </div>
@@ -1911,8 +1924,27 @@ const ghostBtnStyle: React.CSSProperties = {
 
 const tableStyle: React.CSSProperties = {
   width: '100%', borderCollapse: 'collapse',
+  // Bugatti Sev-1 (cat 7 Mobile): the entry tables (crew / equipment /
+  // entries / photos / visitors) have 4–7 columns. Below ~480px those
+  // columns squash unreadable. min-width forces a horizontal-scroll inside
+  // the wrapper instead, preserving column structure.
+  minWidth: 480,
   fontFamily: typography.fontFamily, fontSize: 13,
 };
+
+// Bugatti Sev-1: horizontal-scroll wrapper for the entry tables on narrow
+// viewports. Tables overflow the wrapper instead of clipping or squashing.
+const TableScroll: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+  <div
+    style={{
+      width: '100%',
+      overflowX: 'auto',
+      WebkitOverflowScrolling: 'touch',
+    }}
+  >
+    {children}
+  </div>
+);
 
 const thStyle: React.CSSProperties = {
   textAlign: 'left',

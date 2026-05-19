@@ -1,19 +1,19 @@
-// Phase 5 — Full tier progressive disclosure.
+// Phase 5. Full tier progressive disclosure.
 //
 // Renders the rest of the create form below the Quick tier. Sections
 // expand/collapse independently; each section header shows whether any
 // field inside has been filled (Iris pre-filled or manual).
 //
 // Sections (per spec Part 4.2 + plan Pillar A):
-//   * Question(s) — multi-question support per RFI parity (Phase 5 ships
+//   * Question(s). multi-question support per RFI parity (Phase 5 ships
 //     single-question; multi follows in Phase 6 if needed by demo)
-//   * Context — Trade / Cost code / Spec section / Location / Drawing pins
-//   * Impact — Cost impact $ + days; schedule activity link
-//   * People — From / Reviewers chain / Distribution / Watchers
-//   * Workflow — template picker (project default + Iris suggestion)
-//   * Attachments — drag-drop manager
-//   * Privacy — Internal / Shared + Private toggle
-//   * Numbering — auto by default; "Override" reveals manual entry
+//   * Context. Trade / Cost code / Spec section / Location / Drawing pins
+//   * Impact. Cost impact $ + days; schedule activity link
+//   * People. From / Reviewers chain / Distribution / Watchers
+//   * Workflow. template picker (project default + Iris suggestion)
+//   * Attachments. drag-drop manager
+//   * Privacy. Internal / Shared + Private toggle
+//   * Numbering. auto by default; "Override" reveals manual entry
 //
 // Phase 5 ships the section scaffolding + the field plumbing. The
 // typeahead pickers (people / spec / drawing pin / schedule activity)
@@ -110,7 +110,7 @@ export const FullTierProgressive: React.FC<FullTierProgressiveProps> = ({
             style={inputStyle}
             aria-label="Submittal kind"
           >
-            <option value="">— select —</option>
+            <option value="">- select -</option>
             {KIND_OPTIONS.map((k) => (
               <option key={k.value} value={k.value}>
                 {k.label}
@@ -122,7 +122,7 @@ export const FullTierProgressive: React.FC<FullTierProgressiveProps> = ({
       <Field
         label="Spec section paragraph"
         autoFromIris={autoSrc(draft, 'spec_section_paragraph')}
-        hint="e.g. §2.04.B.3 — feeds the citation backref."
+        hint="e.g. §2.04.B.3. feeds the citation backref."
       >
         <input
           type="text"
@@ -160,7 +160,7 @@ export const FullTierProgressive: React.FC<FullTierProgressiveProps> = ({
             type="text"
             value={draft.schedule_activity_id ?? ''}
             onChange={(e) => onPatch({ schedule_activity_id: e.target.value || null })}
-            placeholder="Pick activity — Phase 6 typeahead"
+            placeholder="Pick activity. Phase 6 typeahead"
             style={inputStyle}
             aria-label="Schedule activity (placeholder picker)"
           />
@@ -247,7 +247,7 @@ export const FullTierProgressive: React.FC<FullTierProgressiveProps> = ({
             type="text"
             value={draft.responsible_sub_id ?? ''}
             onChange={(e) => onPatch({ responsible_sub_id: e.target.value || null })}
-            placeholder="Pick org — Phase 6 typeahead"
+            placeholder="Pick org. Phase 6 typeahead"
             style={inputStyle}
             aria-label="Responsible sub (placeholder picker)"
           />

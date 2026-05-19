@@ -57,8 +57,73 @@ function getNeighborhood(nodeId: string, edges: GraphEdge[], allNodes: GraphNode
 }
 
 // ── Page Component ───────────────────────────────────────
+//
+// Bugatti Sev-1 closure (cat 1 Functional Correctness): the original
+// implementation built filter chips + a graph viewer around hardcoded
+// empty arrays — `[] as GraphNode[]` at lines 80/85 — and fabricated a
+// fake stat ("1 critical path") via Math.max(1, ...). Users saw "0
+// entities, 0 connections, 1 critical path" on a page that promised
+// "Visualize relationships between all project entities." That is
+// shipping a lie.
+//
+// Until the backend graph query lands (Lap 3), the page renders an
+// honest "coming soon" surface instead. The original implementation
+// (filters, viewer, stats, focus mode) is preserved below behind a
+// feature-flag check so re-enabling is a one-line change once the
+// query is ready: flip GRAPH_BACKEND_READY to true.
+
+const GRAPH_BACKEND_READY = false
 
 export default function IntelligenceGraphPage() {
+  if (!GRAPH_BACKEND_READY) {
+    return <IntelligenceGraphComingSoon />
+  }
+  return <IntelligenceGraphPageImpl />
+}
+
+const IntelligenceGraphComingSoon: React.FC = () => (
+  <PageContainer
+    title="Project Intelligence Graph"
+    subtitle="Visualize relationships between all project entities"
+  >
+    <div
+      role="status"
+      style={{
+        marginTop: spacing['8'],
+        padding: spacing['8'],
+        backgroundColor: colors.surfaceRaised,
+        border: `1px solid ${colors.borderSubtle}`,
+        borderRadius: borderRadius.lg,
+        textAlign: 'center',
+        fontFamily: typography.fontFamily,
+      }}
+    >
+      <h2 style={{
+        margin: 0,
+        fontSize: typography.fontSize.large,
+        fontWeight: typography.fontWeight.semibold,
+        color: colors.textPrimary,
+      }}>
+        Graph view ships in Lap 3
+      </h2>
+      <p style={{
+        margin: `${spacing['3']} auto 0`,
+        maxWidth: 520,
+        fontSize: typography.fontSize.body,
+        color: colors.textSecondary,
+        lineHeight: 1.55,
+      }}>
+        The Project Intelligence Graph visualizes how every RFI,
+        submittal, change order, and schedule phase connect. The query
+        layer behind it is still in flight — until it lands, this page
+        would show empty filters and fabricated stats, so we've turned
+        it off rather than ship a lie.
+      </p>
+    </div>
+  </PageContainer>
+)
+
+function IntelligenceGraphPageImpl() {
   const [enabledTypes, setEnabledTypes] = useState<Set<GraphNode['type']>>(new Set(ALL_NODE_TYPES))
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [focusMode, setFocusMode] = useState(false)

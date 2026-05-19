@@ -10,14 +10,43 @@
 import { describe, it, expect, vi } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+
+// usePermissions in test environment without seeded role data returns
+// hasPermission: () => false for everything (the safe default). The gate
+// then disables Approve, which makes click-fires-onApprove tests fail.
+// Mock the hook to grant permission so the tests focus on the gate's
+// callback behavior, not the permission resolver itself (which has its
+// own focused tests in src/hooks).
+vi.mock('../../../hooks/usePermissions', () => ({
+  usePermissions: () => ({
+    role: 'project_manager',
+    loading: false,
+    hasPermission: () => true,
+    hasAnyPermission: () => true,
+    isAtLeast: () => true,
+    canAccessModule: () => true,
+  }),
+}))
+
 import { IrisApprovalGate } from '../IrisApprovalGate'
 import type { DraftedAction } from '../../../types/draftedActions'
 
 // useOpenCitationPanel + useRecordDraftView need a Router + Supabase context.
-// Wrap renders in a MemoryRouter so the gate's hooks resolve. The hooks
-// themselves are exercised in their own focused unit tests.
+// usePermissions (added in the Bugatti closure pass to gate Approve & Send)
+// also needs a QueryClient. Wrap renders in both providers so the gate's
+// hooks resolve. The hooks themselves are exercised in focused unit tests.
 function renderInRouter(ui: React.ReactElement) {
-  return render(<MemoryRouter>{ui}</MemoryRouter>)
+  const queryClient = new QueryClient({
+    defaultOptions: {
+      queries: { retry: false, gcTime: 0 },
+    },
+  })
+  return render(
+    <QueryClientProvider client={queryClient}>
+      <MemoryRouter>{ui}</MemoryRouter>
+    </QueryClientProvider>,
+  )
 }
 
 function makeDraft(overrides: Partial<DraftedAction> = {}): DraftedAction {

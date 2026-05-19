@@ -1,5 +1,5 @@
 /**
- * DrawingTiledViewer — THE viewer for all construction drawings.
+ * DrawingTiledViewer. THE viewer for all construction drawings.
  *
  * Powered by OpenSeadragon for buttery 60fps pan/zoom on massive ARCH E sheets.
  * Three source modes, one viewer:
@@ -69,7 +69,7 @@ import { useOfflineSync } from '../../hooks/useOfflineSync';
 import { useAuthStore } from '../../stores/authStore';
 import { toast } from 'sonner';
 
-// ── Tool cursors — inline SVG data-URLs so each tool feels its own job.
+// ── Tool cursors. inline SVG data-URLs so each tool feels its own job.
 // Keeping them here (rather than as separate files) lets us tune hotspots inline
 // and avoid an extra network round-trip for a handful of tiny SVGs.
 const toolCursor = (tool: MarkupTool): string => {
@@ -98,11 +98,11 @@ const toolCursor = (tool: MarkupTool): string => {
     }
   })();
   if (!svg) return 'default';
-  // Hotspot at (12,12) — the natural center for most of these glyphs.
+  // Hotspot at (12,12). the natural center for most of these glyphs.
   return `url("data:image/svg+xml,${svg}") 12 12, crosshair`;
 };
 
-// ── First-use tool hint — breathing coach mark shown once per session per tool ─
+// ── First-use tool hint. breathing coach mark shown once per session per tool ─
 const ToolHint: React.FC<{ tool: MarkupTool; onDismiss: () => void }> = ({ tool, onDismiss }) => {
   useEffect(() => {
     const t = window.setTimeout(onDismiss, 3200);
@@ -116,7 +116,7 @@ const ToolHint: React.FC<{ tool: MarkupTool; onDismiss: () => void }> = ({ tool,
     calibrate: { title: 'Calibrate scale', body: 'Click two points of a known distance' },
     pin: { title: 'Pin', body: 'Click to drop a pin' },
     highlight: { title: 'Highlight', body: 'Drag to paint a translucent band' },
-    text: { title: 'Text', body: 'Click to place text — Enter commits · Esc cancels' },
+    text: { title: 'Text', body: 'Click to place text. Enter commits · Esc cancels' },
     draw: { title: 'Draw', body: 'Drag for a freehand stroke' },
   };
   const h = hints[tool];
@@ -149,7 +149,7 @@ const ToolHint: React.FC<{ tool: MarkupTool; onDismiss: () => void }> = ({ tool,
   );
 };
 
-// ── OSD Loupe — circular precision magnifier that samples OSD's drawer canvas ──
+// ── OSD Loupe. circular precision magnifier that samples OSD's drawer canvas ──
 // Shown when a measurement/path/calibrate tool is active to help users snap to edges.
 const OsdLoupe: React.FC<{
   screenX: number;
@@ -197,7 +197,7 @@ const OsdLoupe: React.FC<{
       ctx.fillRect(0, 0, SIZE, SIZE);
       try {
         ctx.drawImage(sourceCanvas, srcX, srcY, srcSize, srcSize, 0, 0, SIZE, SIZE);
-      } catch { /* tainted — skip */ }
+      } catch { /* tainted. skip */ }
       ctx.strokeStyle = 'rgba(244,120,32,0.9)';
       ctx.lineWidth = 1;
       ctx.beginPath();
@@ -218,7 +218,7 @@ const OsdLoupe: React.FC<{
     };
   }, [screenX, screenY, viewerRef, containerRef]);
 
-  // Position via transform (GPU-accelerated) — no CSS transition so the loupe sticks to the cursor.
+  // Position via transform (GPU-accelerated). no CSS transition so the loupe sticks to the cursor.
   const OFFSET = 64;
   const containerEl = containerRef.current;
   const maxRight = (containerEl?.clientWidth ?? window.innerWidth) - SIZE - 16;
@@ -252,7 +252,7 @@ const OsdLoupe: React.FC<{
           display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
           pointerEvents: 'none',
         }}>
-          {/* Calibrated scale tick — shows true-measure span under the loupe width */}
+          {/* Calibrated scale tick. shows true-measure span under the loupe width */}
           <div style={{ width: SIZE * 0.4, height: 4, position: 'relative' }}>
             <div style={{ position: 'absolute', top: 1, left: 0, right: 0, height: 2, backgroundColor: 'rgba(20,20,20,0.85)', borderRadius: 1 }} />
             <div style={{ position: 'absolute', top: 0, left: 0, width: 2, height: 6, backgroundColor: 'rgba(20,20,20,0.85)' }} />
@@ -273,7 +273,7 @@ const OsdLoupe: React.FC<{
   );
 };
 
-// ── Inline text prompt — replaces the jarring window.prompt for text markups ─
+// ── Inline text prompt. replaces the jarring window.prompt for text markups ─
 const InlineTextPrompt: React.FC<{
   x: number;
   y: number;
@@ -367,7 +367,7 @@ interface AnnotationOverlayItem {
   opacity: number;
   text?: string;
   stampType?: string;
-  /** The markup tool that produced this annotation — used to preserve styling on reload. */
+  /** The markup tool that produced this annotation. used to preserve styling on reload. */
   uiTool?: MarkupTool;
 }
 
@@ -702,7 +702,7 @@ const PresenceCursorsOverlay: React.FC<PresenceCursorsOverlayProps> = React.memo
               stroke="rgba(0,0,0,0.4)"
               strokeWidth={0.8}
             />
-            {/* Name + tool chip — shows what the remote user is doing live. */}
+            {/* Name + tool chip. shows what the remote user is doing live. */}
             {(() => {
               const first = v.name.split(' ')[0];
               const tool = v.tool && v.tool !== 'select' ? v.tool : null;
@@ -803,7 +803,7 @@ const PresenceAvatarBar: React.FC<PresenceAvatarBarProps> = React.memo(({ viewer
           {v.initials}
           {hoveredId === v.user_id && (
             <div style={S.presenceTooltip}>
-              {v.name} — {v.tool}
+              {v.name}. {v.tool}
             </div>
           )}
         </div>
@@ -1109,18 +1109,18 @@ export const DrawingTiledViewer: React.FC<DrawingTiledViewerProps> = ({
   const [rotation, setRotation] = useState(0);
   const [showAnnotations, setShowAnnotations] = useState(true);
   const [activeTool, setActiveTool] = useState<MarkupTool>('select');
-  // Extended tools — not part of MarkupTool union yet, rendered as a separate
+  // Extended tools. not part of MarkupTool union yet, rendered as a separate
   // button row. When set, short-circuits the mouse handlers before activeTool.
   const [extendedTool, setExtendedTool] = useState<'cloud' | 'stamp' | null>(null);
   const [stampTypeSel, setStampTypeSel] = useState<StampType>('reviewed');
   const [isMarkupMode, setIsMarkupMode] = useState(false);
   const [showRFIModal, setShowRFIModal] = useState(false);
   const [rfiScreenshot, setRfiScreenshot] = useState<string | null>(null);
-  // Inline text prompt — replaces the jarring window.prompt for the text tool.
+  // Inline text prompt. replaces the jarring window.prompt for the text tool.
   const [textPrompt, setTextPrompt] = useState<{ screen: { x: number; y: number }; norm: NormalizedPoint } | null>(null);
-  // Timestamp of the most recent successful save — used to trigger a brief "Saved" confirmation pulse.
+  // Timestamp of the most recent successful save. used to trigger a brief "Saved" confirmation pulse.
   const [saveConfirmedAt, setSaveConfirmedAt] = useState<number | null>(null);
-  // Cursor position within the viewer (CSS px) — drives the precision loupe for measure/path/area/calibrate.
+  // Cursor position within the viewer (CSS px). drives the precision loupe for measure/path/area/calibrate.
   const [cursorPos, setCursorPos] = useState<{ x: number; y: number } | null>(null);
   // Auto-save idle timer ref so rapid edits debounce into a single save.
   const autoSaveTimerRef = useRef<number | null>(null);
@@ -1217,7 +1217,7 @@ export const DrawingTiledViewer: React.FC<DrawingTiledViewerProps> = ({
     return mapped.filter((a): a is AnnotationOverlayItem => a !== null);
   }, [dbMarkups, showAnnotations]);
 
-  // ── Tile source — DZI when tiled, simple image when not ────────────────
+  // ── Tile source. DZI when tiled, simple image when not ────────────────
   const osdTileSource = useMemo((): string | Record<string, unknown> | null => {
     // Priority 1: Pre-generated deep-zoom tiles
     if (drawing.tile_status === 'ready') {
@@ -1270,7 +1270,7 @@ export const DrawingTiledViewer: React.FC<DrawingTiledViewerProps> = ({
 
     viewerRef.current = viewer;
 
-    // Disable OSD's built-in keyboard shortcuts — we handle all keys ourselves at the window level.
+    // Disable OSD's built-in keyboard shortcuts. we handle all keys ourselves at the window level.
     // Otherwise OSD swallows Esc (and some other keys) when the viewer container has focus.
     try {
       const tracker = (viewer as unknown as { innerTracker?: { keyHandler?: unknown; keyDownHandler?: unknown; keyPressHandler?: unknown } }).innerTracker;
@@ -1279,7 +1279,7 @@ export const DrawingTiledViewer: React.FC<DrawingTiledViewerProps> = ({
         tracker.keyDownHandler = null;
         tracker.keyPressHandler = null;
       }
-    } catch { /* not a fatal if OSD internals change — our window handler still runs in capture phase */ }
+    } catch { /* not a fatal if OSD internals change. our window handler still runs in capture phase */ }
 
     // Track zoom changes
     viewer.addHandler('zoom', () => {
@@ -1389,11 +1389,11 @@ export const DrawingTiledViewer: React.FC<DrawingTiledViewerProps> = ({
     updateTool(activeTool);
   }, [activeTool, isMeasureTool, updateTool, extendedTool]);
 
-  // Toolbar is shown whenever the user is actively working — either a tool is selected
+  // Toolbar is shown whenever the user is actively working. either a tool is selected
   // OR there are unsaved markups waiting to go to the DB.
   const isToolbarVisible = activeTool !== 'select' || localAnnotations.length > 0 || extendedTool !== null;
 
-  // Real-world span covered by the loupe's viewing window — rendered as a calibrated scale bar.
+  // Real-world span covered by the loupe's viewing window. rendered as a calibrated scale bar.
   const loupeScaleLabel = useMemo(() => {
     if (!viewportBounds || containerSize.width === 0) return null;
     const LOUPE_SIZE = 108;
@@ -1413,7 +1413,7 @@ export const DrawingTiledViewer: React.FC<DrawingTiledViewerProps> = ({
     return formatFeetInches(realIn * 0.4);
   }, [viewportBounds, containerSize.width, imageSize.width, calibrationScale, scaleRatioText]);
 
-  // Selection is only meaningful in the select tool — any other tool clears it.
+  // Selection is only meaningful in the select tool. any other tool clears it.
   useEffect(() => {
     if (activeTool !== 'select') setSelectedId(null);
   }, [activeTool]);
@@ -1426,7 +1426,7 @@ export const DrawingTiledViewer: React.FC<DrawingTiledViewerProps> = ({
       undoStack.current.push([...localAnnotations]);
       setLocalAnnotations((prev) => prev.filter((a) => a.id !== selectedId));
     } else {
-      // Persisted — delete from DB; react-query invalidation will refresh the list.
+      // Persisted. delete from DB; react-query invalidation will refresh the list.
       deleteMarkup.mutate({ id: selectedId, drawingId: drawing.id });
     }
     setSelectedId(null);
@@ -1471,7 +1471,7 @@ export const DrawingTiledViewer: React.FC<DrawingTiledViewerProps> = ({
   // ── Interactive drawing event handlers ─────────────────────────────────
   const handleOverlayMouseDown = useCallback(
     (e: React.MouseEvent<SVGSVGElement>) => {
-      // Extended tools (cloud / stamp) take priority — they render their own
+      // Extended tools (cloud / stamp) take priority. they render their own
       // buttons outside the MarkupToolbar but share the same overlay handlers.
       if (extendedTool === 'stamp') {
         const rect = e.currentTarget.getBoundingClientRect();
@@ -1532,7 +1532,7 @@ export const DrawingTiledViewer: React.FC<DrawingTiledViewerProps> = ({
       }
 
       if (geomType === 'text') {
-        // Open an inline input at the click location — no native dialog.
+        // Open an inline input at the click location. no native dialog.
         setTextPrompt({
           screen: { x: e.clientX - rect.left, y: e.clientY - rect.top },
           norm: pt,
@@ -1697,8 +1697,8 @@ export const DrawingTiledViewer: React.FC<DrawingTiledViewerProps> = ({
         // `annotation_type`, includes OSD-specific normalized coords, and packs a `data`
         // blob so shapes round-trip through the canvas-based viewer too.
         // Only write columns guaranteed by the base 00019 schema (drawing_id, project_id,
-        // type, data). Everything else — OSD-specific normalized coords, the full UI tool,
-        // styling — is packed into the `data` jsonb blob so saves work regardless of which
+        // type, data). Everything else. OSD-specific normalized coords, the full UI tool,
+        // styling. is packed into the `data` jsonb blob so saves work regardless of which
         // schema-enhancement migrations are applied to the user's DB.
         const baseData = {
           project_id: projectId,
@@ -1769,7 +1769,7 @@ export const DrawingTiledViewer: React.FC<DrawingTiledViewerProps> = ({
     [annotations, localAnnotations],
   );
 
-  // All endpoints from existing measurement-like annotations — used for magnetic snap.
+  // All endpoints from existing measurement-like annotations. used for magnetic snap.
   // We only offer snap for geometries where endpoints are semantically meaningful.
   const snapPoints = useMemo(() => {
     const pts: NormalizedPoint[] = [];
@@ -1827,7 +1827,7 @@ export const DrawingTiledViewer: React.FC<DrawingTiledViewerProps> = ({
         case 'Escape':
           e.preventDefault();
           e.stopPropagation();
-          // One key, one action — always step back one level.
+          // One key, one action. always step back one level.
           // If actively drawing: cancel the in-progress stroke.
           // Else if a tool is selected: return to select.
           // Else: close the viewer.
@@ -1876,7 +1876,7 @@ export const DrawingTiledViewer: React.FC<DrawingTiledViewerProps> = ({
           }
           break;
         default: {
-          // Tool hotkeys — match common design-tool conventions.
+          // Tool hotkeys. match common design-tool conventions.
           // Ignore when the user is typing in an input (avoids grabbing letters).
           const target = e.target as HTMLElement | null;
           if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) break;
@@ -1930,7 +1930,7 @@ export const DrawingTiledViewer: React.FC<DrawingTiledViewerProps> = ({
     viewerRef.current?.viewport.setRotation(newRotation);
   }, [rotation]);
 
-  // Create-RFI — compose the OSD canvas + annotation overlay into a screenshot and open the modal.
+  // Create-RFI. compose the OSD canvas + annotation overlay into a screenshot and open the modal.
   const handleCreateRFI = useCallback(() => {
     const openModal = (screenshot: string | null) => {
       setRfiScreenshot(screenshot);
@@ -1946,7 +1946,7 @@ export const DrawingTiledViewer: React.FC<DrawingTiledViewerProps> = ({
       out.width = w; out.height = h;
       const ctx = out.getContext('2d');
       if (!ctx) { openModal(null); return; }
-      try { ctx.drawImage(osdCanvas, 0, 0, w, h); } catch { /* tainted — skip */ }
+      try { ctx.drawImage(osdCanvas, 0, 0, w, h); } catch { /* tainted. skip */ }
       // Compose the SVG annotation layer so pins/highlights appear in the screenshot.
       const svg = containerRef.current?.querySelector('svg');
       if (svg) {
@@ -2095,7 +2095,7 @@ export const DrawingTiledViewer: React.FC<DrawingTiledViewerProps> = ({
         {/* OpenSeadragon container */}
         <div id={VIEWER_ID} style={S.osdContainer} />
 
-        {/* Annotation SVG overlay — click-selectable only in the select tool so
+        {/* Annotation SVG overlay. click-selectable only in the select tool so
              other tools aren't interfered with. */}
         {showAnnotations && (
           <AnnotationSvgOverlay
@@ -2116,7 +2116,7 @@ export const DrawingTiledViewer: React.FC<DrawingTiledViewerProps> = ({
           containerSize={containerSize}
         />
 
-        {/* Interactive drawing SVG overlay — captures mouse events for annotation tools */}
+        {/* Interactive drawing SVG overlay. captures mouse events for annotation tools */}
         {isMarkupMode && (
           <svg
             style={{
@@ -2177,7 +2177,7 @@ export const DrawingTiledViewer: React.FC<DrawingTiledViewerProps> = ({
           </svg>
         )}
 
-        {/* Measurement overlay — always mounted so completed measurements stay visible
+        {/* Measurement overlay. always mounted so completed measurements stay visible
              across tool switches. Clicks only register when a measure tool is active. */}
         <MeasurementOverlay
           activeTool={activeTool}
@@ -2229,7 +2229,7 @@ export const DrawingTiledViewer: React.FC<DrawingTiledViewerProps> = ({
           <div id={NAVIGATOR_ID} style={S.navigatorContainer} />
         )}
 
-        {/* Markup toolbar — visible whenever any tool is active or there are unsaved markups */}
+        {/* Markup toolbar. visible whenever any tool is active or there are unsaved markups */}
         {isToolbarVisible && (
           <div style={{
             position: 'absolute',
@@ -2254,7 +2254,7 @@ export const DrawingTiledViewer: React.FC<DrawingTiledViewerProps> = ({
               onCreateRFI={handleCreateRFI}
             />
             {/* Cloud + Stamp extended tool row. Not part of MarkupToolbar's
-                MarkupTool union yet — rendered here so the DB-backed 'cloud' /
+                MarkupTool union yet. rendered here so the DB-backed 'cloud' /
                 'stamp' geometry types that the SVG overlay already renders are
                 also creatable from the UI. */}
             <div style={{
@@ -2285,7 +2285,7 @@ export const DrawingTiledViewer: React.FC<DrawingTiledViewerProps> = ({
                   fontSize: 12,
                   fontWeight: 600,
                 }}
-                title="Revision cloud — drag a rectangle to scallop its edges"
+                title="Revision cloud. drag a rectangle to scallop its edges"
               >
                 Cloud
               </button>
@@ -2306,7 +2306,7 @@ export const DrawingTiledViewer: React.FC<DrawingTiledViewerProps> = ({
                   fontSize: 12,
                   fontWeight: 600,
                 }}
-                title="Place an approval stamp — click on the drawing"
+                title="Place an approval stamp. click on the drawing"
               >
                 Stamp
               </button>
@@ -2334,7 +2334,7 @@ export const DrawingTiledViewer: React.FC<DrawingTiledViewerProps> = ({
           </div>
         )}
 
-        {/* Save success confirmation — fades out automatically. */}
+        {/* Save success confirmation. fades out automatically. */}
         {saveConfirmedAt && (
           <div key={saveConfirmedAt} style={{
             position: 'absolute',
@@ -2371,10 +2371,10 @@ export const DrawingTiledViewer: React.FC<DrawingTiledViewerProps> = ({
           </div>
         )}
 
-        {/* First-use tool hint — dismisses itself after 3s. */}
+        {/* First-use tool hint. dismisses itself after 3s. */}
         {hintTool && <ToolHint tool={hintTool} onDismiss={() => setHintTool(null)} />}
 
-        {/* Precision loupe — shown for measure/path/area/calibrate when the cursor is inside the viewer. */}
+        {/* Precision loupe. shown for measure/path/area/calibrate when the cursor is inside the viewer. */}
         {cursorPos && (activeTool === 'measure' || activeTool === 'path' || activeTool === 'area' || activeTool === 'calibrate') && isLoaded && (
           <OsdLoupe
             screenX={cursorPos.x}
@@ -2386,7 +2386,7 @@ export const DrawingTiledViewer: React.FC<DrawingTiledViewerProps> = ({
           />
         )}
 
-        {/* Inline text prompt — replaces the native window.prompt for text tool */}
+        {/* Inline text prompt. replaces the native window.prompt for text tool */}
         {textPrompt && (
           <InlineTextPrompt
             x={textPrompt.screen.x}

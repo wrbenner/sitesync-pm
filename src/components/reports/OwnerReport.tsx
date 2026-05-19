@@ -1,4 +1,4 @@
-// OwnerReport — Auto-generated owner/OAC meeting report.
+// OwnerReport. Auto-generated owner/OAC meeting report.
 // Moment 5 from the product vision: the PM walks into the meeting with
 // better insight than any human could compile manually.
 //
@@ -757,7 +757,7 @@ export const OwnerReportPdfDoc: React.FC<{ data: OwnerReportData }> = ({ data })
   const { projectName, projectAddress, reportDate, narrative, percentComplete, overallStatus, scheduleSummary, budgetSummary, riskFlags, lookahead } = data
 
   return (
-    <Document title={`Owner Report — ${projectName}`}>
+    <Document title={`Owner Report. ${projectName}`}>
       <Page size="LETTER" style={pdfStyles.page}>
         <View style={pdfStyles.brand}>
           <Text style={pdfStyles.brandText}>SITESYNC PM</Text>
@@ -938,7 +938,7 @@ export const OwnerReportPdfDoc: React.FC<{ data: OwnerReportData }> = ({ data })
           style={pdfStyles.footer}
           render={({ pageNumber, ...rest }) => (
             <>
-              <Text>SiteSync PM — {projectName} — Owner Report {reportDate}</Text>
+              <Text>SiteSync PM. {projectName}. Owner Report {reportDate}</Text>
               <Text>Page {pageNumber} of {(rest as { totalPages?: number }).totalPages ?? '?'}</Text>
             </>
           )}

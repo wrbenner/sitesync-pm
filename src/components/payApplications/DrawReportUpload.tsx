@@ -1,4 +1,4 @@
-// DrawReportUpload — 3-step modal for ingesting AIA G702/G703 draw reports.
+// DrawReportUpload. 3-step modal for ingesting AIA G702/G703 draw reports.
 //
 //   Step 1 (upload)   → drop a PDF or .xlsx file.
 //   Step 2 (review)   → editable grid of extracted line items. Low-confidence
@@ -165,12 +165,12 @@ export function DrawReportUpload({ open, onClose, projectId, onSuccess }: DrawRe
       setStep('done')
       if (result.budgetRowsUpdated > 0) {
         toast.success(
-          `Draw report saved — ${result.lineItemCount} line items, ${result.budgetRowsUpdated} budget row${result.budgetRowsUpdated !== 1 ? 's' : ''} updated.`,
+          `Draw report saved. ${result.lineItemCount} line items, ${result.budgetRowsUpdated} budget row${result.budgetRowsUpdated !== 1 ? 's' : ''} updated.`,
           { duration: 5000 },
         )
       } else {
         toast.success(
-          `Draw report saved — ${result.lineItemCount} line items. Budget actuals unchanged (no CSI-division match in the current budget). Pay app + Construction Brain updated.`,
+          `Draw report saved. ${result.lineItemCount} line items. Budget actuals unchanged (no CSI-division match in the current budget). Pay app + Construction Brain updated.`,
           { duration: 7000 },
         )
       }
@@ -263,7 +263,7 @@ export function DrawReportUpload({ open, onClose, projectId, onSuccess }: DrawRe
 
   // Live reconciliation: sum-of-lines vs stated contract sum, recalculated
   // as the user edits. Used to drive the green/red banner and the commit
-  // guard. statedContractSum comes from the extraction when available —
+  // guard. statedContractSum comes from the extraction when available -
   // falls back to 0 (banner stays neutral) for blank-slate draws.
   const liveRecon = useMemo(() => {
     if (!staged) return null
@@ -409,7 +409,7 @@ export function DrawReportUpload({ open, onClose, projectId, onSuccess }: DrawRe
                   Drop your draw report here
                 </p>
                 <p style={{ margin: 0, fontSize: typography.fontSize.sm, color: colors.textTertiary }}>
-                  AIA G702/G703 (PDF) or Excel (.xlsx) — any format, any layout
+                  AIA G702/G703 (PDF) or Excel (.xlsx). any format, any layout
                 </p>
               </div>
 
@@ -457,7 +457,7 @@ export function DrawReportUpload({ open, onClose, projectId, onSuccess }: DrawRe
               <p style={{
                 margin: `${spacing['2']} 0 0`, fontSize: typography.fontSize.sm, color: colors.textTertiary,
               }}>
-                AI is reading every line item. Takes 20–60 seconds for a typical G702/G703.
+                AI is reading every line item. Takes 20-60 seconds for a typical G702/G703.
               </p>
               <p style={{
                 marginTop: spacing['3'],
@@ -481,11 +481,11 @@ export function DrawReportUpload({ open, onClose, projectId, onSuccess }: DrawRe
               }}>
                 <SummaryCard
                   label="Application"
-                  value={staged.extraction.application_number ? `#${staged.extraction.application_number}` : '—'}
+                  value={staged.extraction.application_number ? `#${staged.extraction.application_number}` : '-'}
                 />
                 <SummaryCard
                   label="Period To"
-                  value={staged.extraction.period_to || '—'}
+                  value={staged.extraction.period_to || '-'}
                 />
                 <SummaryCard
                   label="Line Items"
@@ -497,7 +497,7 @@ export function DrawReportUpload({ open, onClose, projectId, onSuccess }: DrawRe
                 />
               </div>
 
-              {/* Reconciliation banner — green when sum(line items) ≈ contract sum, red otherwise */}
+              {/* Reconciliation banner. green when sum(line items) ≈ contract sum, red otherwise */}
               {liveRecon && (
                 <div style={{
                   display: 'flex', alignItems: 'flex-start', gap: spacing['2'],
@@ -563,7 +563,7 @@ export function DrawReportUpload({ open, onClose, projectId, onSuccess }: DrawRe
                 }}>
                   <AlertTriangle size={12} />
                   <span>
-                    {lowConfidenceCount} row{lowConfidenceCount !== 1 ? 's' : ''} flagged as low confidence —
+                    {lowConfidenceCount} row{lowConfidenceCount !== 1 ? 's' : ''} flagged as low confidence -
                     verify the numbers in rows marked with an amber dot.
                   </span>
                 </div>
@@ -613,7 +613,7 @@ export function DrawReportUpload({ open, onClose, projectId, onSuccess }: DrawRe
                 )
               })()}
 
-              {/* Bulk actions toolbar — appears when ≥1 row selected */}
+              {/* Bulk actions toolbar. appears when ≥1 row selected */}
               {selectedIdx.size > 0 && (
                 <div style={{
                   display: 'flex', alignItems: 'center', justifyContent: 'space-between',
@@ -761,7 +761,7 @@ export function DrawReportUpload({ open, onClose, projectId, onSuccess }: DrawRe
                           numeric
                         />
                         <div
-                          title={low ? `Low confidence (${Math.round(line.confidence * 100)}%) — verify values` : `Confidence ${Math.round(line.confidence * 100)}%`}
+                          title={low ? `Low confidence (${Math.round(line.confidence * 100)}%). verify values` : `Confidence ${Math.round(line.confidence * 100)}%`}
                           style={{
                             width: 10, height: 10, borderRadius: '50%',
                             backgroundColor: low ? colors.statusPending : colors.statusActive,
@@ -803,7 +803,7 @@ export function DrawReportUpload({ open, onClose, projectId, onSuccess }: DrawRe
                 </div>
               </div>
 
-              {/* Override checkbox — appears ONLY when reconciliation would block commit. */}
+              {/* Override checkbox. appears ONLY when reconciliation would block commit. */}
               {liveRecon && liveRecon.severelyOff && (
                 <div style={{
                   display: 'flex', alignItems: 'center', gap: spacing['2'],
@@ -822,7 +822,7 @@ export function DrawReportUpload({ open, onClose, projectId, onSuccess }: DrawRe
                     style={{ cursor: 'pointer', width: 16, height: 16 }}
                   />
                   <label htmlFor="recon-override" style={{ cursor: 'pointer' }}>
-                    Save anyway — I've verified the numbers are correct despite the mismatch
+                    Save anyway. I've verified the numbers are correct despite the mismatch
                   </label>
                 </div>
               )}

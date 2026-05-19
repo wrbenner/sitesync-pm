@@ -130,7 +130,7 @@ const btnSecondary: React.CSSProperties = {
 // ── Helpers ─────────────────────────────────────────────
 const fmt = (n: number) => n.toLocaleString('en-US');
 const fmtUSD = (n: number) => '$' + n.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
-const fmtDate = (d: string) => d ? new Date(d + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—';
+const fmtDate = (d: string) => d ? new Date(d + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '-';
 const daysUntil = (d: string) => Math.ceil((new Date(d + 'T00:00:00').getTime() - Date.now()) / 86400000);
 
 const HealthRing: React.FC<{ score: number; size?: number }> = ({ score, size = 56 }) => {
@@ -237,7 +237,7 @@ const HUDCompliancePage: React.FC = () => {
             journeymanRate: Number(w.base_hourly_rate ?? 0),
             fringes: Number(w.fringe_benefits ?? 0),
             total: Number(w.base_hourly_rate ?? 0) + Number(w.fringe_benefits ?? 0),
-            apprenticeRatio: '1:3', // Not stored in DB — default
+            apprenticeRatio: '1:3', // Not stored in DB. default
           }));
           setWageRates(mapped);
         } else if (!cancelled) {
@@ -303,7 +303,7 @@ const HUDCompliancePage: React.FC = () => {
           });
           setPayrollEntries(mapped);
 
-          // Generate alerts from payroll data — flag rejected reports
+          // Generate alerts from payroll data. flag rejected reports
           const payrollAlerts: ComplianceAlert[] = [];
           mapped.forEach(entry => {
             if (entry.status === 'rejected') {
@@ -311,7 +311,7 @@ const HUDCompliancePage: React.FC = () => {
                 id: `alert-payroll-${entry.id}`,
                 severity: 'critical',
                 program: 'Davis-Bacon',
-                message: `Certified payroll report rejected for ${entry.contractor} — week ending ${fmtDate(entry.weekEnding)}. Review and resubmit.`,
+                message: `Certified payroll report rejected for ${entry.contractor}. week ending ${fmtDate(entry.weekEnding)}. Review and resubmit.`,
                 date: entry.weekEnding,
                 actionRequired: true,
               });
@@ -484,7 +484,7 @@ const HUDCompliancePage: React.FC = () => {
                 </div>
               </div>
               <div style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary, textAlign: 'center' }}>
-                {overallHealth >= 90 ? 'Excellent — all programs on track' : overallHealth >= 70 ? 'Good — some items need attention' : 'At Risk — immediate action required'}
+                {overallHealth >= 90 ? 'Excellent. all programs on track' : overallHealth >= 70 ? 'Good. some items need attention' : 'At Risk. immediate action required'}
               </div>
             </motion.div>
 
@@ -601,12 +601,12 @@ const HUDCompliancePage: React.FC = () => {
         {/* Project Summary */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: spacing.md }}>
           {[
-            { label: 'Credit Type', value: lihtcUnits.length > 0 ? '9% / 4% Hybrid' : '—' },
-            { label: 'Set-Aside', value: lihtcUnits.length > 0 ? '40% @ 60% AMI' : '—' },
-            { label: 'Applicable Fraction', value: applicableFraction.totalUnits > 0 ? `${(appFraction * 100).toFixed(1)}%` : '—' },
-            { label: 'Qualified Basis', value: '—' },
-            { label: 'Max Annual Credit', value: '—' },
-            { label: 'Compliance Period', value: '—' },
+            { label: 'Credit Type', value: lihtcUnits.length > 0 ? '9% / 4% Hybrid' : '-' },
+            { label: 'Set-Aside', value: lihtcUnits.length > 0 ? '40% @ 60% AMI' : '-' },
+            { label: 'Applicable Fraction', value: applicableFraction.totalUnits > 0 ? `${(appFraction * 100).toFixed(1)}%` : '-' },
+            { label: 'Qualified Basis', value: '-' },
+            { label: 'Max Annual Credit', value: '-' },
+            { label: 'Compliance Period', value: '-' },
           ].map((item, i) => (
             <div key={i} style={cardStyle}>
               <div style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary, marginBottom: spacing.xs }}>{item.label}</div>
@@ -629,7 +629,7 @@ const HUDCompliancePage: React.FC = () => {
                   flex: 1, background: isCurrentYear ? colors.primaryOrange : isInitial ? colors.statusActive : colors.statusInfo,
                   opacity: isCurrentYear ? 1 : i <= 1 ? 0.9 : 0.4,
                   position: 'relative', cursor: 'pointer',
-                }} title={`Year ${i + 1} — ${isInitial ? 'Initial Compliance' : 'Extended Use'}`} />
+                }} title={`Year ${i + 1}. ${isInitial ? 'Initial Compliance' : 'Extended Use'}`} />
               );
             })}
           </div>
@@ -725,13 +725,13 @@ const HUDCompliancePage: React.FC = () => {
                         {fmtUSD(u.actualRent)}
                       </td>
                       <td style={tableCellStyle}>{fmtUSD(u.incomeLimit)}</td>
-                      <td style={tableCellStyle}>{u.tenantName || '—'}</td>
+                      <td style={tableCellStyle}>{u.tenantName || '-'}</td>
                       <td style={tableCellStyle}><span style={badgeStyle(u.tenantStatus)}>{u.tenantStatus}</span></td>
                       <td style={tableCellStyle}>{fmtDate(u.certDate)}</td>
                       <td style={tableCellStyle}>
                         <button
                           disabled
-                          aria-label="Edit unit — coming soon"
+                          aria-label="Edit unit. Coming soon."
                           title="HUD compliance editor not yet wired"
                           style={{ background: 'none', border: 'none', cursor: 'not-allowed', color: colors.textTertiary, padding: 4, opacity: 0.5 }}
                         >
@@ -916,7 +916,7 @@ const HUDCompliancePage: React.FC = () => {
                                         {emp.name} {underpaid && <AlertCircle size={12} color={colors.statusCritical} style={{ marginLeft: 4 }} />}
                                       </td>
                                       <td style={{ ...tableCellStyle, fontSize: typography.fontSize.caption }}>{emp.classification}</td>
-                                      <td style={{ ...tableCellStyle, fontSize: typography.fontSize.caption, textAlign: 'center' }}>{emp.hours[0] || '—'}</td>
+                                      <td style={{ ...tableCellStyle, fontSize: typography.fontSize.caption, textAlign: 'center' }}>{emp.hours[0] || '-'}</td>
                                       <td style={{ ...tableCellStyle, fontSize: typography.fontSize.caption, color: underpaid ? colors.statusCritical : colors.textPrimary }}>
                                         ${emp.rate.toFixed(2)}
                                       </td>
@@ -1093,7 +1093,7 @@ const HUDCompliancePage: React.FC = () => {
                   <tr key={b.id}>
                     <td style={{ ...tableCellStyle, fontWeight: typography.fontWeight.semibold }}>{b.name}</td>
                     <td style={tableCellStyle}>{b.certType}</td>
-                    <td style={tableCellStyle}>{b.contractAmt > 0 ? fmtUSD(b.contractAmt) : '—'}</td>
+                    <td style={tableCellStyle}>{b.contractAmt > 0 ? fmtUSD(b.contractAmt) : '-'}</td>
                     <td style={tableCellStyle}>
                       {b.section3 ? <CheckCircle size={16} color={colors.statusActive} /> : <X size={16} color={colors.textTertiary} />}
                     </td>
@@ -1139,10 +1139,10 @@ const HUDCompliancePage: React.FC = () => {
           <div style={{ display: 'flex', flexDirection: 'column', gap: spacing.lg }}>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: spacing.md }}>
               {[
-                { label: 'Total QRE', value: '—' },
-                { label: 'Federal HTC (20%)', value: '—' },
-                { label: 'State HTC (25%)', value: '—' },
-                { label: 'NPS Status', value: '—' },
+                { label: 'Total QRE', value: '-' },
+                { label: 'Federal HTC (20%)', value: '-' },
+                { label: 'State HTC (25%)', value: '-' },
+                { label: 'NPS Status', value: '-' },
               ].map((item, i) => (
                 <div key={i} style={cardStyle}>
                   <div style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>{item.label}</div>
@@ -1226,10 +1226,10 @@ const HUDCompliancePage: React.FC = () => {
           <div style={{ display: 'flex', flexDirection: 'column', gap: spacing.lg }}>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: spacing.md }}>
               {[
-                { label: 'NMTC Allocation', value: '—' },
-                { label: 'QLICI Amount', value: '—' },
-                { label: 'Investor Credit (39%)', value: '—' },
-                { label: 'Compliance Year', value: '—' },
+                { label: 'NMTC Allocation', value: '-' },
+                { label: 'QLICI Amount', value: '-' },
+                { label: 'Investor Credit (39%)', value: '-' },
+                { label: 'Compliance Year', value: '-' },
               ].map((item, i) => (
                 <div key={i} style={cardStyle}>
                   <div style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>{item.label}</div>
@@ -1265,12 +1265,12 @@ const HUDCompliancePage: React.FC = () => {
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: spacing.lg }}>
                 <div style={{ textAlign: 'center', padding: spacing.lg, background: colors.surfaceInset, borderRadius: borderRadius.md }}>
-                  <div style={{ fontSize: '36px', fontWeight: typography.fontWeight.bold, color: colors.textTertiary }}>—</div>
+                  <div style={{ fontSize: '36px', fontWeight: typography.fontWeight.bold, color: colors.textTertiary }}>-</div>
                   <div style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary }}>Full-Time Jobs Created</div>
                   <div style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>Configure target in Settings</div>
                 </div>
                 <div style={{ textAlign: 'center', padding: spacing.lg, background: colors.surfaceInset, borderRadius: borderRadius.md }}>
-                  <div style={{ fontSize: '36px', fontWeight: typography.fontWeight.bold, color: colors.textTertiary }}>—</div>
+                  <div style={{ fontSize: '36px', fontWeight: typography.fontWeight.bold, color: colors.textTertiary }}>-</div>
                   <div style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary }}>Full-Time Jobs Retained</div>
                   <div style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>Configure target in Settings</div>
                 </div>
@@ -1284,10 +1284,10 @@ const HUDCompliancePage: React.FC = () => {
           <div style={{ display: 'flex', flexDirection: 'column', gap: spacing.lg }}>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: spacing.md }}>
               {[
-                { label: 'Eligible Units', value: lihtcUnits.length > 0 ? String(lihtcUnits.length) : '—' },
-                { label: 'Certified Units', value: '—' },
-                { label: 'Credit per Unit', value: '—' },
-                { label: 'Estimated Total', value: '—' },
+                { label: 'Eligible Units', value: lihtcUnits.length > 0 ? String(lihtcUnits.length) : '-' },
+                { label: 'Certified Units', value: '-' },
+                { label: 'Credit per Unit', value: '-' },
+                { label: 'Estimated Total', value: '-' },
               ].map((item, i) => (
                 <div key={i} style={cardStyle}>
                   <div style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>{item.label}</div>
@@ -1324,8 +1324,8 @@ const HUDCompliancePage: React.FC = () => {
                         <td style={tableCellStyle}>
                           <Clock size={16} color={colors.textTertiary} />
                         </td>
-                        <td style={tableCellStyle}>—</td>
-                        <td style={{ ...tableCellStyle, fontWeight: typography.fontWeight.semibold }}>—</td>
+                        <td style={tableCellStyle}>-</td>
+                        <td style={{ ...tableCellStyle, fontWeight: typography.fontWeight.semibold }}>-</td>
                         <td style={tableCellStyle}>
                           <span style={badgeStyle('pending')}>Pending</span>
                         </td>
@@ -1369,10 +1369,10 @@ const HUDCompliancePage: React.FC = () => {
           <div style={{ display: 'flex', flexDirection: 'column', gap: spacing.lg }}>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: spacing.md }}>
               {[
-                { label: 'Building Sq Ft', value: '—' },
-                { label: 'Credit per Sq Ft', value: '—' },
-                { label: 'Estimated Deduction', value: '—' },
-                { label: 'ASHRAE Baseline', value: '—' },
+                { label: 'Building Sq Ft', value: '-' },
+                { label: 'Credit per Sq Ft', value: '-' },
+                { label: 'Estimated Deduction', value: '-' },
+                { label: 'ASHRAE Baseline', value: '-' },
               ].map((item, i) => (
                 <div key={i} style={cardStyle}>
                   <div style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>{item.label}</div>
@@ -1384,7 +1384,7 @@ const HUDCompliancePage: React.FC = () => {
             {/* Energy Model Summary */}
             <div style={cardStyle}>
               <div style={{ fontSize: typography.fontSize.body, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, marginBottom: spacing.md }}>
-                Energy Model — ASHRAE 90.1 Comparison
+                Energy Model. ASHRAE 90.1 Comparison
               </div>
               <EmptyCard
                 icon={Zap}
@@ -1425,10 +1425,10 @@ const HUDCompliancePage: React.FC = () => {
           <div style={{ display: 'flex', flexDirection: 'column', gap: spacing.lg }}>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: spacing.md }}>
               {[
-                { label: 'Original Basis', value: '—' },
-                { label: 'Improvement Target', value: '—' },
-                { label: 'Improvements to Date', value: '—' },
-                { label: 'Census Tract', value: '—' },
+                { label: 'Original Basis', value: '-' },
+                { label: 'Improvement Target', value: '-' },
+                { label: 'Improvements to Date', value: '-' },
+                { label: 'Census Tract', value: '-' },
               ].map((item, i) => (
                 <div key={i} style={cardStyle}>
                   <div style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>{item.label}</div>
@@ -1457,16 +1457,16 @@ const HUDCompliancePage: React.FC = () => {
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: spacing.lg, textAlign: 'center' }}>
                 <div style={{ padding: spacing.lg, background: colors.surfaceInset, borderRadius: borderRadius.md }}>
                   <div style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>Start Date</div>
-                  <div style={{ fontSize: typography.fontSize.body, fontWeight: typography.fontWeight.semibold, color: colors.textTertiary }}>—</div>
+                  <div style={{ fontSize: typography.fontSize.body, fontWeight: typography.fontWeight.semibold, color: colors.textTertiary }}>-</div>
                 </div>
                 <div style={{ padding: spacing.lg, background: colors.surfaceInset, borderRadius: borderRadius.md }}>
                   <div style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>Days Remaining</div>
-                  <div style={{ fontSize: '36px', fontWeight: typography.fontWeight.bold, color: colors.textTertiary }}>—</div>
+                  <div style={{ fontSize: '36px', fontWeight: typography.fontWeight.bold, color: colors.textTertiary }}>-</div>
                   <div style={{ fontSize: typography.fontSize.caption, color: colors.textSecondary }}>Configure in Settings</div>
                 </div>
                 <div style={{ padding: spacing.lg, background: colors.surfaceInset, borderRadius: borderRadius.md }}>
                   <div style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>Deadline</div>
-                  <div style={{ fontSize: typography.fontSize.body, fontWeight: typography.fontWeight.semibold, color: colors.textTertiary }}>—</div>
+                  <div style={{ fontSize: typography.fontSize.body, fontWeight: typography.fontWeight.semibold, color: colors.textTertiary }}>-</div>
                 </div>
               </div>
             </div>

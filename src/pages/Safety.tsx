@@ -26,7 +26,7 @@ const tabs: { key: TabKey; label: string; icon: React.ElementType }[] = [
   { key: 'corrective_actions', label: 'Corrective Actions', icon: Wrench },
 ]
 
-// OSHA incident severity — dot and badge colors per design spec
+// OSHA incident severity. dot and badge colors per design spec
 const OSHA_SEVERITY: Record<string, { fg: string; bg: string; label: string }> = {
   near_miss:          { fg: colors.statusNeutral,   bg: colors.statusNeutralSubtle,   label: 'Near Miss' },
   first_aid:          { fg: colors.statusPending,   bg: colors.statusPendingSubtle,   label: 'First Aid' },
@@ -774,7 +774,7 @@ export const Safety: React.FC = () => {
 
   // ── KPI calculations ───────────────────────────────────────
 
-  // first_aid and near_miss do NOT reset the days counter — only medical_treatment and above do
+  // first_aid and near_miss do NOT reset the days counter. only medical_treatment and above do
   const recordableSeverities = ['medical_treatment', 'lost_time', 'fatality']
 
   const lastRecordableIncident = displayIncidents
@@ -1201,7 +1201,7 @@ export const Safety: React.FC = () => {
         </div>
       )}
 
-      {/* Tab Switcher — wrapped so the right-edge gradient hint stays
+      {/* Tab Switcher. wrapped so the right-edge gradient hint stays
           aligned with the scroll container even when more tabs are
           present than fit on iPhone width. */}
       <div style={{ position: 'relative', marginBottom: spacing.lg }}>
@@ -2498,7 +2498,7 @@ export const Safety: React.FC = () => {
               </div>
             </div>
 
-            {/* Photo upload — required when severity >= medical treatment */}
+            {/* Photo upload. required when severity >= medical treatment */}
             <div style={{ marginBottom: spacing['5'] }}>
               <label style={{ display: 'block', fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary, marginBottom: spacing['1'] }}>
                 Photo Documentation
@@ -2743,7 +2743,7 @@ export const Safety: React.FC = () => {
           onCreateObservation={(v, photoUrl) => {
             setIncidentForm((f) => ({
               ...f,
-              description: `[AI-detected ${v.severity} violation – ${v.category}]\n${v.description}\n\nOSHA: ${v.osha_reference}\nCorrective action: ${v.corrective_action}\n\nPhoto: ${photoUrl}`,
+              description: `[AI-detected ${v.severity} violation. ${v.category}]\n${v.description}\n\nOSHA: ${v.osha_reference}\nCorrective action: ${v.corrective_action}\n\nPhoto: ${photoUrl}`,
             }))
             setShowAiScanModal(false)
             setShowIncidentModal(true)

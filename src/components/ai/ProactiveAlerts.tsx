@@ -99,7 +99,7 @@ function useProactiveAlerts(projectId: string | undefined) {
           severity: age > 30 ? 'critical' : 'warning',
           icon: AlertTriangle,
           title: `RFI #${rfi.number ?? '?'} has been open for ${age} days`,
-          description: `${factor}x average response time — ${rfi.title ?? 'untitled'}`,
+          description: `${factor}x average response time. ${rfi.title ?? 'untitled'}`,
           navigateTo: '/rfis',
         });
       }
@@ -136,7 +136,7 @@ function useProactiveAlerts(projectId: string | undefined) {
           severity: expiringCount > 3 ? 'warning' : 'info',
           icon: Award,
           title: `${expiringCount} certification${expiringCount === 1 ? '' : 's'} expire within 30 days`,
-          description: certsData.slice(0, 3).map((c) => `${c.worker_name} — ${c.certification_type}`).join(', ') + (expiringCount > 3 ? '…' : ''),
+          description: certsData.slice(0, 3).map((c) => `${c.worker_name}. ${c.certification_type}`).join(', ') + (expiringCount > 3 ? '…' : ''),
           navigateTo: '/safety',
         });
       }

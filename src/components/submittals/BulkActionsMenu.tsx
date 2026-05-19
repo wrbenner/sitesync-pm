@@ -1,13 +1,13 @@
-// Phase 3 — Bulk Actions menu.
+// Phase 3. Bulk Actions menu.
 //
 // Per SUBMITTALS_PAGE_REBUILD_PLAN_2026-05-06.md Phase 3 §B.
 // Six menu items, each PermissionGate-wrapped:
-//   1. Edit                  — opens BulkEditModal
-//   2. Apply Workflow        — opens workflow picker (Phase 4 placeholder for now)
-//   3. Delete                — typed-confirm "DELETE", admin-only
-//   4. Re-run Iris Pre-flight — disabled (P2 of submittal spec, Phase 4+)
-//   5. Distribute to Field   — calls submittal_distribute RPC per row
-//   6. Generate Stamp PDF    — disabled (P2 of submittal spec)
+//   1. Edit                 . opens BulkEditModal
+//   2. Apply Workflow       . opens workflow picker (Phase 4 placeholder for now)
+//   3. Delete               . typed-confirm "DELETE", admin-only
+//   4. Re-run Iris Pre-flight. disabled (P2 of submittal spec, Phase 4+)
+//   5. Distribute to Field  . calls submittal_distribute RPC per row
+//   6. Generate Stamp PDF   . disabled (P2 of submittal spec)
 //
 // The trigger lives in SubmittalsToolbar. This component is the dropdown
 // content shown when selectedCount ≥ 1 and the toolbar trigger fires.
@@ -44,7 +44,7 @@ export interface BulkActionsMenuProps {
   /** Selected submittal ids. The menu shows count in section header. */
   selectedIds: string[]
   onClose: () => void
-  /** Open the bulk edit modal. Page-level — composes with BulkEditModal. */
+  /** Open the bulk edit modal. Page-level. composes with BulkEditModal. */
   onOpenEdit: () => void
   /** Open the bulk distribute dialog. Page mounts BulkDistributeDialog. */
   onOpenDistribute: () => void
@@ -182,7 +182,7 @@ export const BulkActionsMenu: React.FC<BulkActionsMenuProps> = ({
         <MenuItem
           icon={<Sparkles size={12} />}
           disabled
-          title="Available in P2 of submittals — coming in Phase 4"
+          title="Available in P2 of submittals. coming in Phase 4"
         >
           Re-run Iris Pre-flight
         </MenuItem>
@@ -195,7 +195,7 @@ export const BulkActionsMenu: React.FC<BulkActionsMenuProps> = ({
         <MenuItem
           icon={<FileSignature size={12} />}
           disabled
-          title="Available in P2 of submittals — coming in Phase 4"
+          title="Available in P2 of submittals. coming in Phase 4"
         >
           Generate Stamp PDF
         </MenuItem>

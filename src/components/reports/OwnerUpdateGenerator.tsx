@@ -17,7 +17,7 @@ import { generateIrisDraft } from '../../services/iris'
 import type { ProjectContextSnapshot } from '../../services/iris/types'
 import type { StreamItem } from '../../types/stream'
 
-// Iris brand color — DESIGN-RESET indigo accent.
+// Iris brand color. DESIGN-RESET indigo accent.
 const IRIS_INDIGO = '#4F46E5'
 const IRIS_INDIGO_HOVER = '#4338CA'
 const IRIS_INDIGO_TINT = '#EEF2FF'
@@ -50,7 +50,7 @@ const TIER_TONE: Record<ConfidenceTier, { fg: string; bg: string; ring: string; 
     fg: colors.statusCritical,
     bg: colors.statusCriticalSubtle,
     ring: colors.statusCritical,
-    label: 'Low confidence — review carefully',
+    label: 'Low confidence. review carefully',
   },
 }
 
@@ -77,12 +77,12 @@ function buildDeterministicOwnerUpdate(ctx: ProjectContextSnapshot): {
   const sources: string[] = []
   const sentences: string[] = []
 
-  // Section 1 — opener
+  // Section 1. opener
   sentences.push(
     `This is a status update on ${projectLabel} covering the last ${pluralizeDays(period)}.`,
   )
 
-  // Section 2 — Schedule
+  // Section 2. Schedule
   if (ctx.scheduleStatus) {
     const behind = ctx.scheduleStatus.behindActivities ?? []
     const hit = ctx.scheduleStatus.milestonesHit ?? []
@@ -106,7 +106,7 @@ function buildDeterministicOwnerUpdate(ctx: ProjectContextSnapshot): {
     sentences.push('Schedule. No material change.')
   }
 
-  // Section 3 — Budget
+  // Section 3. Budget
   if (ctx.budgetStatus) {
     const { percentCommitted, approvedTotal, changeOrderExposure, sourceLabel } = ctx.budgetStatus
     const parts: string[] = [`${percentCommitted.toFixed(1)}% of budget committed`]
@@ -122,27 +122,27 @@ function buildDeterministicOwnerUpdate(ctx: ProjectContextSnapshot): {
     sentences.push('Budget. No material change.')
   }
 
-  // Section 4 — Top risks
+  // Section 4. Top risks
   const risks = (ctx.topRisks ?? []).slice(0, 3)
   if (risks.length > 0) {
-    const lines = risks.map((r) => `${r.title} — ${r.summary}`).join('; ')
+    const lines = risks.map((r) => `${r.title}. ${r.summary}`).join('; ')
     sentences.push(`Key risks. ${lines}.`)
     for (const r of risks) sources.push(r.sourceLabel)
   } else {
     sentences.push('Key risks. None flagged this period.')
   }
 
-  // Section 5 — Decisions needed
+  // Section 5. Decisions needed
   const decisions = (ctx.decisionsNeeded ?? []).slice(0, 5)
   if (decisions.length > 0) {
-    const lines = decisions.map((d) => `${d.title} — ${d.summary}`).join('; ')
+    const lines = decisions.map((d) => `${d.title}. ${d.summary}`).join('; ')
     sentences.push(`Decisions needed from owner. ${lines}.`)
     for (const d of decisions) sources.push(d.sourceLabel)
   } else {
     sentences.push('Decisions needed from owner. None at this time.')
   }
 
-  // Section 6 — Progress highlights
+  // Section 6. Progress highlights
   const progress = (ctx.progressHighlights ?? []).slice(0, 5)
   if (progress.length > 0) {
     sentences.push(`Progress. ${progress.map((p) => p.summary).join('. ')}.`)
@@ -151,7 +151,7 @@ function buildDeterministicOwnerUpdate(ctx: ProjectContextSnapshot): {
     sentences.push('Progress. No notable highlights logged this period.')
   }
 
-  // Section 7 — Lookahead
+  // Section 7. Lookahead
   const lookahead = (ctx.lookahead14Days ?? []).slice(0, 6)
   if (lookahead.length > 0) {
     sentences.push(
@@ -174,7 +174,7 @@ function buildDeterministicOwnerUpdate(ctx: ProjectContextSnapshot): {
 
 /**
  * Pre-warm the Anthropic prompt cache so the demo's "Generate Update" hits a
- * warm cache. Fire-and-forget — never throws, never awaits, never affects
+ * warm cache. Fire-and-forget. never throws, never awaits, never affects
  * page render. Called from the Reports page on mount.
  *
  * Implementation: kick off a 1-token call that shares the role preamble with
@@ -185,11 +185,11 @@ function buildDeterministicOwnerUpdate(ctx: ProjectContextSnapshot): {
 export function prewarmIris(projectId?: string | null): void {
   if (typeof window === 'undefined') return
   // iris-call validates project_id as a UUID. The prewarm is a no-op if we
-  // don't have a project to attribute it to — would 400 in the browser
+  // don't have a project to attribute it to. would 400 in the browser
   // console for no demo-visible benefit.
   if (!projectId) return
   // Build a minimal trigger that uses the same template path. We catch all
-  // failures silently — pre-warm is best-effort.
+  // failures silently. pre-warm is best-effort.
   const triggerItem: StreamItem = {
     id: 'iris-prewarm',
     type: 'task',
@@ -228,7 +228,7 @@ export function prewarmIris(projectId?: string | null): void {
 
 /**
  * Build the synthetic stream item that drives the Iris draft request.
- * Owner Update is on-demand only — there's no real stream record behind it,
+ * Owner Update is on-demand only. there's no real stream record behind it,
  * but `generateIrisDraft` expects a StreamItem-shaped trigger so we make a
  * minimal one here.
  */
@@ -260,14 +260,14 @@ function buildTriggerItem(periodDays: number): StreamItem {
 interface OwnerUpdateGeneratorProps {
   /**
    * Snapshot of project data the template will use. The page is responsible
-   * for assembling this — the component does not reach into stores itself,
+   * for assembling this. the component does not reach into stores itself,
    * so the same component can be unit-tested or reused with mock data.
    */
   context: ProjectContextSnapshot
   /**
    * Optional: persist the sent update somewhere (Supabase, audit log, etc.).
    * If absent, the "Send" button copies the body to the clipboard with a
-   * toast — sufficient for the demo path.
+   * toast. sufficient for the demo path.
    */
   onSend?: (body: string) => Promise<void> | void
   /**
@@ -284,7 +284,7 @@ interface OwnerUpdateGeneratorProps {
  * confidence indicator, and Copy/Send/Discard actions.
  *
  * Iris rule: AI prepares, humans approve. The draft is labeled
- * "Iris drafted this — review before sending" prominently inside the modal.
+ * "Iris drafted this. review before sending" prominently inside the modal.
  * No auto-send. No drafts on page load.
  */
 export const OwnerUpdateGenerator: React.FC<OwnerUpdateGeneratorProps> = ({
@@ -321,7 +321,7 @@ export const OwnerUpdateGenerator: React.FC<OwnerUpdateGeneratorProps> = ({
       setSources(draft.sources)
       setConfidence(draft.confidence ?? 0.5)
     } catch (err) {
-      // Deterministic fallback — never let the demo path fail. We log the
+      // Deterministic fallback. never let the demo path fail. We log the
       // upstream error to console for diagnostics but show a usable draft.
       console.warn('[OwnerUpdate] Iris generation failed; using deterministic fallback.', err)
       const fallback = buildDeterministicOwnerUpdate(context)
@@ -352,7 +352,7 @@ export const OwnerUpdateGenerator: React.FC<OwnerUpdateGeneratorProps> = ({
         await onSend(body)
         toast.success('Owner update sent')
       } else {
-        // Fallback for the demo path — surface the message via clipboard.
+        // Fallback for the demo path. surface the message via clipboard.
         await navigator.clipboard.writeText(body)
         toast.success('Owner update copied. Paste into your email and send.')
       }
@@ -518,7 +518,7 @@ export const OwnerUpdateGenerator: React.FC<OwnerUpdateGeneratorProps> = ({
                       fontFamily: typography.fontFamily,
                     }}
                   >
-                    Owner Update — Preview
+                    Owner Update. Preview
                   </Dialog.Title>
                   <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'], flexWrap: 'wrap' }}>
                     <div
@@ -537,7 +537,7 @@ export const OwnerUpdateGenerator: React.FC<OwnerUpdateGeneratorProps> = ({
                       }}
                     >
                       <Sparkles size={11} strokeWidth={2.5} />
-                      Iris drafted this — review before sending
+                      Iris drafted this. review before sending
                     </div>
                     {tier && !loading && (
                       <span
@@ -561,7 +561,7 @@ export const OwnerUpdateGenerator: React.FC<OwnerUpdateGeneratorProps> = ({
                     )}
                     {usedFallback && !loading && (
                       <span
-                        title="Iris streaming was unavailable — assembled deterministically from project data."
+                        title="Iris streaming was unavailable. assembled deterministically from project data."
                         style={{
                           display: 'inline-flex',
                           alignItems: 'center',
@@ -601,7 +601,7 @@ export const OwnerUpdateGenerator: React.FC<OwnerUpdateGeneratorProps> = ({
                 </Dialog.Close>
               </div>
 
-              {/* Body — editable textarea */}
+              {/* Body. editable textarea */}
               <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
                 {loading && (
                   <div
@@ -724,7 +724,7 @@ export const OwnerUpdateGenerator: React.FC<OwnerUpdateGeneratorProps> = ({
                     }}
                   >
                     {usedFallback
-                      ? 'Streaming was unavailable. Draft assembled from project data — review before sending.'
+                      ? 'Streaming was unavailable. Draft assembled from project data. review before sending.'
                       : 'AI prepares, you approve. Edit freely before sending.'}
                   </span>
                   <div style={{ display: 'flex', gap: spacing['2'] }}>

@@ -1,6 +1,7 @@
 import React, { useMemo, useState, useRef, useCallback } from 'react'
 import { Truck, Plus, Sparkles, Camera, ShieldAlert, Clock, FileText, Package, ClipboardCheck, Bell, Loader2, X } from 'lucide-react'
 import { PageContainer, Card, MetricBox, Btn, Skeleton, Modal, InputField, EmptyState } from '../components/Primitives'
+import { PermissionGate, RequestAccessPage } from '../components/auth/PermissionGate'
 import { colors, spacing, typography, borderRadius } from '../styles/theme'
 import { useProjectId } from '../hooks/useProjectId'
 import { useAuth } from '../hooks/useAuth'
@@ -75,7 +76,16 @@ function getScheduleColor(daysLate: number): { c: string; bg: string; label: str
   return { c: colors.statusCritical, bg: colors.statusCriticalSubtle, label: `${daysLate}d Late` }
 }
 
-const Deliveries: React.FC = () => {
+// Bugatti Sev-1 (cat 6 PermissionGate): the audit flagged unguarded delivery
+// scheduling + photo verification. Logistics/deliveries is PM/superintendent
+// scope. Field viewers and external vendors don't act here.
+const Deliveries: React.FC = () => (
+  <PermissionGate minRole="superintendent" fallback={<RequestAccessPage moduleName="Deliveries" />}>
+    <DeliveriesImpl />
+  </PermissionGate>
+)
+
+const DeliveriesImpl: React.FC = () => {
   const projectId = useProjectId()
   const { user } = useAuth()
   const { data: deliveries, isLoading } = useDeliveries(projectId ?? undefined)

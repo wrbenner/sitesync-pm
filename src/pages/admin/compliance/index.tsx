@@ -1,9 +1,9 @@
 /**
- * Compliance Cockpit — single pane of glass for the compliance officer.
+ * Compliance Cockpit. single pane of glass for the compliance officer.
  *
  * Operational density. The five panels (COI / WH-347 / OSHA 300 / Lien Rights
  * / Audit Chain) live in this one route so the once-a-week sweep is one URL,
- * one shortcut. No decorative motion — this dashboard is read fast and
+ * one shortcut. No decorative motion. this dashboard is read fast and
  * exported faster.
  *
  * Each panel handles its own data load + graceful degradation. This file
@@ -47,7 +47,7 @@ const ComplianceCockpit: React.FC = () => {
   const [lastRefresh, setLastRefresh] = useState<Date>(() => new Date())
 
   const handleRefresh = () => {
-    // Invalidate just the panels' queries — bounded to this page so we don't
+    // Invalidate just the panels' queries. bounded to this page so we don't
     // thrash the rest of the app's caches.
     void qc.invalidateQueries({ queryKey: ['insurance_certificates', projectId] })
     void qc.invalidateQueries({ queryKey: ['wh347-data', projectId] })
@@ -62,7 +62,7 @@ const ComplianceCockpit: React.FC = () => {
   return (
     <PageContainer
       title="Compliance"
-      subtitle="COI · certified payroll · OSHA 300 · lien rights · audit chain — one project, one screen."
+      subtitle="COI · certified payroll · OSHA 300 · lien rights · audit chain. one project, one screen."
     >
       {/* Header strip: project pill + last-refresh stamp + refresh button */}
       <div style={{

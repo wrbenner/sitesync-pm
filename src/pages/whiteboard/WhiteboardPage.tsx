@@ -58,19 +58,35 @@ export const WhiteboardPage: React.FC = () => {
       updatedAt: new Date().toISOString(),
     }
 
-    // Store in localStorage
+    // Store in localStorage. Bugatti Sev-1 closure: the previous version
+    // silently swallowed quota errors and unconditionally toasted "saved
+    // successfully" — so a full localStorage looked like a successful save
+    // until the next reload revealed the loss. Now we surface the real
+    // outcome with a typed error message.
+    let saveError: string | null = null
     try {
       const existing = JSON.parse(localStorage.getItem('sitesync_whiteboards') ?? '[]') as unknown as SavedBoard[]
       const idx = existing.findIndex(b => b.id === boardId)
       if (idx >= 0) existing[idx] = saved
       else existing.push(saved)
       localStorage.setItem('sitesync_whiteboards', JSON.stringify(existing))
-    } catch {
-      // Silently fail on storage quota
+    } catch (err) {
+      // QuotaExceededError is the dominant case — browser cap is ~5MB total.
+      // SecurityError fires in private mode on some browsers. Either way,
+      // the board was NOT persisted; tell the user explicitly.
+      const isQuota =
+        err instanceof DOMException &&
+        (err.name === 'QuotaExceededError' || err.code === 22 || err.code === 1014)
+      saveError = isQuota
+        ? 'Browser storage is full. Delete an older whiteboard or export this one.'
+        : err instanceof Error
+          ? err.message
+          : 'Could not save this whiteboard. Try again.'
     }
 
     if (toast?.addToast) {
-      toast.addToast('success', 'Board saved successfully')
+      if (saveError) toast.addToast('error', saveError)
+      else toast.addToast('success', 'Board saved successfully')
     }
   }, [boardId, boardName, boardData, toast])
 

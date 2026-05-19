@@ -641,7 +641,7 @@ const DrawingsPage: React.FC = () => {
         await drawingService.updateDrawing(drawingId, updates as unknown as Record<string, unknown>);
         refetch();
         if (updates.discipline) {
-          addToast('info', 'AI unavailable — discipline set from sheet prefix.');
+          addToast('info', 'AI unavailable. Discipline set from sheet prefix.');
         } else {
           const msg = err instanceof Error ? err.message : '';
           if (msg.includes('413') || msg.includes('too large')) {
@@ -1356,7 +1356,7 @@ const DrawingsPage: React.FC = () => {
         try {
           await triggerClassification(probe.drawingId, probe.pageImageUrl, probe.fileName, probe.fullPageUrl);
         } catch {
-          addToast('warning', 'AI classification service unavailable. Drawings saved — discipline set from filename where possible.');
+          addToast('warning', 'AI classification service unavailable. Drawings saved. Discipline set from filename where possible.');
           for (const t of classificationTargets) {
             const fallback = inferDisciplineFromFilename(t.fileName);
             if (fallback) {
@@ -1442,7 +1442,7 @@ const DrawingsPage: React.FC = () => {
     setShowAnalysisPanel(true);
     try {
       await intelligence.analyzeDrawingSet();
-      addToast('success', `Analysis complete — ${intelligence.state.discrepancyCount} discrepancies detected`);
+      addToast('success', `Analysis complete. ${intelligence.state.discrepancyCount} discrepancies detected.`);
     } catch { addToast('error', 'Drawing analysis failed.'); }
   }, [projectId, intelligence, addToast]);
 

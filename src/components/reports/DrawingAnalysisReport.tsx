@@ -95,14 +95,14 @@ export const DrawingAnalysisReport: React.FC<{ data: DrawingAnalysisReportData }
     : 0
 
   return (
-    <Document title={`Drawing Analysis — ${data.projectName}`}>
+    <Document title={`Drawing Analysis. ${data.projectName}`}>
       <Page size="LETTER" style={styles.page}>
         <View style={styles.brand}>
           <Text style={styles.brandText}>SITESYNC AI</Text>
         </View>
         <Text style={styles.title}>Drawing Analysis Summary</Text>
         <Text style={styles.subtitle}>
-          {data.projectName} — generated {data.generatedAt}
+          {data.projectName}. generated {data.generatedAt}
         </Text>
 
         <View style={styles.summary}>
@@ -146,8 +146,8 @@ export const DrawingAnalysisReport: React.FC<{ data: DrawingAnalysisReportData }
               <Text style={styles.cellSheet}>{r.sheetNumber}</Text>
               <Text style={styles.cellTitle}>{r.drawingTitle}</Text>
               <Text style={styles.cellDiscipline}>{r.discipline}</Text>
-              <Text style={styles.cellPlanType}>{r.planType || '—'}</Text>
-              <Text style={styles.cellScale}>{r.scaleText || '—'}</Text>
+              <Text style={styles.cellPlanType}>{r.planType || '-'}</Text>
+              <Text style={styles.cellScale}>{r.scaleText || '-'}</Text>
               <Text style={styles.cellConfidence}>{Math.round(r.confidence * 100)}%</Text>
               <Text style={styles.cellPaired}>{r.paired ? r.pairedWith || 'Yes' : 'No'}</Text>
             </View>
@@ -159,7 +159,7 @@ export const DrawingAnalysisReport: React.FC<{ data: DrawingAnalysisReportData }
           style={styles.footer}
           render={({ pageNumber, ...rest }) => (
             <>
-              <Text>SiteSync PM — {data.projectName}</Text>
+              <Text>SiteSync PM. {data.projectName}</Text>
               <Text>
                 Page {pageNumber} of {(rest as { totalPages?: number }).totalPages ?? '?'}
               </Text>
@@ -246,8 +246,8 @@ export async function generateDrawingAnalysisReport(
       const c = classByDrawing.get(d.id)
       const partner = pairPartner.get(d.id)
       return {
-        sheetNumber: d.sheet_number ?? c?.sheet_number ?? '—',
-        drawingTitle: d.title ?? c?.drawing_title ?? '—',
+        sheetNumber: d.sheet_number ?? c?.sheet_number ?? '-',
+        drawingTitle: d.title ?? c?.drawing_title ?? '-',
         discipline: d.discipline ?? c?.discipline ?? 'Unknown',
         planType: c?.plan_type ?? null,
         floorLevel: c?.floor_level ?? null,

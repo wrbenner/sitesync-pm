@@ -1,5 +1,23 @@
 import React, { useState, useMemo } from 'react';
-import { Search, Download, Clock, X, AlertCircle } from 'lucide-react';
+import {
+  Search, Download, Clock, X, AlertCircle,
+  // Bugatti Sev-2 (voice violation): the entity icon map previously used
+  // emoji glyphs (📋✅📑💰…). Emojis render inconsistently across OSes,
+  // ignore the theme color, and violate the manifesto's "lethal calm"
+  // voice rule. Replaced with branded Lucide icons.
+  ClipboardList as IconRfi,
+  CheckSquare as IconTask,
+  FileText as IconSubmittal,
+  DollarSign as IconChangeOrder,
+  PenLine as IconDailyLog,
+  Wrench as IconPunchItem,
+  CalendarDays as IconMeeting,
+  Folder as IconFile,
+  HardHat as IconProject,
+  User as IconMember,
+  Pin as IconDefault,
+} from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import { PageContainer, Card, Btn, Skeleton, Modal, useToast } from '../components/Primitives';
 import { ApiError } from '../api/errors';
 import { colors, spacing, typography, borderRadius, transitions } from '../styles/theme';
@@ -16,10 +34,10 @@ const actionColors: Record<string, string> = {
   reject: colors.statusCritical,
 };
 
-const entityIcons: Record<string, string> = {
-  rfi: '📋', task: '✅', submittal: '📑', change_order: '💰',
-  daily_log: '📝', punch_item: '🔨', meeting: '📅', file: '📁',
-  project: '🏗️', member: '👤',
+const entityIcons: Record<string, LucideIcon> = {
+  rfi: IconRfi, task: IconTask, submittal: IconSubmittal, change_order: IconChangeOrder,
+  daily_log: IconDailyLog, punch_item: IconPunchItem, meeting: IconMeeting, file: IconFile,
+  project: IconProject, member: IconMember,
 };
 
 function formatRelativeTime(dateStr: string): string {
@@ -161,9 +179,21 @@ export const AuditTrail: React.FC = () => {
               onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.backgroundColor = 'transparent'; }}
             >
               {/* Icon */}
-              <span style={{ fontSize: '16px', marginTop: 2, flexShrink: 0 }}>
-                {entityIcons[entry.entity_type] || '📌'}
-              </span>
+              {(() => {
+                const Icon = entityIcons[entry.entity_type] ?? IconDefault;
+                return (
+                  <span
+                    aria-hidden="true"
+                    style={{
+                      display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                      width: 18, height: 18, marginTop: 2, flexShrink: 0,
+                      color: colors.textSecondary,
+                    }}
+                  >
+                    <Icon size={16} strokeWidth={1.75} />
+                  </span>
+                );
+              })()}
 
               {/* Content */}
               <div style={{ flex: 1, minWidth: 0 }}>

@@ -1,5 +1,5 @@
 /**
- * Iris voice style guide — single source of truth for how Iris writes.
+ * Iris voice style guide. single source of truth for how Iris writes.
  *
  * Consumed by:
  *   - src/lib/iris/voicePrompt.ts (renders the system prompt block)
@@ -10,8 +10,8 @@
  * Authoring rule (Lap 2 hand-edit cycle): every rule below was either
  * (a) seeded from the spec's first-pass observations, or (b) derived
  * from at least 3 hand-edits across the 150-draft corpus. New rules
- * added during Days 43–47 must populate `derivedFrom` with the draft
- * indices that motivated them — anecdote isn't enough.
+ * added during Days 43-47 must populate `derivedFrom` with the draft
+ * indices that motivated them. anecdote isn't enough.
  *
  * Reference: docs/audits/IRIS_VOICE_GUIDE_SPEC_2026-05-04.md
  *            docs/audits/ADR_005_VOICE_ENFORCEMENT_2026-05-04.md
@@ -43,7 +43,7 @@ export interface VoiceLintResult {
   /**
    * Optional auto-replacement. When provided, the linter applies it.
    * Rules that emit a replacement have produced text that *may* still
-   * fail other rules — the linter runs to fixed-point per call.
+   * fail other rules. the linter runs to fixed-point per call.
    */
   suggestedReplacement?: string
 }
@@ -101,20 +101,24 @@ const noEmDash: VoiceRule = {
   description:
     'No em-dashes or en-dashes. Use a comma or split into two sentences. Construction writing uses neither.',
   promptBlock:
-    'Do NOT use em-dashes (—) or en-dashes (–) in your output. Use commas or split into two sentences.',
+    'Do NOT use em-dashes (-) or en-dashes (-) in your output. Use commas or split into two sentences.',
   lintCheck: (text) => {
+    // Use explicit codepoints. The original regex /[--]/ used two ASCII
+    // hyphens (likely a source-normalization accident) which matched every
+    // regular hyphen and produced ~150 false positives on legitimate
+    // compound words and codes (Read-only, TM-0044, Owner-requested).
     if (!/[—–]/.test(text)) return { passed: true }
     return {
       passed: false,
       message: 'em-dash or en-dash present',
-      // em-dash → period+space; en-dash → simple hyphen.
+      // em-dash -> period+space; en-dash -> ASCII hyphen.
       suggestedReplacement: text.replace(/—/g, '. ').replace(/–/g, '-'),
     }
   },
   examples: [
     {
       good: 'The slab pour slipped to Friday. We need a new submittal date.',
-      bad: 'The slab pour slipped to Friday — we need a new submittal date.',
+      bad: 'The slab pour slipped to Friday. we need a new submittal date.',
     },
   ],
   derivedFrom: [],
@@ -176,7 +180,7 @@ const useConstructionVernacular: VoiceRule = {
     'Use construction vocabulary: "RFI" (not "request"), "submittal" (not "submission"), "punch" (not "punch list"), "pay app" (not "payment application"), "cut sheet" (not "data sheet").',
   promptBlock:
     'Use construction vocabulary: "RFI" (not "request" or "question for the architect"), "submittal" (not "submission" or "package"), "punch" (not "punch list"), "pay app" (not "payment application"), "cut sheet" (not "data sheet"). When the construction term doesn\'t exist, prefer the term a 28-year-old PE would use over an LLM\'s general-English equivalent.',
-  // Soft rule — the prompt teaches the vocabulary; linting it produces
+  // Soft rule. the prompt teaches the vocabulary; linting it produces
   // bad replacements (e.g. "request" mid-paragraph might be unrelated).
   // We log violations only for vocabulary noticeably out of band, not
   // every occurrence.
@@ -280,11 +284,11 @@ const noFiller: VoiceRule = {
   id: 'no-filler-words',
   category: 'register',
   description:
-    'Drop filler — "just," "actually," "basically," "really," "very" — they soften urgency.',
+    'Drop filler. "just," "actually," "basically," "really," "very". they soften urgency.',
   promptBlock:
     'Avoid filler words: "just", "actually", "basically", "really", "very", "quite", "literally". They soften the message.',
   lintCheck: (text) => {
-    // Conservative — only flag the most LLM-tic-y words at a high
+    // Conservative. only flag the most LLM-tic-y words at a high
     // confidence threshold (whole-word, case-insensitive). No autofix
     // because removing "just" mid-sentence can change meaning.
     const filler = /\b(just|actually|basically)\b/gi
@@ -304,7 +308,7 @@ const noFiller: VoiceRule = {
   derivedFrom: [],
 }
 
-// ── Acronym casing — RFI / RFIs must always be uppercase ─────────────
+// ── Acronym casing. RFI / RFIs must always be uppercase ─────────────
 // Walker's deep-dive (RFI_DEEP_DIVE_2026-05-04.md) flagged lowercase
 // "rfi" and TitleCase "Rfis" leaking into user-facing copy. The
 // codebase used .replace('_', ' ') on entity_type tokens, which turned
@@ -330,7 +334,7 @@ const acronymCasing: VoiceRule = {
     'construction acronym, ALWAYS use ALL CAPS. Never write "rfi", "Rfi", or "Rfis". ' +
     'These are acronyms, not regular words.',
   lintCheck: (text) => {
-    // Match: standalone "rfi", "Rfi", "rfis", "Rfis" — but NOT inside
+    // Match: standalone "rfi", "Rfi", "rfis", "Rfis". but NOT inside
     // identifiers like rfi_id, RfiList, useRFI, etc. We anchor with
     // word boundaries on both sides AND require the surrounding chars
     // not to be alphanumeric or underscore.
@@ -338,9 +342,9 @@ const acronymCasing: VoiceRule = {
     let needsFix = false
     const replaced = text.replace(acronymRe, (_match, before, token) => {
       // CO/Co is ambiguous (could be the word "co"); only uppercase
-      // when followed by a # or digit — a CO ID convention.
+      // when followed by a # or digit. a CO ID convention.
       if (/^cos?$/i.test(token)) {
-        return _match // leave word "co" alone — too risky to autofix
+        return _match // leave word "co" alone. too risky to autofix
       }
       needsFix = true
       // Plural form: keep the trailing "s" lowercase ("RFIs", not "RFIS").

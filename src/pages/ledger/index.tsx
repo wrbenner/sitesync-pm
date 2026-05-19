@@ -25,6 +25,7 @@ import {
 import { QuickCreateFAB } from '../../components/QuickCreateFAB';
 import CreateChangeOrderModal from '../../components/forms/CreateChangeOrderModal';
 import { useCreateChangeOrder } from '../../hooks/mutations/change-orders';
+import { PermissionGate, RequestAccessPage } from '../../components/auth/PermissionGate';
 
 // ── Currency helper ─────────────────────────────────────────
 
@@ -705,9 +706,14 @@ const CreateCOModalWrapper: React.FC<{ open: boolean; onClose: () => void; proje
 
 // ── Export ──────────────────────────────────────────────────
 
+// Bugatti Sev-1 (cat 6 PermissionGate): the Ledger page exposed change
+// order creation + financial table edits without permission gating.
+// "Where is the money?" is a financials view — owner/admin/PM only.
 const Ledger: React.FC = () => (
   <ErrorBoundary>
-    <LedgerPage />
+    <PermissionGate minRole="project_manager" fallback={<RequestAccessPage moduleName="Ledger" />}>
+      <LedgerPage />
+    </PermissionGate>
   </ErrorBoundary>
 );
 

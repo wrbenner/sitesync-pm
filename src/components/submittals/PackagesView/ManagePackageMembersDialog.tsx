@@ -1,4 +1,4 @@
-// Phase 4 — Manage Package Members dialog.
+// Phase 4. Manage Package Members dialog.
 //
 // Replaces the package's membership with a checked-set picker over all
 // project submittals. Submittals already in the package start checked;
@@ -106,7 +106,7 @@ export const ManagePackageMembersDialog: React.FC<ManagePackageMembersDialogProp
   }
 
   return (
-    <DialogShell title={`Manage members — Package #${pkg.number}`} onClose={onClose} width={580}>
+    <DialogShell title={`Manage members. Package #${pkg.number}`} onClose={onClose} width={580}>
       <form onSubmit={submit} style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
         <input
           type="search"
@@ -162,7 +162,7 @@ export const ManagePackageMembersDialog: React.FC<ManagePackageMembersDialogProp
                   <span style={{ width: 80, color: C.ink2, fontVariantNumeric: 'tabular-nums' }}>
                     {String(r.number ?? '')}
                   </span>
-                  <span style={{ color: C.ink3, width: 90 }}>{(r.csi_section as string | null) ?? '—'}</span>
+                  <span style={{ color: C.ink3, width: 90 }}>{(r.csi_section as string | null) ?? '-'}</span>
                   <span style={{ flex: 1, color: C.ink, fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                     {String(r.title ?? '')}
                   </span>

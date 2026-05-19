@@ -1,5 +1,5 @@
 // ─────────────────────────────────────────────────────────────────────────────
-// Change Orders — money in motion (investor-readiness push)
+// Change Orders. money in motion (investor-readiness push)
 // ─────────────────────────────────────────────────────────────────────────────
 // Mission: every dollar in motion, dense and trustworthy. PM tracks pending,
 // approved, rejected; sees margin impact at a glance; approves or rejects
@@ -75,7 +75,7 @@ const usd0 = new Intl.NumberFormat('en-US', {
 })
 
 function fmt$(n: number | null | undefined): string {
-  if (n == null || Number.isNaN(n)) return '—'
+  if (n == null || Number.isNaN(n)) return '-'
   return usd0.format(n)
 }
 
@@ -86,7 +86,7 @@ function fmt$Compact(n: number): string {
 }
 
 function fmtPct(rate01: number | null | undefined): string {
-  if (rate01 == null || Number.isNaN(rate01)) return '—'
+  if (rate01 == null || Number.isNaN(rate01)) return '-'
   return `${(rate01 * 100).toFixed(1)}%`
 }
 
@@ -123,7 +123,7 @@ const REASON_LABEL: Record<string, string> = {
 
 function reasonLabel(co: ChangeOrder): string {
   const code = co.reason_code ?? ''
-  return REASON_LABEL[code] ?? co.reason ?? '—'
+  return REASON_LABEL[code] ?? co.reason ?? '-'
 }
 
 // ── Status pill ─────────────────────────────────────────────────────────────
@@ -194,17 +194,17 @@ function readChain(co: ChangeOrder): ChainStep[] {
 }
 
 const InlineApprovalChain: React.FC<{ chain: ChainStep[] }> = ({ chain }) => {
-  if (chain.length === 0) return <span style={{ color: C.ink4 }}>—</span>
+  if (chain.length === 0) return <span style={{ color: C.ink4 }}>-</span>
   const visible = chain.length > 5 ? [...chain.slice(0, 4), { status: 'pending', role: `+${chain.length - 4} more` } as ChainStep] : chain
   return (
-    <span aria-label={`Approval chain — ${chain.length} steps`} style={{ display: 'inline-flex', alignItems: 'center', gap: 3 }}>
+    <span aria-label={`Approval chain. ${chain.length} steps`} style={{ display: 'inline-flex', alignItems: 'center', gap: 3 }}>
       {visible.map((step, i) => {
         const color = STEP_TONE[String(step.status ?? 'pending')] ?? STEP_TONE.pending
         return (
           <React.Fragment key={`${step.role ?? 'step'}-${i}`}>
             {i > 0 && <span aria-hidden style={{ width: 6, height: 1, backgroundColor: C.border }} />}
             <span
-              title={`${step.role ?? `Step ${i + 1}`} — ${step.status ?? 'pending'}`}
+              title={`${step.role ?? `Step ${i + 1}`}. ${step.status ?? 'pending'}`}
               style={{
                 width: 8,
                 height: 8,
@@ -318,7 +318,7 @@ const ChangeOrdersPage: React.FC = () => {
   )
   const { data: coProfileMap } = useProfileNames(coUserIds)
   const originatorName = (co: { requested_by?: string | null; created_by?: string | null }): string =>
-    displayName(coProfileMap, co.requested_by ?? co.created_by ?? null, '—')
+    displayName(coProfileMap, co.requested_by ?? co.created_by ?? null, '-')
   const { data: project } = useProject(projectId)
   const { data: activePeriod } = useActivePeriod(projectId)
 
@@ -364,7 +364,7 @@ const ChangeOrdersPage: React.FC = () => {
 
   const totals = useMemo(() => {
     // "Now" is captured once per memo run. We accept that the rolling window
-    // freezes between memo runs — when the active period flips or `all`
+    // freezes between memo runs. when the active period flips or `all`
     // changes, the window recomputes. For a financial UI this is fine.
     // eslint-disable-next-line react-hooks/purity
     const nowMs = Date.now()
@@ -474,7 +474,7 @@ const ChangeOrdersPage: React.FC = () => {
         comments: opts?.comments,
         approvedCost: opts?.approvedCost,
       })
-      toast.success(`CO #${co.number ?? '—'} approved`)
+      toast.success(`CO #${co.number ?? '-'} approved`)
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Failed to approve')
     }
@@ -484,7 +484,7 @@ const ChangeOrdersPage: React.FC = () => {
     if (!projectId || !user?.id) return
     try {
       await rejectCO.mutateAsync({ id: co.id, userId: user.id, projectId, comments })
-      toast.success(`CO #${co.number ?? '—'} rejected`)
+      toast.success(`CO #${co.number ?? '-'} rejected`)
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Failed to reject')
     }
@@ -494,7 +494,7 @@ const ChangeOrdersPage: React.FC = () => {
     if (!projectId || !user?.id) return
     try {
       await submitCO.mutateAsync({ id: co.id, userId: user.id, projectId })
-      toast.success(`CO #${co.number ?? '—'} submitted for review`)
+      toast.success(`CO #${co.number ?? '-'} submitted for review`)
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Failed to submit')
     }
@@ -580,7 +580,7 @@ const ChangeOrdersPage: React.FC = () => {
       >
         <PageEmpty
           title="No change orders yet"
-          body="Track every dollar in motion — pending, approved, rejected, and margin impact."
+          body="Track every dollar in motion. pending, approved, rejected, and margin impact."
         />
         {createOpen && projectId && (
           <CreateChangeOrderModal
@@ -589,7 +589,7 @@ const ChangeOrdersPage: React.FC = () => {
             onSubmit={async () => {
               // Modal owns its own form state and creation flow; consumer
               // closes on successful submit. The projectId is read from the
-              // active-project store inside the modal — no prop needed here.
+              // active-project store inside the modal. no prop needed here.
               setCreateOpen(false)
             }}
           />
@@ -736,11 +736,11 @@ const CORow: React.FC<{
       }}
     >
       <Td align="right" mono>
-        <span style={{ color: C.ink, fontWeight: 600 }}>{co.number != null ? `#${co.number}` : '—'}</span>
+        <span style={{ color: C.ink, fontWeight: 600 }}>{co.number != null ? `#${co.number}` : '-'}</span>
       </Td>
       <Td>
         <span style={{ color: C.ink, fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>
-          {co.title ?? co.description ?? '—'}
+          {co.title ?? co.description ?? '-'}
         </span>
       </Td>
       <Td>{reasonLabel(co)}</Td>
@@ -756,14 +756,14 @@ const CORow: React.FC<{
             fontWeight: 600,
           }}
         >
-          {amount === 0 ? '—' : fmt$(amount)}
+          {amount === 0 ? '-' : fmt$(amount)}
         </span>
       </Td>
       <Td>
         <StatusPill status={co.status} />
       </Td>
       <Td align="right" mono>
-        {days == null ? '—' : (
+        {days == null ? '-' : (
           <span
             style={{
               color: days > 14 ? C.critical : days > 7 ? C.high : C.ink2,
@@ -805,7 +805,7 @@ const CORow: React.FC<{
             promoted
           </span>
         ) : (
-          <span style={{ color: C.ink4 }}>—</span>
+          <span style={{ color: C.ink4 }}>-</span>
         )}
       </Td>
       <Td>
@@ -831,7 +831,7 @@ const CORow: React.FC<{
             Iris draft
           </span>
         ) : (
-          <span style={{ color: C.ink4 }}>—</span>
+          <span style={{ color: C.ink4 }}>-</span>
         )}
       </Td>
     </tr>
@@ -914,7 +914,7 @@ const DetailPanel: React.FC<DetailPanelProps> = ({
         }}
       >
         <span style={{ fontFamily: MONO, fontSize: 13, fontWeight: 600, color: C.ink, fontVariantNumeric: 'tabular-nums' }}>
-          {co.number != null ? `#${co.number}` : '—'}
+          {co.number != null ? `#${co.number}` : '-'}
         </span>
         <h2 style={{ margin: 0, fontSize: 14, fontWeight: 600, color: C.ink, flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
           {co.title ?? co.description ?? 'Untitled CO'}
@@ -952,14 +952,14 @@ const DetailPanel: React.FC<DetailPanelProps> = ({
               v={
                 co.schedule_impact_days
                   ? `${co.schedule_impact_days > 0 ? '+' : ''}${co.schedule_impact_days}d`
-                  : co.schedule_impact ?? '—'
+                  : co.schedule_impact ?? '-'
               }
             />
             <KV
               k="Days open"
               v={(() => {
                 const d = daysOpen(co)
-                return d == null ? '—' : `${d}d`
+                return d == null ? '-' : `${d}d`
               })()}
             />
           </Grid2>
@@ -1091,7 +1091,7 @@ const KV: React.FC<{ k: string; v: React.ReactNode; mono?: boolean }> = ({ k, v,
         fontVariantNumeric: mono ? 'tabular-nums' : 'normal',
       }}
     >
-      {v ?? '—'}
+      {v ?? '-'}
     </div>
   </div>
 )
@@ -1153,7 +1153,7 @@ const Field: React.FC<{
   </label>
 )
 
-// ── Shell — sticky header + total strip + body ──────────────────────────────
+// ── Shell. sticky header + total strip + body ──────────────────────────────
 
 interface ShellProps {
   children: React.ReactNode

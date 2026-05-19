@@ -336,7 +336,7 @@ const DiscrepancyCard: React.FC<{ item: DiscrepancyItem; index: number }> = ({ i
 // ── Main component ────────────────────────────────────────
 
 export const DiscrepancyReport: React.FC<{ data: DiscrepancyReportData }> = ({ data }) => (
-  <Document title={`Discrepancy Report — ${data.projectName}`}>
+  <Document title={`Discrepancy Report. ${data.projectName}`}>
     <CoverPage data={data} />
     <TableOfContentsPage items={data.discrepancies} />
     <SummaryStatsPage data={data} />
@@ -359,7 +359,7 @@ export const DiscrepancyReport: React.FC<{ data: DiscrepancyReportData }> = ({ d
           style={styles.pageFooter}
           render={(({ pageNumber, totalPages }: { pageNumber: number; totalPages: number }) => (
             <>
-              <Text>SiteSync PM — {data.projectName}</Text>
+              <Text>SiteSync PM. {data.projectName}</Text>
               <Text>
                 Page {pageNumber} of {totalPages}
               </Text>
@@ -451,8 +451,8 @@ export async function generateDiscrepancyReport(
       return {
         id: d.id,
         description: d.description ?? 'Dimensional mismatch detected',
-        archSheet: archDraw?.sheet_number ?? '—',
-        structSheet: structDraw?.sheet_number ?? '—',
+        archSheet: archDraw?.sheet_number ?? '-',
+        structSheet: structDraw?.sheet_number ?? '-',
         archDimension: d.arch_dimension,
         structDimension: d.struct_dimension,
         severity: (d.severity === 'high' || d.severity === 'medium' || d.severity === 'low' ? d.severity : 'medium') as DiscrepancyItem['severity'],

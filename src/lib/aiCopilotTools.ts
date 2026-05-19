@@ -1,4 +1,4 @@
-// ── AI Copilot Tools — Function Definitions ──────────────────
+// ── AI Copilot Tools. Function Definitions ──────────────────
 // Adapted from SiteSync PM production chatbot:
 //   sitesyncai-backend/src/chatbot/openai/function-definitions.ts
 //
@@ -7,7 +7,7 @@
 // DESCRIPTIONS are mapped to SiteSync PM's data model (projects, drawings,
 // discrepancies, pairs, entities) instead of SiteSync PM's file-centric one.
 //
-// Each tool handler runs server-side via supabase edge functions — this
+// Each tool handler runs server-side via supabase edge functions. this
 // module is the SHARED SCHEMA + CLIENT-SIDE DISPATCHER.
 
 export type ToolName =
@@ -54,7 +54,7 @@ export const AI_COPILOT_TOOLS: AiCopilotTool[] = [
           },
           project_id: {
             type: 'string',
-            description: 'UUID of the project. ALWAYS use the exact value from system context — never placeholders.',
+            description: 'UUID of the project. ALWAYS use the exact value from system context. never placeholders.',
           },
         },
         required: ['sheet_no', 'project_id'],
@@ -115,7 +115,7 @@ export const AI_COPILOT_TOOLS: AiCopilotTool[] = [
     function: {
       name: 'get_project_stats',
       description:
-        'Comprehensive project statistics: counts of architectural sheets, structural sheets, pairs, unpaired sheets, sheets with dimensions, and overall progress. Use for "how many sheets", "how many pairs", "show me the numbers", etc. Do NOT use for discrepancy-specific questions — use get_discrepancy_stats.',
+        'Comprehensive project statistics: counts of architectural sheets, structural sheets, pairs, unpaired sheets, sheets with dimensions, and overall progress. Use for "how many sheets", "how many pairs", "show me the numbers", etc. Do NOT use for discrepancy-specific questions. use get_discrepancy_stats.',
       parameters: {
         type: 'object',
         properties: {
@@ -149,7 +149,7 @@ export const AI_COPILOT_TOOLS: AiCopilotTool[] = [
     function: {
       name: 'audit_cross_modal_scales',
       description:
-        'Audit scale consistency between architectural and structural pairs — flags pairs where the drawing scales disagree. ALWAYS pass project_id.',
+        'Audit scale consistency between architectural and structural pairs. flags pairs where the drawing scales disagree. ALWAYS pass project_id.',
       parameters: {
         type: 'object',
         properties: {
@@ -229,7 +229,7 @@ export const AI_COPILOT_TOOLS: AiCopilotTool[] = [
     function: {
       name: 'get_project_info',
       description:
-        'Get information about a specific project by name (status, drawing count, discrepancy count, key dates). Does NOT require project_id — searches by name.',
+        'Get information about a specific project by name (status, drawing count, discrepancy count, key dates). Does NOT require project_id. searches by name.',
       parameters: {
         type: 'object',
         properties: {

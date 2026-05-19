@@ -68,7 +68,9 @@ const BIMViewerPage: React.FC = () => {
       return;
     }
 
-    alert('Please upload a .glb, .gltf, or .ifc file.');
+    // Bugatti Sev-1 closure: native alert() was unbranded, blocked the thread,
+    // and trapped iOS keyboards. Use the existing sonner toast layer instead.
+    toast.error('Please upload a .glb, .gltf, or .ifc file.');
   }, [ifc, modelUrl]);
 
   // Update displayed filename when the IFC hook errors out

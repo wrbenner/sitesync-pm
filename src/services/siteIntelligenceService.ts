@@ -213,33 +213,33 @@ function mapFloodZone(zone: string, subtype: string): { risk_level: FloodZoneDat
       return {
         risk_level: 'High',
         insurance_required: true,
-        description: `Zone ${zoneUpper} — Special Flood Hazard Area (1% annual chance flood). Mandatory flood insurance. Base flood elevations may apply.`,
+        description: `Zone ${zoneUpper}: Special Flood Hazard Area (1% annual chance flood). Mandatory flood insurance. Base flood elevations may apply.`,
       };
     case 'VE':
     case 'V':
       return {
         risk_level: 'High',
         insurance_required: true,
-        description: `Zone ${zoneUpper} — Coastal High Hazard Area with wave action. Mandatory flood insurance. Elevated construction required.`,
+        description: `Zone ${zoneUpper}: Coastal High Hazard Area with wave action. Mandatory flood insurance. Elevated construction required.`,
       };
     case 'X':
       if (subtype && subtype.includes('500')) {
         return {
           risk_level: 'Moderate',
           insurance_required: false,
-          description: 'Zone X (Shaded) — 0.2% annual chance (500-year) flood area. Flood insurance recommended but not mandatory.',
+          description: 'Zone X (Shaded): 0.2% annual chance (500-year) flood area. Flood insurance recommended but not mandatory.',
         };
       }
       return {
         risk_level: 'Minimal',
         insurance_required: false,
-        description: 'Zone X (Unshaded) — Minimal flood hazard. Area outside the 0.2% annual chance floodplain. Flood insurance optional.',
+        description: 'Zone X (Unshaded): Minimal flood hazard. Area outside the 0.2% annual chance floodplain. Flood insurance optional.',
       };
     case 'D':
       return {
         risk_level: 'Low',
         insurance_required: false,
-        description: 'Zone D — Undetermined risk. Flood hazards are possible but not determined. Flood insurance available.',
+        description: 'Zone D: Undetermined risk. Flood hazards are possible but not determined. Flood insurance available.',
       };
     default:
       return {

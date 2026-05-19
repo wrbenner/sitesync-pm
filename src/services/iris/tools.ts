@@ -36,7 +36,7 @@ export const irisTools = [
     input_schema: {
       type: 'object',
       properties: {
-        title: { type: 'string', description: 'Short title — what the RFI is asking. e.g. "Confirm column dimensions at line 7"' },
+        title: { type: 'string', description: 'Short title. What the RFI is asking. e.g. "Confirm column dimensions at line 7"' },
         description: { type: 'string', description: 'Full RFI body. Be specific. Include drawing refs and exact location.' },
         priority: { type: 'string', enum: ['low', 'medium', 'high', 'critical'], description: 'critical = work is stopped; high = blocks within a week; medium = within 2 weeks; low = soon-ish.' },
         discipline: { type: 'string', description: 'Architectural / Structural / MEP / Civil / etc.' },

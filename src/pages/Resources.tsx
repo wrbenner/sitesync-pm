@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react'
 import { Users, Package, Truck, Plus, Calculator, Download, Layers } from 'lucide-react'
 import { PageContainer, Card, SectionHeader, MetricBox, Btn, Skeleton, Modal, InputField, EmptyState } from '../components/Primitives'
+import { PermissionGate, RequestAccessPage } from '../components/auth/PermissionGate'
 import { colors, spacing, typography, borderRadius, transitions } from '../styles/theme'
 import { useProjectId } from '../hooks/useProjectId'
 import { toast } from 'sonner'
@@ -39,7 +40,15 @@ const CSI_DIVISIONS: { code: number; label: string }[] = [
   { code: 33, label: '33 — Utilities' },
 ]
 
-export const Resources: React.FC = () => {
+// Bugatti Sev-1 (cat 6 PermissionGate): the audit flagged unguarded labor /
+// material / equipment rate creation. Resource rate setup is PM-only work.
+export const Resources: React.FC = () => (
+  <PermissionGate minRole="project_manager" fallback={<RequestAccessPage moduleName="Resources" />}>
+    <ResourcesImpl />
+  </PermissionGate>
+)
+
+const ResourcesImpl: React.FC = () => {
   const projectId = useProjectId()
   const [activeTab, setActiveTab] = useState<TabKey>('labor')
   const [laborModal, setLaborModal] = useState(false)

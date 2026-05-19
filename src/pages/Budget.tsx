@@ -1,5 +1,5 @@
 // ─────────────────────────────────────────────────────────────────────────────
-// Budget — investor-grade, glance-readable money page
+// Budget. investor-grade, glance-readable money page
 // ─────────────────────────────────────────────────────────────────────────────
 // Mission: an Owner walks in with the PM and sees, in one screen, what was
 // approved, what's committed, what's been spent, and the variance. Dense
@@ -31,7 +31,7 @@ import { fromCents, type Cents } from '../types/money'
 
 
 // ── Page-local design tokens ────────────────────────────────────────────────
-// Investor view colors are not tied to the parchment surface — see
+// Investor view colors are not tied to the parchment surface. see
 // specs/homepage-redesign/DESIGN-RESET.md for the locked palette.
 import { fromTable } from '../lib/db/queries'
 
@@ -78,12 +78,12 @@ const pct1 = new Intl.NumberFormat('en-US', {
 })
 
 function fmt$(value: number | null | undefined, dense = true): string {
-  if (value == null || Number.isNaN(value)) return '—'
+  if (value == null || Number.isNaN(value)) return '-'
   return dense ? usd0.format(value) : usd2.format(value)
 }
 
 function fmtPct(rate01: number | null | undefined): string {
-  if (rate01 == null || Number.isNaN(rate01)) return '—'
+  if (rate01 == null || Number.isNaN(rate01)) return '-'
   return pct1.format(rate01)
 }
 
@@ -130,8 +130,8 @@ function rowFromBudgetItem(b: BudgetItemRow, cosOnLine: MappedChangeOrder[]): Ro
   const coTotal = approvedCOs.reduce((s, co) => s + co.amount, 0)
   return {
     id: b.id,
-    costCode: b.cost_code ?? '—',
-    division: b.division || '—',
+    costCode: b.cost_code ?? '-',
+    division: b.division || '-',
     csiDivision: b.csi_division ?? '',
     description: b.description ?? '',
     original,
@@ -208,14 +208,14 @@ const BudgetPage: React.FC = () => {
     [budgetItems, cosByLine],
   )
 
-  // Engine-computed roll-up — mirrors the rest of the app for cross-page parity.
+  // Engine-computed roll-up. mirrors the rest of the app for cross-page parity.
   const projectFinancials = useMemo(
     () => computeProjectFinancials(divisions, changeOrders, projectData?.totalValue ?? 0),
     [divisions, changeOrders, projectData?.totalValue],
   )
 
   // Strip totals are sourced from raw rows so an Owner reading these numbers
-  // sees the literal sum of the table beneath them — no surprise deltas from
+  // sees the literal sum of the table beneath them. no surprise deltas from
   // contract-value scaling.
   const totals = useMemo(() => {
     let original = 0, committed = 0, actual = 0, forecast = 0
@@ -235,7 +235,7 @@ const BudgetPage: React.FC = () => {
   const [view, setView] = useState<ViewMode>('summary')
   const [expanded, setExpanded] = useState<Set<string>>(new Set())
   // Track which divisions the user has explicitly *closed*. Default empty
-  // means all are open — no seeding needed when we land on by-division.
+  // means all are open. no seeding needed when we land on by-division.
   const [closedDivisions, setClosedDivisions] = useState<Set<string>>(new Set())
   const [addOpen, setAddOpen] = useState(false)
 
@@ -267,7 +267,7 @@ const BudgetPage: React.FC = () => {
         byDiv.set(r.division, {
           ...r,
           id: `summary-${r.division}`,
-          costCode: r.csiDivision || '—',
+          costCode: r.csiDivision || '-',
           description: r.division,
           coCount: r.coCount,
           coTotal: r.coTotal,
@@ -318,7 +318,7 @@ const BudgetPage: React.FC = () => {
     return allLineRows.filter((r) => !closedDivisions.has(r.division))
   }, [view, summaryRows, allLineRows, closedDivisions])
 
-  // Clamp during render — when rows shrink, the stored index may exceed the
+  // Clamp during render. when rows shrink, the stored index may exceed the
   // new length. Deriving avoids a follow-up setState in an effect.
   const focusIndex = focusableRows.length === 0
     ? 0
@@ -446,7 +446,7 @@ const BudgetPage: React.FC = () => {
       <div ref={tableScrollRef} style={{ flex: 1, overflow: 'auto', backgroundColor: C.surface }}>
         <table
           role="grid"
-          aria-label={`Budget — ${VIEW_LABEL[view]} view`}
+          aria-label={`Budget. ${VIEW_LABEL[view]} view`}
           style={{
             width: '100%',
             borderCollapse: 'separate',
@@ -560,7 +560,7 @@ const BudgetPage: React.FC = () => {
   )
 }
 
-// ── Shell — sticky header + view toggle + total strip ───────────────────────
+// ── Shell. sticky header + view toggle + total strip ───────────────────────
 
 interface ShellProps {
   children: React.ReactNode
@@ -658,7 +658,7 @@ const Shell: React.FC<ShellProps> = ({
   )
 }
 
-// ── ProjectChip — committed of approved + percent ───────────────────────────
+// ── ProjectChip. committed of approved + percent ───────────────────────────
 
 const ProjectChip: React.FC<{ committed: number; original: number; committedPct: number }> = ({
   committed,
@@ -745,7 +745,7 @@ const ViewToggle: React.FC<{ value: ViewMode; onChange: (v: ViewMode) => void }>
   )
 }
 
-// ── Total strip — 4 large numbers + variance ────────────────────────────────
+// ── Total strip. 4 large numbers + variance ────────────────────────────────
 
 const TotalStrip: React.FC<{
   total: { original: number; committed: number; actual: number; forecast: number; variance: number; variancePct: number }
@@ -982,7 +982,7 @@ const BudgetRow: React.FC<BudgetRowProps> = ({
       <Td align="right" mono>
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
           <span style={{ color: vTone, fontWeight: bold ? 600 : 500 }}>
-            {row.original === 0 && row.forecast === 0 ? '—' : `${vSign}${fmt$(Math.abs(v))}`}
+            {row.original === 0 && row.forecast === 0 ? '-' : `${vSign}${fmt$(Math.abs(v))}`}
           </span>
           {row.original > 0 && (
             <div
@@ -1038,7 +1038,7 @@ const BudgetRow: React.FC<BudgetRowProps> = ({
             CO×{row.coCount}
           </span>
         ) : (
-          <span style={{ color: C.ink4 }}>—</span>
+          <span style={{ color: C.ink4 }}>-</span>
         )}
       </Td>
     </tr>
@@ -1169,7 +1169,7 @@ const ExpansionPanel: React.FC<{
               {cos.map((co) => (
                 <tr key={co.id}>
                   <Td mono>{co.coNumber}</Td>
-                  <Td>{co.title || '—'}</Td>
+                  <Td>{co.title || '-'}</Td>
                   <Td align="right" mono>
                     {fmt$(co.amount)}
                   </Td>
@@ -1383,7 +1383,7 @@ const ByDivisionBody: React.FC<ByDivisionBodyProps> = ({
         const csi = divRows[0].csiDivision || ''
         const subRow: Row = {
           id: `subtotal-${div}`,
-          costCode: csi || '—',
+          costCode: csi || '-',
           division: div,
           csiDivision: csi,
           description: div,

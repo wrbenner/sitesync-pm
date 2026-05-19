@@ -1,8 +1,8 @@
 // FieldCaptureModal — full-screen camera UI for on-site photo capture.
 // Consumes useFieldCapture for camera + GPS + offline-queue behavior.
 
-import React, { useEffect, useState } from 'react';
-import { Camera, MapPin, X, WifiOff, CloudUpload, AlertTriangle, Loader2 } from 'lucide-react';
+import React, { useEffect, useRef, useState } from 'react';
+import { Camera, ImageIcon, MapPin, X, WifiOff, CloudUpload, AlertTriangle, Loader2 } from 'lucide-react';
 import { colors, spacing, typography, borderRadius, transitions } from '../../styles/theme';
 import { useFieldCapture } from '../../hooks/useFieldCapture';
 import { toast } from 'sonner';
@@ -40,6 +40,12 @@ export const FieldCaptureModal: React.FC<FieldCaptureModalProps> = ({
 
   const [caption, setCaption] = useState('');
   const [preview, setPreview] = useState<{ blob: Blob; url: string } | null>(null);
+  // Bugatti Field Manual item #10 (last 20% closure): camera fallback for
+  // devices/conditions where the live camera stream fails (locked screen,
+  // permissions denied, hardware fault). The library picker uses the native
+  // file input — on iOS Safari this opens the photo library; on Android it
+  // shows a chooser; on desktop it opens the OS file picker.
+  const libraryInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -69,6 +75,21 @@ export const FieldCaptureModal: React.FC<FieldCaptureModalProps> = ({
   const handleRetake = () => {
     if (preview) URL.revokeObjectURL(preview.url);
     setPreview(null);
+  };
+
+  const handleLibraryPick = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    // Always reset the input value so picking the same file twice still fires.
+    e.target.value = '';
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please select an image file.');
+      return;
+    }
+    // Mirror handleCapture's preview-state shape so the rest of the flow
+    // (caption → save → commitCapture) works identically.
+    const url = URL.createObjectURL(file);
+    setPreview({ blob: file, url });
   };
 
   const handleSave = async () => {
@@ -395,6 +416,15 @@ export const FieldCaptureModal: React.FC<FieldCaptureModalProps> = ({
             </>
           ) : (
             <>
+              <input
+                ref={libraryInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleLibraryPick}
+                aria-hidden="true"
+                tabIndex={-1}
+                style={{ position: 'absolute', width: 1, height: 1, padding: 0, margin: -1, overflow: 'hidden', clip: 'rect(0,0,0,0)', whiteSpace: 'nowrap', border: 0 }}
+              />
               <button
                 onClick={onClose}
                 style={{
@@ -412,6 +442,27 @@ export const FieldCaptureModal: React.FC<FieldCaptureModalProps> = ({
                 }}
               >
                 Cancel
+              </button>
+              <button
+                onClick={() => libraryInputRef.current?.click()}
+                aria-label="Choose photo from library"
+                style={{
+                  flex: 1, minHeight: 56,
+                  padding: `${spacing['3']} ${spacing['4']}`,
+                  border: `1px solid ${colors.borderDefault}`,
+                  backgroundColor: 'transparent',
+                  color: colors.textPrimary,
+                  borderRadius: borderRadius.md,
+                  fontSize: typography.fontSize.body,
+                  fontWeight: typography.fontWeight.medium,
+                  fontFamily: typography.fontFamily,
+                  cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  gap: spacing['2'],
+                  transition: `all ${transitions.quick}`,
+                }}
+              >
+                <ImageIcon size={18} /> Library
               </button>
               <button
                 onClick={handleCapture}

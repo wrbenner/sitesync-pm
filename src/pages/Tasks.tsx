@@ -1,8 +1,8 @@
 // ─────────────────────────────────────────────────────────────────────────────
-// Tasks — the unified PM/Super inbox (investor-readiness push)
+// Tasks. the unified PM/Super inbox (investor-readiness push)
 // ─────────────────────────────────────────────────────────────────────────────
 // Mission: catch-all inbox for the messy stuff. RFIs / Punch / Submittals are
-// formal records; Tasks are everything else — "send drone over Bldg B Friday",
+// formal records; Tasks are everything else. "send drone over Bldg B Friday",
 // "follow up with Smith on glass mockup", "check the back wall flashing".
 // Things / Linear feel: dense, keyboard-driven, inline add, no nav-on-click.
 // ─────────────────────────────────────────────────────────────────────────────
@@ -143,9 +143,9 @@ function endOfWeek(d: Date): Date {
 }
 
 function fmtDue(due: string | null | undefined): { label: string; tone: string } {
-  if (!due) return { label: '—', tone: C.ink4 }
+  if (!due) return { label: '-', tone: C.ink4 }
   const d = new Date(due)
-  if (Number.isNaN(d.getTime())) return { label: '—', tone: C.ink4 }
+  if (Number.isNaN(d.getTime())) return { label: '-', tone: C.ink4 }
   const now = new Date()
   const today = startOfDay(now)
   const todayEnd = endOfDay(now)
@@ -200,7 +200,7 @@ const TasksPage: React.FC = () => {
   const [editingTitleId, setEditingTitleId] = useState<string | null>(null)
   const [titleDraft, setTitleDraft] = useState('')
 
-  // Quick-add row state — title-only required.
+  // Quick-add row state. title-only required.
   const [draftTitle, setDraftTitle] = useState('')
   const [draftAssignee, setDraftAssignee] = useState('')
   const [draftDue, setDraftDue] = useState('')
@@ -420,7 +420,7 @@ const TasksPage: React.FC = () => {
     if (!inAll) return // unknown id (wrong project, deleted)
     const inVisible = visibleRows.findIndex((t) => t.id === focusParam)
     if (inVisible < 0) {
-      // Filter is hiding the target — reset filters so the row materializes,
+      // Filter is hiding the target. reset filters so the row materializes,
       // then this effect re-runs on the next visibleRows change. The cascading
       // render here is intentional and bounded (one extra paint), not a loop.
       // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -452,7 +452,7 @@ const TasksPage: React.FC = () => {
     }, 2000)
     return () => window.clearTimeout(t)
     // visibleRows ref-equality changes whenever the task list refetches; we
-    // intentionally DON'T re-run on every list change — only when the focus
+    // intentionally DON'T re-run on every list change. only when the focus
     // target changes or the underlying task ids do.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [focusParam, tasks.length, visibleRows.length])
@@ -669,7 +669,7 @@ const TasksPage: React.FC = () => {
               <tr>
                 <td colSpan={9} style={{ padding: '40px 24px', textAlign: 'center', color: C.ink3, fontSize: 13 }}>
                   {tasks.length === 0
-                    ? 'No tasks yet — type a title above to capture the first one.'
+                    ? 'No tasks yet. type a title above to capture the first one.'
                     : 'No tasks match this filter.'}
                 </td>
               </tr>
@@ -810,7 +810,7 @@ const QuickAddRow: React.FC<QuickAddRowProps> = ({
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           onKeyDown={onTitleKeyDown}
-          placeholder="+ New task — title, then Tab to set assignee / due date, Enter to save"
+          placeholder="+ New task. title, then Tab to set assignee / due date, Enter to save"
           aria-label="New task title"
           style={{
             width: '100%',
@@ -1012,7 +1012,7 @@ const TaskRow: React.FC<TaskRowProps> = ({
         boxShadow: highlighted ? `0 0 0 4px ${C.surfaceSelected}` : 'none',
       }}
     >
-      {/* Checkbox column — toggle done */}
+      {/* Checkbox column. toggle done */}
       <td style={cell({ width: 28, padding: '6px 4px 6px 12px' })}>
         <button
           onClick={(e) => {
@@ -1071,7 +1071,7 @@ const TaskRow: React.FC<TaskRowProps> = ({
           {isEditingTitle ? (
             <input
               ref={(el) => {
-                // Imperative focus on mount — replaces autoFocus to satisfy
+                // Imperative focus on mount. replaces autoFocus to satisfy
                 // jsx-a11y/no-autofocus while keeping the inline-edit UX.
                 if (el && document.activeElement !== el) el.focus()
               }}
@@ -1128,7 +1128,7 @@ const TaskRow: React.FC<TaskRowProps> = ({
       {/* Assignee */}
       <td style={cell({ padding: '6px 12px' })}>
         <span style={{ color: assigneeName ? C.ink2 : C.ink4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>
-          {assigneeName || '—'}
+          {assigneeName || '-'}
         </span>
       </td>
 
@@ -1150,7 +1150,7 @@ const TaskRow: React.FC<TaskRowProps> = ({
       {/* Linked */}
       <td style={cell({ padding: '6px 12px' })}>
         {linkedKey === 'Unlinked' ? (
-          <span style={{ color: C.ink4 }}>—</span>
+          <span style={{ color: C.ink4 }}>-</span>
         ) : (
           <span
             style={{
@@ -1170,10 +1170,10 @@ const TaskRow: React.FC<TaskRowProps> = ({
         )}
       </td>
 
-      {/* Iris column — placeholder; tasks don't have an Iris draft surface
+      {/* Iris column. placeholder; tasks don't have an Iris draft surface
           in the locked contract today. Wave 2 wires irisDraftStore lookup. */}
       <td style={cell({ padding: '6px 12px' })}>
-        <span style={{ color: C.ink4 }}>—</span>
+        <span style={{ color: C.ink4 }}>-</span>
       </td>
 
       {/* Delete */}
@@ -1230,7 +1230,7 @@ const ExpandedRow: React.FC<{
           <SectionLabel>Description</SectionLabel>
           <p style={{ margin: '6px 0 0', fontSize: 13, color: C.ink2, lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>
             {task.description || (
-              <span style={{ color: C.ink4 }}>—</span>
+              <span style={{ color: C.ink4 }}>-</span>
             )}
           </p>
 
@@ -1411,7 +1411,7 @@ function cell(extra: React.CSSProperties): React.CSSProperties {
   }
 }
 
-// ── Shell — sticky header + chips + group toggle + search ───────────────────
+// ── Shell. sticky header + chips + group toggle + search ───────────────────
 
 interface ShellProps {
   children: React.ReactNode

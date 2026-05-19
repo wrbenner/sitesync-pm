@@ -35,8 +35,21 @@ const inventory = JSON.parse(
 ) as { routes: RouteRow[] }
 
 // Public routes need no auth; sample priority protected routes for the
-// baseline. Full sweep runs nightly.
-const PRIORITY_PROTECTED = ['/day', '/rfis', '/submittals', '/daily-log', '/punch-list', '/change-orders']
+// baseline. Full sweep runs nightly. Bugatti continuation expands this to
+// include the 3 named demo surfaces (Iris Inbox, RFI Detail, Daily Log)
+// plus every page touched by Phases J/K cross-codebase Sev-1/Sev-2 sweeps.
+const PRIORITY_PROTECTED = [
+  '/day',
+  '/rfis',
+  '/submittals',
+  '/daily-log',
+  '/punch-list',
+  '/change-orders',
+  // Bugatti demo surfaces (Phases B + F):
+  '/iris/inbox',
+  // Note: RFI Detail (/rfis/:id) requires a fixture RFI id; covered by a
+  // separate spec rather than the generic axe sweep.
+]
 const sampleRoutes = [
   ...inventory.routes.filter((r) => r.isPublic).map((r) => r.path).slice(0, 5),
   ...PRIORITY_PROTECTED.filter((p) => inventory.routes.some((r) => r.path === p)),

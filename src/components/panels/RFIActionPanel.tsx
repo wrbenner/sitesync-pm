@@ -1,8 +1,8 @@
 /**
- * RFIActionPanel — Slide-over panel for RFI actions from The Conversation.
+ * RFIActionPanel. Slide-over panel for RFI actions from The Conversation.
  *
  * Shows RFI detail + response form + status actions without navigating away.
- * The GC can read the question, type a response, and close it — all in one flow.
+ * The GC can read the question, type a response, and close it. all in one flow.
  */
 
 import React, { useState, useCallback } from 'react';
@@ -178,7 +178,7 @@ export const RFIActionPanel: React.FC<RFIActionPanelProps> = ({ open, onClose, r
             value={
               <span style={{ color: isOverdue(rfi.due_date, status) ? '#DC2626' : colors.ink }}>
                 {formatShortDate(rfi.due_date)}
-                {isOverdue(rfi.due_date, status) && ' — overdue'}
+                {isOverdue(rfi.due_date, status) && '. overdue'}
               </span>
             }
           />

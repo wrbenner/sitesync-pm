@@ -96,7 +96,7 @@ export const VersionCompareModal: React.FC<VersionCompareModalProps> = ({
                         {rev.issued_by && <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>{rev.issued_by}</span>}
                         {!rev.superseded_at && <Tag label="Current" color={colors.statusActive} backgroundColor={`${colors.statusActive}18`} />}
                       </div>
-                      <iframe src={rev.file_url ?? undefined} title={`Revision ${rev.revision_number} — ${drawing.title}`} style={{ flex: 1, border: `1px solid ${colors.borderSubtle}`, borderRadius: borderRadius.md, width: '100%' }} />
+                      <iframe src={rev.file_url ?? undefined} title={`Revision ${rev.revision_number}: ${drawing.title}`} style={{ flex: 1, border: `1px solid ${colors.borderSubtle}`, borderRadius: borderRadius.md, width: '100%' }} />
                     </div>
                   ))}
                 </div>
@@ -174,7 +174,7 @@ export const ComparisonModal: React.FC<ComparisonModalProps> = ({
               {rev.issued_by && <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>{rev.issued_by}</span>}
             </div>
             {rev.file_url ? (
-              <iframe src={rev.file_url} title={`Rev ${rev.revision_number} — ${compareDrawingTitle}`} style={{ flex: 1, border: `1px solid ${colors.borderSubtle}`, borderRadius: borderRadius.md, width: '100%' }} />
+              <iframe src={rev.file_url} title={`Rev ${rev.revision_number}: ${compareDrawingTitle}`} style={{ flex: 1, border: `1px solid ${colors.borderSubtle}`, borderRadius: borderRadius.md, width: '100%' }} />
             ) : (
               <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surfaceInset, borderRadius: borderRadius.md, border: `1px solid ${colors.borderSubtle}` }}>
                 <p style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary, margin: 0 }}>No PDF available for this revision</p>

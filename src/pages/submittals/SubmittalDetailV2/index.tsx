@@ -290,7 +290,7 @@ const ActionCluster: React.FC<ActionClusterProps> = ({ copilotOpen, onToggleCoPi
           fontWeight: 600,
           fontFamily: FONT,
         }}
-        title="Approve — disposition picker comes online in Phase 7 (voice review codes)"
+        title="Approve. Disposition picker comes online in Phase 7 (voice review codes)."
       >
         Approve
       </button>

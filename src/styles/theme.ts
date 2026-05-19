@@ -499,6 +499,57 @@ export const touchTarget = {
   field: '56px',
 } as const;
 
+// ── Padding / Sizing Presets ─────────────────────────────
+// Composable padding strings that snap to the 4px grid. Use these
+// instead of template-literal padding (`${spacing.sm} ${spacing.xl}`)
+// to keep uniformity across surfaces.
+
+export const paddingX = {
+  '1': `0 ${spacing['1']}`,
+  '2': `0 ${spacing['2']}`,
+  '3': `0 ${spacing['3']}`,
+  '4': `0 ${spacing['4']}`,
+  '5': `0 ${spacing['5']}`,
+  '6': `0 ${spacing['6']}`,
+} as const;
+
+export const paddingY = {
+  '1': `${spacing['1']} 0`,
+  '2': `${spacing['2']} 0`,
+  '3': `${spacing['3']} 0`,
+  '4': `${spacing['4']} 0`,
+  '5': `${spacing['5']} 0`,
+  '6': `${spacing['6']} 0`,
+} as const;
+
+// Common element padding presets (y x).
+export const chipPadding = {
+  sm: `${spacing['1']} ${spacing['2']}`,    // 4 8
+  md: `${spacing['1.5']} ${spacing['2.5']}`, // 6 10
+  lg: `${spacing['2']} ${spacing['3']}`,    // 8 12
+} as const;
+
+export const buttonPadding = {
+  sm: `${spacing['2']} ${spacing['3']}`,    // 8 12
+  md: `${spacing['2.5']} ${spacing['4']}`,  // 10 16
+  lg: `${spacing['3']} ${spacing['6']}`,    // 12 24
+} as const;
+
+export const cardPadding = {
+  sm: spacing['4'],   // 16
+  md: spacing['5'],   // 20
+  lg: spacing['6'],   // 24
+  xl: spacing['8'],   // 32
+} as const;
+
+// Icon-button sizes (square). Pair with appropriate icon size.
+export const iconButtonSize = {
+  sm: { width: '28px', height: '28px', iconSize: 14 },
+  md: { width: '36px', height: '36px', iconSize: 18 },
+  lg: { width: '44px', height: '44px', iconSize: 20 },
+  field: { width: '56px', height: '56px', iconSize: 24 },
+} as const;
+
 // ── Semantic Color Helpers ───────────────────────────────
 
 // Status color map (construction industry standard)

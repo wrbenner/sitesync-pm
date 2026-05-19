@@ -103,7 +103,7 @@ function generateHeaderCells(start: Date, end: Date, zoom: TimeScale): Array<{ l
       }
       case 'week': {
         const weekEnd = addDays(cellDate, 6);
-        label = `${MONTHS[cellDate.getMonth()]} ${cellDate.getDate()}–${weekEnd.getDate()}`;
+        label = `${MONTHS[cellDate.getMonth()]} ${cellDate.getDate()}-${weekEnd.getDate()}`;
         break;
       }
       case 'month':
@@ -173,7 +173,7 @@ function generateMonthHeaders(start: Date, end: Date, zoom: TimeScale): Array<{ 
   return cells;
 }
 
-// ── Color mapping — bold, unmistakable palette ──────────
+// ── Color mapping. bold, unmistakable palette ──────────
 // Every bar must be clearly visible even at 0% progress.
 // Steve Jobs rule: if you squint and can't see it, it's wrong.
 function barColor(phase: GanttPhase): { bg: string; border: string; progress: string; text: string } {
@@ -192,7 +192,7 @@ function barColor(phase: GanttPhase): { bg: string; border: string; progress: st
   if (phase.status === 'at_risk') {
     return { bg: '#FEF3C7', border: '#FCD34D', progress: '#F59E0B', text: '#92400E' };
   }
-  // "upcoming" / unknown — warm neutral
+  // "upcoming" / unknown. warm neutral
   return { bg: '#E8E5E0', border: '#C4BFB8', progress: '#8D8680', text: '#4B4539' };
 }
 
@@ -693,7 +693,7 @@ const GanttRow: React.FC<GanttRowProps> = React.memo(({ phase, chartStart, pxPer
       ) : (
         /* ── Activity bar ── */
         <div
-          title={`${phase.name} — ${progress}% (${toDateStr(start)} → ${toDateStr(end)})`}
+          title={`${phase.name}. ${progress}% (${toDateStr(start)} → ${toDateStr(end)})`}
           onMouseDown={(e) => onDragStart?.(phase.id, e)}
           style={{
             position: 'absolute', left, top: BAR_TOP, width, height: BAR_H,
@@ -711,7 +711,7 @@ const GanttRow: React.FC<GanttRowProps> = React.memo(({ phase, chartStart, pxPer
             transform: hovered ? 'translateY(-0.5px)' : 'none',
           }}
         >
-          {/* Bottom edge gradient — gives depth even at 0% */}
+          {/* Bottom edge gradient. gives depth even at 0% */}
           <div style={{
             position: 'absolute', left: 0, right: 0, bottom: 0, height: '40%',
             background: `linear-gradient(to top, ${clr.progress}10, transparent)`,
@@ -780,7 +780,7 @@ const GanttRow: React.FC<GanttRowProps> = React.memo(({ phase, chartStart, pxPer
         </div>
       )}
 
-      {/* ── Float visualization — translucent buffer zone ── */}
+      {/* ── Float visualization. translucent buffer zone ── */}
       {!isMilestone && (phase.floatDays ?? 0) > 0 && pxPerDay > 0 && (
         <div
           title={`${phase.floatDays} days of float`}
@@ -1000,7 +1000,7 @@ function TablePanel({ phases, selectedId, onSelect, risks, width }: { phases: Ga
                 )}
               </div>
 
-              {/* Start / Finish — shown when panel is wide enough */}
+              {/* Start / Finish. shown when panel is wide enough */}
               {width >= 400 && (
                 <span style={{
                   width: 64, textAlign: 'center',
@@ -1026,7 +1026,7 @@ function TablePanel({ phases, selectedId, onSelect, risks, width }: { phases: Ga
                 fontSize: typography.fontSize.caption, color: colors.textTertiary,
                 fontVariantNumeric: 'tabular-nums',
               }}>
-                {isMilestone ? '—' : `${dur}d`}
+                {isMilestone ? '-' : `${dur}d`}
               </span>
 
               {/* Progress mini bar */}
@@ -1224,7 +1224,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({
     return <GanttEmpty onImportSchedule={onImportSchedule} onAddActivity={onAddActivity} />;
   }
 
-  // The Gantt IS the product — it should fill the viewport.
+  // The Gantt IS the product. it should fill the viewport.
   // Use calc(100vh - offset) so it dominates regardless of content.
   // For large schedules (20+ rows), let content drive height.
   // minHeight ensures it never looks like a widget.
@@ -1330,7 +1330,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({
 
           {/* Timeline body */}
           <div style={{ position: 'relative', width: totalWidth, minHeight: Math.max(totalHeight, chartHNumeric - HEADER_H) }}>
-            {/* Row zebra striping — extends full visible height */}
+            {/* Row zebra striping. extends full visible height */}
             {Array.from({ length: Math.max(phases.length + 8, Math.ceil((chartHNumeric - HEADER_H) / ROW_H)) }, (_, i) => i).filter(i => i % 2 === 1).map(i => (
               <div key={`zs-${i}`} style={{
                 position: 'absolute', left: 0, right: 0, top: i * ROW_H, height: ROW_H,
@@ -1365,7 +1365,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({
             {/* Today marker */}
             <TodayMarker chartStart={chartStart} pxPerDay={pxPerDay} totalHeight={totalHeight} />
 
-            {/* Phase bars — virtualized: only visible rows rendered */}
+            {/* Phase bars. virtualized: only visible rows rendered */}
             {phases.map((phase, i) => {
               if (i < visibleStartIdx || i > visibleEndIdx) return null;
               return (

@@ -1,5 +1,5 @@
 // ── Schedule Health Engine ───────────────────────────────────────────────────
-// Proactive schedule quality analysis — the kind of intelligence that makes
+// Proactive schedule quality analysis. the kind of intelligence that makes
 // construction managers trust a tool. Inspired by PMI scheduling best practices
 // and real CM rejection criteria for subcontractor schedules.
 //
@@ -35,12 +35,12 @@ export interface HealthFinding {
   description: string;
   suggestion: string;
   affectedTaskIds: string[];
-  /** 0–100 deduction from the overall score this finding causes */
+  /** 0-100 deduction from the overall score this finding causes */
   scoreImpact: number;
 }
 
 export interface HealthReport {
-  /** 0–100 overall schedule health score */
+  /** 0-100 overall schedule health score */
   score: number;
   /** A/B/C/D/F letter grade */
   grade: string;
@@ -110,10 +110,10 @@ export function analyzeScheduleHealth(phases: MappedSchedulePhase[]): HealthRepo
   }
 
   // If ≥80% of activities are completely unlinked (no preds AND no succs),
-  // the schedule has no logic data at all — typically seed/imported data that
+  // the schedule has no logic data at all. typically seed/imported data that
   // hasn't been sequenced yet. Return a neutral "unanalyzed" report rather
   // than an F-grade that would alarm users on an otherwise healthy project.
-  // Only applies to larger schedules (>10 activities) — small schedules should
+  // Only applies to larger schedules (>10 activities). small schedules should
   // still be analyzed so that genuine issues (missing preds, dangling) surface.
   const totalLinks = phases.reduce((sum, p) => sum + (predecessorMap.get(p.id)?.length ?? 0), 0);
   const orphanCount = phases.filter(p =>
@@ -191,7 +191,7 @@ export function analyzeScheduleHealth(phases: MappedSchedulePhase[]): HealthRepo
       category: 'negative-float',
       severity: 'critical',
       title: `${negativeFloatTasks.length} activit${negativeFloatTasks.length === 1 ? 'y' : 'ies'} with negative float`,
-      description: `Negative float means the schedule cannot meet its constraints — the math says these activities need to start before their predecessors finish. This typically indicates constraint conflicts or an impossible deadline.`,
+      description: `Negative float means the schedule cannot meet its constraints. the math says these activities need to start before their predecessors finish. This typically indicates constraint conflicts or an impossible deadline.`,
       suggestion: `Review date constraints on these activities. Remove "Must Finish By" constraints or extend the project deadline. Consider fast-tracking or crashing the critical path.`,
       affectedTaskIds: negativeFloatTasks.map(p => p.id),
       scoreImpact: Math.min(30, negativeFloatTasks.length * 5),
@@ -245,7 +245,7 @@ export function analyzeScheduleHealth(phases: MappedSchedulePhase[]): HealthRepo
       category: 'dangling',
       severity: dangling.length > 2 ? 'critical' : 'warning',
       title: `${dangling.length} completely disconnected activit${dangling.length === 1 ? 'y' : 'ies'}`,
-      description: `These activities have zero logic ties — no predecessors and no successors. They float independently of the schedule and cannot drive or be driven by the critical path.`,
+      description: `These activities have zero logic ties. no predecessors and no successors. They float independently of the schedule and cannot drive or be driven by the critical path.`,
       suggestion: `Connect each activity to the schedule network. Every activity should answer: "What comes before me?" and "What comes after me?"`,
       affectedTaskIds: dangling,
       scoreImpact: Math.min(20, dangling.length * 4),
@@ -281,8 +281,8 @@ export function analyzeScheduleHealth(phases: MappedSchedulePhase[]): HealthRepo
         category: 'duration-anomaly',
         severity: 'warning',
         title: `${anomalies.length} activit${anomalies.length === 1 ? 'y has' : 'ies have'} unusual duration`,
-        description: `Activities longer than 60 days should typically be broken into smaller, measurable tasks. Very short durations may indicate missing scope. Construction best practice keeps activities between 5–20 working days.`,
-        suggestion: `Break long activities into 2–4 week segments. Verify short activities aren't missing work scope.`,
+        description: `Activities longer than 60 days should typically be broken into smaller, measurable tasks. Very short durations may indicate missing scope. Construction best practice keeps activities between 5-20 working days.`,
+        suggestion: `Break long activities into 2-4 week segments. Verify short activities aren't missing work scope.`,
         affectedTaskIds: anomalies,
         scoreImpact: Math.min(10, anomalies.length * 2),
       });
@@ -301,7 +301,7 @@ export function analyzeScheduleHealth(phases: MappedSchedulePhase[]): HealthRepo
       severity: logicDensity < 0.5 ? 'critical' : 'warning',
       title: `Low logic density: ${logicDensity.toFixed(1)} links per activity`,
       description: `A well-connected schedule typically has 1.5+ links per activity. Low density means changes won't properly ripple through the schedule, reducing its value as a planning tool. Current: ${totalLinks} links across ${phases.length} activities.`,
-      suggestion: `Review the schedule from start to finish. For each activity, ensure at least one predecessor and one successor exist. Target 1.5–2.0 links per activity.`,
+      suggestion: `Review the schedule from start to finish. For each activity, ensure at least one predecessor and one successor exist. Target 1.5-2.0 links per activity.`,
       affectedTaskIds: [],
       scoreImpact: Math.min(20, Math.round((1.0 - logicDensity) * 20)),
     });
@@ -326,7 +326,7 @@ export function analyzeScheduleHealth(phases: MappedSchedulePhase[]): HealthRepo
   }
 
   // ── 8. Near-Critical Activities ───────────────────────────────────────────
-  // Activities with very low float (1–3 days) that could easily become critical
+  // Activities with very low float (1-3 days) that could easily become critical
   const nearCritical = phases.filter(p => {
     const float = p.floatDays ?? 0;
     return float > 0 && float <= 3 && !(p.critical || p.is_critical || p.is_critical_path);
@@ -429,12 +429,12 @@ function buildSummary(
 
 // ── Unlinked Report (no predecessor/successor data) ─────────────────────────
 // Returned when ≥80% of activities have zero logic links. The schedule exists
-// but has not been sequenced yet — don't show a red F-grade.
+// but has not been sequenced yet. don't show a red F-grade.
 
 function unlinkedReport(activityCount: number): HealthReport {
   return {
     score: 100,
-    grade: '—',
+    grade: '-',
     summary: `${activityCount} activities found but no predecessor-successor links have been added yet. Add logic ties to enable schedule health analysis.`,
     findings: [],
     criticalCount: 0,

@@ -846,21 +846,29 @@ export function RFIDetail() {
             {rfi.title}
           </h1>
 
-          {/* Ball in court — prominent when active */}
+          {/* Ball in court — prominent when active.
+              Bugatti Sev-2 (cat 8 a11y): the chip was visually orange-only,
+              relying on color to mean "active / awaiting." Text now leads
+              with "Awaiting reply from", so the signal is conveyed by
+              icon + word + name — not just the orange tint. role="status"
+              + aria-label make this explicit to screen readers. */}
           {rfi.ball_in_court && currentStatus !== 'closed' && currentStatus !== 'void' && (
-            <div style={{
-              display: 'inline-flex', alignItems: 'center', gap: '6px',
-              marginTop: '10px', padding: '5px 12px',
-              borderRadius: '8px',
-              backgroundColor: colors.orangeSubtle,
-              border: `1px solid ${colors.primaryOrange}20`,
-              fontSize: '12px', color: colors.primaryOrange, fontWeight: 600,
-            }}>
-              <Flag size={11} />
-              {/* The literal site of Walker's "code in activity" complaint —
-                  this used to render a raw UUID. UserName guarantees skeleton
-                  during load, then a name; never the UUID. */}
-              Ball in court: <UserName userId={rfi.ball_in_court} fallback="—" />
+            <div
+              role="status"
+              aria-label={`Awaiting reply on this RFI`}
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: '6px',
+                marginTop: '10px', padding: '5px 12px',
+                borderRadius: '8px',
+                backgroundColor: colors.orangeSubtle,
+                border: `1px solid ${colors.primaryOrange}20`,
+                fontSize: '12px', color: colors.primaryOrange, fontWeight: 600,
+                maxWidth: '100%',
+                flexWrap: 'wrap',
+              }}
+            >
+              <Flag size={11} aria-hidden />
+              <span>Awaiting reply from <UserName userId={rfi.ball_in_court} fallback="—" /></span>
             </div>
           )}
         </div>
@@ -971,7 +979,13 @@ export function RFIDetail() {
               join the legal record. ─────────────────────────────── */}
         <RFIEmailReviewBanner rfiId={rfi.id} projectId={rfi.project_id} />
 
-        {/* ── The Question + Thread Card ──────────────────── */}
+        {/* ── The Question + Thread Card ────────────────────
+            Bugatti Sev-2 (cat 7 Mobile): defensive overflow handling for
+            iPhone landscape (844×390). Long unbroken strings (URLs,
+            mention slugs) inside the thread used to expand the flex
+            ancestors and clip avatars/timestamps. minWidth: 0 +
+            overflowWrap break the longest words; outer overflow: hidden
+            already in place caps the box. */}
         <div style={{
           borderRadius: '16px',
           border: `1px solid ${colors.borderSubtle}`,
@@ -979,6 +993,8 @@ export function RFIDetail() {
           overflow: 'hidden',
           marginBottom: '24px',
           boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+          minWidth: 0,
+          overflowWrap: 'anywhere',
         }}>
           {/* Question content */}
           <div style={{ padding: '20px 24px' }}>

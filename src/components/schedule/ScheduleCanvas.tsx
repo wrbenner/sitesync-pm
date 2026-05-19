@@ -1,4 +1,4 @@
-// SiteSync PM — Schedule Canvas
+// SiteSync PM. Schedule Canvas
 // A world-class construction schedule view.
 //
 // Design tenets:
@@ -6,7 +6,7 @@
 //     bars on the same row, each with a tiny section chip. This takes 385
 //     imported per-zone rows and renders ~60-120 clean rows grouped under
 //     their buildings.
-//   - Buildings are the organizing axis — rendered as collapsible horizontal
+//   - Buildings are the organizing axis. rendered as collapsible horizontal
 //     sections with an accent rail and a compact progress summary.
 //   - Palette is restrained: five status tones in the same saturation band,
 //     plus one orange accent for the Today line. No Easter-basket greens.
@@ -102,7 +102,7 @@ const STATUS_BAR: Record<RowStatus, { fill: string; text: string; progressFill: 
 //
 // All palettes share a common saturation + lightness curve so no single
 // building shouts louder than another. Behind-schedule segments override
-// with red regardless — urgency trumps grouping.
+// with red regardless. urgency trumps grouping.
 type BuildingPalette = {
   /** Four tints from lightest to darkest, indexed by section number. */
   fills: [string, string, string, string];
@@ -114,7 +114,7 @@ type BuildingPalette = {
 };
 
 const BUILDING_PALETTES: Record<string, BuildingPalette> = {
-  // Sitework / General — neutral warm tan. Intentionally desaturated so it
+  // Sitework / General. neutral warm tan. Intentionally desaturated so it
   // reads as "common/site-wide" rather than any building.
   _sitework: {
     fills:    ['#E6E2D8', '#D6D1C3', '#C6BFAE', '#B5AC98'],
@@ -122,35 +122,35 @@ const BUILDING_PALETTES: Record<string, BuildingPalette> = {
     text:     '#4A453B',
     accent:   '#9E9688',
   },
-  // Building A — slate blue.
+  // Building A. slate blue.
   A: {
     fills:    ['#D9E6F2', '#B7CFE6', '#94B8D6', '#739FC3'],
     progress: ['#4B7DB4', '#3C6AA0', '#2E588B', '#234775'],
     text:     '#1C3A5E',
     accent:   '#4B7DB4',
   },
-  // Building B — warm plum.
+  // Building B. warm plum.
   B: {
     fills:    ['#E8D6E4', '#D6B4D0', '#BE92B6', '#A5729B'],
     progress: ['#7E4E79', '#6B4168', '#583457', '#452945'],
     text:     '#3F233D',
     accent:   '#7E4E79',
   },
-  // Building C — sea teal.
+  // Building C. sea teal.
   C: {
     fills:    ['#D1EBE3', '#A8D8CB', '#80C2B1', '#5BA894'],
     progress: ['#3D8777', '#327166', '#275C53', '#1E4841'],
     text:     '#1B3D36',
     accent:   '#3D8777',
   },
-  // Building D — dusty rose.
+  // Building D. dusty rose.
   D: {
     fills:    ['#EED9D2', '#DDB5AC', '#C79187', '#AE7165'],
     progress: ['#905149', '#7A423B', '#62342E', '#4B2722'],
     text:     '#432521',
     accent:   '#905149',
   },
-  // Clubhouse — warm amber. Same curve, different hue.
+  // Clubhouse. warm amber. Same curve, different hue.
   CL: {
     fills:    ['#F1E2BE', '#E6CC8D', '#D2AE59', '#B3902F'],
     progress: ['#8D6F1D', '#765B16', '#5F4910', '#483709'],
@@ -187,7 +187,7 @@ function buildingKey(raw: string | null | undefined): { key: string; section: nu
 function paletteFor(segment: { raw: { wbs?: string | null; }; status: RowStatus }): {
   fill: string; progressFill: string; text: string;
 } {
-  // Behind trumps everything — red is the alarm color.
+  // Behind trumps everything. red is the alarm color.
   if (segment.status === 'behind') {
     return { fill: STATUS_BAR.behind.fill, progressFill: STATUS_BAR.behind.progressFill, text: STATUS_BAR.behind.text };
   }
@@ -650,7 +650,7 @@ export const ScheduleCanvas: React.FC<ScheduleCanvasProps> = ({ phases, zoom, sh
         onMouseLeave={() => setTooltip(null)}
       >
         <div style={{ width: bounds.width, height: Math.max(totalBodyH, 400), position: 'relative' }}>
-          {/* Weekend shading — subtle columns for Sat/Sun in day & week zoom */}
+          {/* Weekend shading. subtle columns for Sat/Sun in day & week zoom */}
           {(zoom === 'day' || zoom === 'week') && (() => {
             const weekends: React.ReactNode[] = [];
             const startDate = new Date(bounds.min);
@@ -709,7 +709,7 @@ export const ScheduleCanvas: React.FC<ScheduleCanvasProps> = ({ phases, zoom, sh
             }} />
           ))}
 
-          {/* Today line — prominent orange with soft gradient glow */}
+          {/* Today line. prominent orange with soft gradient glow */}
           {todayX !== null && (
             <>
               {/* Glow halo */}
@@ -1046,7 +1046,7 @@ const LeftRow: React.FC<{ row: ActivityRow }> = ({ row }) => {
           {row.segments.length}×
         </span>
       )}
-      {/* Float indicator — only show when meaningful */}
+      {/* Float indicator. only show when meaningful */}
       {floatDays !== null && floatDays >= 0 && overallStatus !== 'completed' && (
         <span style={{
           fontSize: 10,
@@ -1217,7 +1217,7 @@ const BodyRow: React.FC<{
             role="button"
             tabIndex={0}
             onMouseDown={(e) => handleBarMouseDown(seg, e)}
-            aria-label={`${row.name} — ${seg.startDate} to ${seg.endDate} — ${seg.percentComplete}%`}
+            aria-label={`${row.name}. ${seg.startDate} to ${seg.endDate}. ${seg.percentComplete}%`}
             onMouseEnter={(e) => {
               const el = e.currentTarget as HTMLDivElement;
               el.style.filter = 'brightness(0.96)';

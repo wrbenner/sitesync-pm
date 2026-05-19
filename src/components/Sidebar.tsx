@@ -1,5 +1,5 @@
 // ─────────────────────────────────────────────────────────────────────────────
-// Sidebar — role-filtered nav (Tab C / Wave 1)
+// Sidebar. role-filtered nav (Tab C / Wave 1)
 // ─────────────────────────────────────────────────────────────────────────────
 // Flat list of nav items, filtered by the user's StreamRole. Two visual modes:
 //   - collapsed (72px) : icon column with hover tooltip
@@ -61,7 +61,7 @@ interface SidebarProps {
   onClose?: () => void
 }
 
-// ── Icon registry — string → component ──────────────────────────────────────
+// ── Icon registry. string → component ──────────────────────────────────────
 // Kept inside the component module so tree-shaking still drops icons no nav
 // item references; growing the registry is just adding a key here + bumping
 // NAV_ITEMS.
@@ -103,7 +103,7 @@ function writeStoredCollapsed(v: boolean) {
   try {
     window.localStorage.setItem(SIDEBAR_PREF_KEY, String(v))
   } catch {
-    /* storage full / disabled — non-critical */
+    /* storage full / disabled. non-critical */
   }
 }
 
@@ -296,7 +296,7 @@ const ProjectSwitcher: React.FC<{ collapsed: boolean }> = ({ collapsed }) => {
             )}
             <button
               onClick={() => {
-                // Project creation now lives at /onboarding — owned by the
+                // Project creation now lives at /onboarding. owned by the
                 // T-Onboarding tab and styled to match the cockpit. The
                 // legacy modal stays mounted (line below) for callers that
                 // still open createOpen=true, but the sidebar's primary
@@ -541,7 +541,7 @@ const UserStrip: React.FC<{ collapsed: boolean; streamRole: StreamRole }> = ({
     >
       <button
         onClick={() => setMenuOpen((v) => !v)}
-        aria-label={`Account menu — ${displayName}, ${roleLabel}`}
+        aria-label={`Account menu. ${displayName}, ${roleLabel}`}
         aria-haspopup="menu"
         aria-expanded={menuOpen}
         title={collapsed ? `${displayName} · ${roleLabel}` : undefined}
@@ -739,7 +739,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate, mode, 
   const streamRole: StreamRole = useMemo(() => toStreamRole(projectRole), [projectRole])
   const navItems = useMemo(() => getNavForRole(streamRole), [streamRole])
 
-  // Mobile detection — when present we render <MobileTabBar/>; the App shell
+  // Mobile detection. when present we render <MobileTabBar/>; the App shell
   // already prefers MobileLayout, so this is the safety net.
   const [isMobile, setIsMobile] = useState(() =>
     typeof window !== 'undefined' && window.matchMedia('(max-width: 768px)').matches,
@@ -768,7 +768,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate, mode, 
     setSidebarCollapsed(readStoredCollapsed(false))
   }, [location.pathname, setSidebarCollapsed])
 
-  // Persist user-driven changes — but only when they happen on a non-/day
+  // Persist user-driven changes. but only when they happen on a non-/day
   // page so the auto-collapse on /day doesn't poison the preference.
   useEffect(() => {
     if (location.pathname === '/day') return
@@ -781,13 +781,13 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate, mode, 
   useEffect(() => {
     if (typeof window === 'undefined') return
     const handler = (e: KeyboardEvent) => {
-      // Cmd/Ctrl + \ — works regardless of focus target
+      // Cmd/Ctrl + \. works regardless of focus target
       if (e.key === '\\' && (e.metaKey || e.ctrlKey)) {
         e.preventDefault()
         setSidebarCollapsed(!sidebarCollapsed)
         return
       }
-      // Bare `[` — only when not typing in a field
+      // Bare `[`. only when not typing in a field
       if (e.key === '[' && !e.metaKey && !e.ctrlKey && !e.altKey) {
         const target = e.target as HTMLElement | null
         const tag = target?.tagName
@@ -898,7 +898,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate, mode, 
 
       <ProjectSwitcher collapsed={collapsed} />
 
-      {/* Search affordance — opens the command palette on click (App handles ⌘K) */}
+      {/* Search affordance. opens the command palette on click (App handles ⌘K) */}
       {!collapsed && (
         <div style={{ padding: `${spacing['1']} ${spacing['3']} ${spacing['2']}` }}>
           <button
@@ -953,7 +953,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate, mode, 
       >
         {navItems.map((item) => {
           const Icon = ICONS[item.icon] ?? Zap
-          // Active when the route prefix matches — handles nested detail
+          // Active when the route prefix matches. handles nested detail
           // pages (e.g. /rfis/123 still highlights RFIs) without needing a
           // separate "section" concept.
           const isActive =

@@ -13,13 +13,29 @@
  */
 
 import React, { useState } from 'react'
-import { Sparkles, Check, X, ChevronDown, ChevronUp, ExternalLink } from 'lucide-react'
+import { Sparkles, Check, X, ChevronDown, ChevronUp, ExternalLink, Lock } from 'lucide-react'
+import { toast } from 'sonner'
 import { colors, spacing, typography, borderRadius, shadows } from '../../styles/theme'
 import { supabase, isSupabaseConfigured } from '../../lib/supabase'
 import { useRecordDraftView } from '../../hooks/useRecordDraftView'
 import { useOpenCitationPanel } from '../../hooks/useOpenCitationPanel'
+import { usePermissions, type Permission } from '../../hooks/usePermissions'
 import { isCitationKind } from '../../lib/iris/citationRouting'
 import type { DraftedAction } from '../../types/draftedActions'
+
+// Iris draft action_type → underlying entity permission required to execute it.
+// Bugatti audit Sev-1: Approve & Send was unguarded; a foreman could execute
+// any drafted action. Each draft type now resolves to its real entity-write
+// permission, so the action button respects the same role gates as the
+// non-Iris create path.
+const APPROVE_PERMISSION_BY_ACTION_TYPE: Record<DraftedAction['action_type'], Permission> = {
+  'rfi.draft': 'rfis.create',
+  'daily_log.draft': 'daily_log.create',
+  'pay_app.draft': 'financials.edit',
+  'punch_item.draft': 'punch_list.create',
+  'schedule.resequence': 'schedule.edit',
+  'submittal.transmittal_draft': 'submittals.create',
+}
 
 type DecisionMethod = 'keyboard' | 'mouse' | 'voice' | 'unknown'
 
@@ -91,18 +107,40 @@ export const IrisApprovalGate: React.FC<IrisApprovalGateProps> = ({
   const recordViewRef = useRecordDraftView(draft.id)
   const openCitationPanel = useOpenCitationPanel()
 
+  // Bugatti Sev-1 closure: gate Approve & Send on the same permission as the
+  // non-Iris create path for the underlying entity. The button stays visible
+  // when denied (rendered disabled with a Lock icon) so users see what they
+  // can't do rather than wondering why an action is missing.
+  const { hasPermission } = usePermissions()
+  const requiredPermission = APPROVE_PERMISSION_BY_ACTION_TYPE[draft.action_type]
+  const canApprove = hasPermission(requiredPermission)
+
   const handleApprove = async (event: React.MouseEvent<HTMLButtonElement>) => {
+    if (!canApprove) {
+      toast.error(`You don't have permission to execute ${actionLabel.toLowerCase()} drafts.`)
+      return
+    }
     const method = detectDecisionMethod(event)
-    // If onApprove throws, we let it propagate and skip the telemetry record —
-    // we only count decisions that actually landed.
-    await onApprove(draft)
-    recordDecisionTelemetry(draft.id, method, editsApplied)
+    try {
+      await onApprove(draft)
+      recordDecisionTelemetry(draft.id, method, editsApplied)
+    } catch (err) {
+      toast.error(
+        err instanceof Error ? err.message : 'Approving the draft failed. Please try again.',
+      )
+    }
   }
 
   const handleReject = async (event: React.MouseEvent<HTMLButtonElement>) => {
     const method = detectDecisionMethod(event)
-    await onReject(draft)
-    recordDecisionTelemetry(draft.id, method, editsApplied)
+    try {
+      await onReject(draft)
+      recordDecisionTelemetry(draft.id, method, editsApplied)
+    } catch (err) {
+      toast.error(
+        err instanceof Error ? err.message : 'Rejecting the draft failed. Please try again.',
+      )
+    }
   }
 
   return (
@@ -314,24 +352,33 @@ export const IrisApprovalGate: React.FC<IrisApprovalGateProps> = ({
         <button
           type="button"
           onClick={handleApprove}
-          disabled={busy}
-          aria-label="Approve and execute this drafted action"
+          disabled={busy || !canApprove}
+          aria-label={
+            canApprove
+              ? 'Approve and execute this drafted action'
+              : `You do not have permission to execute ${actionLabel.toLowerCase()} drafts`
+          }
+          title={canApprove ? undefined : 'Permission required'}
           style={{
             display: 'inline-flex',
             alignItems: 'center',
+            justifyContent: 'center',
             gap: spacing['1'],
+            // Bugatti Sev-2: 44px min tap target on mobile.
+            minHeight: 44,
             padding: `${spacing['2']} ${spacing['4']}`,
-            backgroundColor: busy ? colors.surfaceDisabled : colors.primaryOrange,
-            color: busy ? colors.textDisabled : colors.white,
+            backgroundColor: busy || !canApprove ? colors.surfaceDisabled : colors.primaryOrange,
+            color: busy || !canApprove ? colors.textDisabled : colors.white,
             border: 'none',
             borderRadius: borderRadius.md,
             fontSize: typography.fontSize.sm,
             fontWeight: typography.fontWeight.semibold,
             fontFamily: typography.fontFamily,
-            cursor: busy ? 'not-allowed' : 'pointer',
+            cursor: busy || !canApprove ? 'not-allowed' : 'pointer',
           }}
         >
-          <Check size={14} /> Approve & send
+          {canApprove ? <Check size={14} /> : <Lock size={14} aria-hidden />}
+          Approve & send
         </button>
         <button
           type="button"
@@ -341,7 +388,9 @@ export const IrisApprovalGate: React.FC<IrisApprovalGateProps> = ({
           style={{
             display: 'inline-flex',
             alignItems: 'center',
+            justifyContent: 'center',
             gap: spacing['1'],
+            minHeight: 44,
             padding: `${spacing['2']} ${spacing['4']}`,
             backgroundColor: 'transparent',
             color: colors.textSecondary,

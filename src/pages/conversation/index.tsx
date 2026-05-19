@@ -37,6 +37,7 @@ import {
 import { RFIActionPanel } from '../../components/panels/RFIActionPanel';
 import { SubmittalActionPanel } from '../../components/panels/SubmittalActionPanel';
 import { QuickCreateFAB } from '../../components/QuickCreateFAB';
+import { usePermissions, type Permission } from '../../hooks/usePermissions';
 import CreateRFIModal from '../../components/forms/CreateRFIModal';
 import CreateSubmittalModal from '../../components/forms/CreateSubmittalModal';
 import CreateChangeOrderModal from '../../components/forms/CreateChangeOrderModal';
@@ -75,6 +76,12 @@ const ConversationPage: React.FC = () => {
   const isOnline = useIsOnline();
   const user = useAuthStore((s) => s.user);
   const navigate = useNavigate();
+  // Bugatti Sev-1 (cat 6): the Quick Actions row exposed 6 create buttons
+  // (RFI, Submittal, CO, Punch, Daily Log, Task) without any permission
+  // check — a subcontractor could pop modals for entities they have no
+  // right to create. Per-action permission gating filters the row to
+  // only the entries the current user can actually act on.
+  const { hasPermission } = usePermissions();
 
   useEffect(() => { setPageContext('conversation'); }, [setPageContext]);
 
@@ -391,13 +398,13 @@ const ConversationPage: React.FC = () => {
               anything or go to each page easily" — this fixes that. */}
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
             {([
-              { label: 'New RFI', icon: <HelpCircle size={13} />, onClick: () => setShowCreateRFI(true) },
-              { label: 'New Submittal', icon: <Send size={13} />, onClick: () => setShowCreateSubmittal(true) },
-              { label: 'New CO', icon: <FileEdit size={13} />, onClick: () => setShowCreateChangeOrder(true) },
-              { label: 'New Punch', icon: <ListChecks size={13} />, onClick: () => setShowCreatePunch(true) },
-              { label: 'New Daily Log', icon: <ClipboardList size={13} />, onClick: () => setShowCreateDailyLog(true) },
-              { label: 'New Task', icon: <ListTodo size={13} />, onClick: () => setShowCreateTask(true) },
-            ]).map((act) => (
+              { label: 'New RFI', icon: <HelpCircle size={13} />, onClick: () => setShowCreateRFI(true), permission: 'rfis.create' as Permission },
+              { label: 'New Submittal', icon: <Send size={13} />, onClick: () => setShowCreateSubmittal(true), permission: 'submittals.create' as Permission },
+              { label: 'New CO', icon: <FileEdit size={13} />, onClick: () => setShowCreateChangeOrder(true), permission: 'change_orders.create' as Permission },
+              { label: 'New Punch', icon: <ListChecks size={13} />, onClick: () => setShowCreatePunch(true), permission: 'punch_list.create' as Permission },
+              { label: 'New Daily Log', icon: <ClipboardList size={13} />, onClick: () => setShowCreateDailyLog(true), permission: 'daily_log.create' as Permission },
+              { label: 'New Task', icon: <ListTodo size={13} />, onClick: () => setShowCreateTask(true), permission: 'tasks.create' as Permission },
+            ]).filter((act) => hasPermission(act.permission)).map((act) => (
               <button
                 key={act.label}
                 onClick={act.onClick}

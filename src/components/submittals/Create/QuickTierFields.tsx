@@ -1,8 +1,8 @@
-// Phase 5 — Quick tier fields for the Unified Create Modal.
+// Phase 5. Quick tier fields for the Unified Create Modal.
 //
 // Three fields, all required for the 80% path:
 //   1. Title
-//   2. Ball-in-court (single user picker — typeahead)
+//   2. Ball-in-court (single user picker. typeahead)
 //   3. Due date (default 7 days from today; user overrides)
 //
 // Provenance-aware: when Iris pre-filled a value (e.g. from voice), the
@@ -67,7 +67,7 @@ export const QuickTierFields: React.FC<QuickTierFieldsProps> = ({
           && draft.provenance.ball_in_court_user_id !== 'manual'
             ? draft.provenance.ball_in_court_user_id : undefined}
       >
-        {/* Phase 5 ships a placeholder picker — typeahead over project_members
+        {/* Phase 5 ships a placeholder picker. typeahead over project_members
          *  is wired by the existing PeoplePicker component in Phase 6 detail
          *  page work. For now, accept a freeform user-id string and let the
          *  full tier provide the searchable picker. */}
@@ -75,7 +75,7 @@ export const QuickTierFields: React.FC<QuickTierFieldsProps> = ({
           type="text"
           value={draft.ball_in_court_user_id ?? ''}
           onChange={(e) => onPatch({ ball_in_court_user_id: e.target.value || null })}
-          placeholder="Pick a person — coming Phase 6 (typeahead)"
+          placeholder="Pick a person. coming Phase 6 (typeahead)"
           style={inputStyle}
           aria-label="Ball in court (placeholder picker)"
         />

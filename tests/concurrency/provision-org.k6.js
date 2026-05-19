@@ -21,7 +21,6 @@
  * (provision-org-race.spec.ts) is the canonical CI guard.
  */
 /* global __ENV */
-// eslint-disable-next-line @typescript-eslint/no-var-requires, no-undef
 import http from 'k6/http'
 import { check } from 'k6'
 

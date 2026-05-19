@@ -1079,7 +1079,7 @@ const SiteIntelligencePage: React.FC = () => {
               value={searchQuery}
               onChange={(e) => handleSearchInput(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-              placeholder="Enter a job site address — e.g. 1200 Construction Ave, Austin, TX 78701"
+              placeholder="Enter a job site address. e.g. 1200 Construction Ave, Austin, TX 78701"
               style={{
                 flex: 1, border: 'none', outline: 'none',
                 backgroundColor: 'transparent',

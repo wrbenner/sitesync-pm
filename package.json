@@ -32,6 +32,8 @@
     "bundle:check": "node scripts/check-bundle-size.js",
     "validate:rfi-audit": "node scripts/validate-rfi-audit-coverage.mjs",
     "lint:rfi-voice": "tsx scripts/lint-rfi-voice.ts",
+    "lint:ui-voice": "tsx scripts/lint-ui-voice.ts",
+    "audit:permission-gate": "node scripts/audit-permission-gate.mjs",
     "permissions:generate": "tsx scripts/generate-permissions-sql.ts",
     "permissions:check": "tsx scripts/check-permissions-sync.ts",
     "build:analyze": "ANALYZE=true vite build",
@@ -149,6 +151,7 @@
     "zustand": "^5.0.12"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.11.3",
     "@capacitor/cli": "^8.3.0",
     "@eslint/js": "^9.39.4",
     "@playwright/test": "^1.58.2",

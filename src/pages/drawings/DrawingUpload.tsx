@@ -69,7 +69,7 @@ export const DrawingUpload: React.FC<DrawingUploadProps> = ({
               type="text"
               value={setName}
               onChange={(e) => setSetName(e.target.value)}
-              placeholder="e.g. 50% DD — 2026-04-22"
+              placeholder="e.g. 50% DD, 2026-04-22"
               style={{ width: '100%', padding: `${spacing['2']} ${spacing['3']}`, border: `1px solid ${colors.borderDefault}`, borderRadius: borderRadius.base, fontSize: typography.fontSize.sm, fontFamily: typography.fontFamily, color: colors.textPrimary, backgroundColor: colors.surfaceRaised, boxSizing: 'border-box' }}
             />
           </div>

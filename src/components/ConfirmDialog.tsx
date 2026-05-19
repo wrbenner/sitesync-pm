@@ -3,12 +3,12 @@ import { AlertTriangle, X } from 'lucide-react'
 import { colors, spacing, typography, borderRadius, shadows, zIndex } from '../styles/theme'
 
 /**
- * ConfirmDialog — the styled replacement for `window.confirm`.
+ * ConfirmDialog. the styled replacement for `window.confirm`.
  *
  * What it fixes vs the native dialog:
  *  - Matches the design system (parchment + ink, not OS chrome)
  *  - Renders entity context (the *thing* being deleted, not just text)
- *  - Cancel is auto-focused (safer default — Enter cancels, not confirms)
+ *  - Cancel is auto-focused (safer default. Enter cancels, not confirms)
  *  - Escape + backdrop click both cancel
  *  - Confirm button is disabled while the async handler is in flight
  *  - Optional "type to confirm" mode for highly destructive actions
@@ -22,7 +22,7 @@ import { colors, spacing, typography, borderRadius, shadows, zIndex } from '../s
  *   <ConfirmDialog
  *     open={!!confirmDelete}
  *     title="Delete RFI?"
- *     description={`RFI #${confirmDelete?.number} — "${confirmDelete?.title}"`}
+ *     description={`RFI #${confirmDelete?.number}. "${confirmDelete?.title}"`}
  *     destructiveLabel="Delete RFI"
  *     onConfirm={async () => {
  *       await deleteRfi.mutateAsync(confirmDelete!.id)
@@ -78,7 +78,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
   const [submitting, setSubmitting] = useState(false)
   const [typed, setTyped] = useState('')
 
-  // Lock body scroll while open. Auto-focus Cancel (safer default —
+  // Lock body scroll while open. Auto-focus Cancel (safer default -
   // hitting Enter accidentally cancels rather than confirms).
   useEffect(() => {
     if (!open) return
@@ -357,14 +357,14 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
 export default ConfirmDialog
 
 /**
- * useConfirm — hook-style API for callers that prefer imperative confirm flow.
+ * useConfirm. hook-style API for callers that prefer imperative confirm flow.
  *
  *   const { confirm, dialog } = useConfirm()
  *
  *   const handleDelete = async () => {
  *     const ok = await confirm({
  *       title: 'Delete RFI?',
- *       description: `RFI #${rfi.number} — "${rfi.title}"`,
+ *       description: `RFI #${rfi.number}. "${rfi.title}"`,
  *       destructiveLabel: 'Delete RFI',
  *     })
  *     if (!ok) return

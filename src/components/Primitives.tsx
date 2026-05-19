@@ -33,10 +33,46 @@ interface PageContainerProps {
   actions?: React.ReactNode;
   children: React.ReactNode;
   'aria-label'?: string;
+  /**
+   * Optional zero-padded numeral prefix shown in mono before the eyebrow.
+   * Example: numeral="01" eyebrow="PROJECT CONTEXT" renders "[01] PROJECT CONTEXT".
+   */
+  numeral?: string;
+  /**
+   * Uppercase Inter-caps eyebrow rendered above the title. Pairs with numeral
+   * and the OrangeDot signature. Stays out of the way when omitted.
+   */
+  eyebrow?: string;
+  /**
+   * Sliver row content rendered above the eyebrow — typically project name
+   * on the left, current context on the right. When neither prop is set,
+   * the Sliver row is omitted entirely.
+   */
+  sliverLeft?: React.ReactNode;
+  sliverRight?: React.ReactNode;
+  /**
+   * Show the OrangeDot signature at the end of the eyebrow row. Defaults true
+   * (the manifesto's "surveyor's mark, once per page" goes here). Set false
+   * for the small number of pages that already place the dot elsewhere.
+   */
+  showSignatureDot?: boolean;
 }
 
-export const PageContainer: React.FC<PageContainerProps> = ({ title, subtitle, actions, children, 'aria-label': ariaLabel }) => {
+export const PageContainer: React.FC<PageContainerProps> = ({
+  title,
+  subtitle,
+  actions,
+  children,
+  'aria-label': ariaLabel,
+  numeral,
+  eyebrow,
+  sliverLeft,
+  sliverRight,
+  showSignatureDot = true,
+}) => {
   const isMobile = useIsMobile()
+  const hasSliver = sliverLeft !== undefined || sliverRight !== undefined;
+  const hasEyebrow = Boolean(eyebrow || numeral);
   return (
     <div
       role="region"
@@ -65,6 +101,86 @@ export const PageContainer: React.FC<PageContainerProps> = ({ title, subtitle, a
       >
         {title && (
           <>
+            {hasSliver && (
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  fontFamily: typography.fontFamily,
+                  fontSize: '11px',
+                  fontWeight: 400,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.22em',
+                  color: colors.ink2,
+                  marginBottom: spacing['5'],
+                  gap: spacing.md,
+                  flexWrap: 'wrap',
+                }}
+              >
+                <div>{sliverLeft}</div>
+                {sliverRight && (
+                  <div style={{ color: colors.ink3, letterSpacing: '0.14em' }}>
+                    {sliverRight}
+                  </div>
+                )}
+              </div>
+            )}
+            {hasEyebrow && (
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: spacing['2'],
+                  marginBottom: spacing['3'],
+                  minHeight: 16,
+                }}
+              >
+                {numeral && (
+                  <span
+                    aria-hidden="true"
+                    style={{
+                      fontFamily: typography.fontFamilyMono,
+                      fontSize: '11px',
+                      fontWeight: 500,
+                      color: colors.ink4,
+                      letterSpacing: '0.06em',
+                    }}
+                  >
+                    [{numeral}]
+                  </span>
+                )}
+                {eyebrow && (
+                  <span
+                    style={{
+                      fontFamily: typography.fontFamily,
+                      fontSize: '11px',
+                      fontWeight: 500,
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.18em',
+                      color: colors.ink3,
+                    }}
+                  >
+                    {eyebrow}
+                  </span>
+                )}
+                {showSignatureDot && (
+                  <span
+                    aria-hidden="true"
+                    style={{
+                      display: 'inline-block',
+                      width: 7,
+                      height: 7,
+                      borderRadius: '50%',
+                      backgroundColor: 'var(--color-primary)',
+                      boxShadow: '0 0 0 3px var(--color-primary-light)',
+                      marginLeft: spacing['1'],
+                      flexShrink: 0,
+                    }}
+                  />
+                )}
+              </div>
+            )}
             <div
               style={{
                 display: 'flex',

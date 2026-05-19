@@ -1,11 +1,11 @@
-// Phase 5 — Voice entry handler.
+// Phase 5. Voice entry handler.
 //
 // Bridges the existing voice FAB pattern (RFIVoiceFAB / VoiceCapture) to
 // the unified create modal. Phase 10 will replace the per-feature voice
 // drivers with the unified `useVoiceCommand` hook; for Phase 5 we ship a
 // thin handler that:
 //   1. Renders a Sparkles button in the page action cluster
-//   2. On click, opens an inline transcript prompt (placeholder UI — the
+//   2. On click, opens an inline transcript prompt (placeholder UI. the
 //      real voice capture lives in `src/components/voice/VoiceRecorder.tsx`
 //      and is wired by Phase 10's voice unification)
 //   3. Iris parses the transcript → entities → seeds an initial draft via
@@ -62,7 +62,7 @@ export const VoiceEntryHandler: React.FC<VoiceEntryHandlerProps> = ({ onDraftRea
       <button
         type="button"
         onClick={() => setOpen(true)}
-        title="Voice — Hey Iris, draft a submittal…"
+        title="Voice. Hey Iris, draft a submittal…"
         aria-label="Create submittal by voice"
         style={{
           display: 'inline-flex',
@@ -119,7 +119,7 @@ export const VoiceEntryHandler: React.FC<VoiceEntryHandlerProps> = ({ onDraftRea
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <Sparkles size={14} color={C.brandOrange} />
               <h2 style={{ margin: 0, fontSize: 14, fontWeight: 600, color: C.ink }}>
-                Hey Iris — draft a submittal
+                Hey Iris. draft a submittal
               </h2>
               <span style={{ flex: 1 }} />
               <button
@@ -139,7 +139,7 @@ export const VoiceEntryHandler: React.FC<VoiceEntryHandlerProps> = ({ onDraftRea
             <p style={{ margin: 0, fontSize: 12, color: C.ink3, lineHeight: 1.4 }}>
               Phase 5 ships transcript-paste here as the capture surface. Phase 10
               wires the unified <code style={{ fontFamily: FONT }}>useVoiceCommand</code>
-              {' '}hook (real microphone, live transcription) — same draft seeding logic
+              {' '}hook (real microphone, live transcription). same draft seeding logic
               behind the scenes.
             </p>
             <textarea
@@ -232,13 +232,13 @@ export function extractEntitiesFromTranscript(transcript: string): {
 } {
   const out: ReturnType<typeof extractEntitiesFromTranscript> = {}
 
-  // CSI section — "08 41 13" or "08-41-13" anywhere in the transcript.
+  // CSI section. "08 41 13" or "08-41-13" anywhere in the transcript.
   const csiMatch = transcript.match(CSI_REGEX)
   if (csiMatch) {
     out.csi_section = `${csiMatch[1]} ${csiMatch[2]} ${csiMatch[3]}`
   }
 
-  // Kind — first match wins.
+  // Kind. first match wins.
   for (const { kind, pattern } of KIND_REGEX) {
     if (pattern.test(transcript)) {
       out.kind = kind
@@ -246,13 +246,13 @@ export function extractEntitiesFromTranscript(transcript: string): {
     }
   }
 
-  // Sub name — "[xxx] Glass" / "[xxx] Concrete" / "[xxx] Steel" etc.
+  // Sub name. "[xxx] Glass" / "[xxx] Concrete" / "[xxx] Steel" etc.
   const subMatch = transcript.match(SUB_NAME_REGEX)
   if (subMatch) {
     out.sub_name = subMatch[0]
   }
 
-  // Title — short clean version: first sentence with kind/csi removed, max 60 chars.
+  // Title. short clean version: first sentence with kind/csi removed, max 60 chars.
   const firstSentence = transcript.split(/[.!?]/)[0].trim()
   if (firstSentence) {
     let title = firstSentence

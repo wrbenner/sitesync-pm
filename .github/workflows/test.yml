@@ -47,6 +47,24 @@ jobs:
       - name: RFI voice linter gate
         run: npx -y tsx scripts/lint-rfi-voice.ts
 
+      # Bugatti Phase L+O: extends the RFI voice linter to every UI string
+      # across src/ (RFI files excluded — covered by the gate above). The
+      # initial baseline violation set was driven to 0 in Phase O via a
+      # full em-dash/en-dash sweep + a fix to the voice-linter rule itself
+      # (previous regex matched ASCII hyphens; now uses U+2014/U+2013).
+      # Gate is hard-fail going forward.
+      - name: UI voice linter gate (non-RFI surfaces)
+        run: npx -y tsx scripts/lint-ui-voice.ts
+
+      # Bugatti Phase L: prevent regression of the unguarded-mutation
+      # findings the May-4 audit surfaced. The mjs script diffs current
+      # unguarded-action counts against scripts/.permission-gate-snapshot.json
+      # and fails CI if any feature area regresses. continue-on-error true
+      # for now so a baseline-refresh PR is not blocked while Walker reviews.
+      - name: PermissionGate regression gate
+        run: node scripts/audit-permission-gate.mjs
+        continue-on-error: true
+
       - name: Page-test drift guard
         run: |
           npx tsx scripts/generate-page-tests.ts

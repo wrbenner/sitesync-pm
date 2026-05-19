@@ -31,7 +31,7 @@ import {
 
 // ── Provider registry ─────────────────────────────────────────
 // Matches the 5-provider whitelist in the integration_connections CHECK
-// constraint. Category drives icon choice only — filters are optional.
+// constraint. Category drives icon choice only. filters are optional.
 
 interface ProviderMeta {
   provider: IntegrationProvider
@@ -416,7 +416,7 @@ export const Integrations: React.FC = () => {
               borderRadius: borderRadius.md, marginBottom: spacing['3'],
               fontSize: typography.fontSize.sm, color: colors.statusInfo,
             }}>
-              Live OAuth is not wired yet. This creates a <strong>pending_auth</strong> row — click
+              Live OAuth is not wired yet. This creates a <strong>pending_auth</strong> row. click
               "Confirm Connection" on the card once the remote side is ready.
             </div>
 
@@ -501,7 +501,7 @@ const SyncHistoryPanel: React.FC<SyncHistoryPanelProps> = ({ connection, organiz
   }
 
   return (
-    <FormModal open onClose={onClose} title={`${providerName} — Sync History`} width={640}>
+    <FormModal open onClose={onClose} title={`${providerName}. Sync History`} width={640}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: spacing['4'] }}>
         {/* Trigger form */}
         <Card padding={spacing['4']}>
@@ -576,7 +576,7 @@ const SyncHistoryPanel: React.FC<SyncHistoryPanelProps> = ({ connection, organiz
               fontSize: typography.fontSize.caption, color: colors.statusPending,
             }}>
               <AlertTriangle size={11} />
-              Connection is {connection.status} — confirm it before syncing.
+              Connection is {connection.status}. confirm it before syncing.
             </div>
           )}
         </Card>

@@ -1,6 +1,7 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import { AlertTriangle, Calendar, Plus, Printer, RefreshCw, Share2, X } from 'lucide-react';
 import { PageContainer, Card, Btn, Skeleton, EmptyState, useToast } from '../components/Primitives';
+import { PermissionGate, RequestAccessPage } from '../components/auth/PermissionGate';
 
 import { PageInsightBanners } from '../components/ai/PredictiveAlert';
 import { colors, spacing, typography, borderRadius, shadows, zIndex } from '../styles/theme';
@@ -68,7 +69,15 @@ const generateDays = (weeks: number): string[] => {
   return days;
 };
 
-export const Lookahead: React.FC = () => {
+// Bugatti Sev-1 (cat 6 PermissionGate): the audit flagged unguarded
+// lookahead-task creation. 3-week lookahead planning is super/PM scope.
+export const Lookahead: React.FC = () => (
+  <PermissionGate minRole="superintendent" fallback={<RequestAccessPage moduleName="Lookahead" />}>
+    <LookaheadImpl />
+  </PermissionGate>
+);
+
+const LookaheadImpl: React.FC = () => {
   const { addToast } = useToast();
   const projectId = useProjectId();
   const [weekView, setWeekView] = useState<1 | 2 | 3>(3);
