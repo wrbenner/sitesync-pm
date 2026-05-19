@@ -46,6 +46,7 @@ function makeChain(data: unknown, error: { message: string } | null = null) {
   chain.order = vi.fn().mockReturnValue(chain)
   chain.gte = vi.fn().mockReturnValue(chain)
   chain.single = vi.fn().mockResolvedValue(resolved)
+  chain.maybeSingle = vi.fn().mockResolvedValue(resolved)
   chain.insert = vi.fn().mockResolvedValue({ data: null, error })
   // Make chain thenable so `await query` resolves to { data, error }
   chain.then = (resolve: (v: unknown) => unknown, reject?: (r: unknown) => unknown) =>
@@ -119,6 +120,7 @@ describe('getSubscription', () => {
     chain.select = vi.fn().mockReturnValue(chain)
     chain.eq = vi.fn().mockReturnValue(chain)
     chain.single = singleFn
+    chain.maybeSingle = singleFn
     mockFrom.mockReturnValue(chain)
 
     const sub = await getSubscription('org-1')
@@ -131,7 +133,7 @@ describe('getSubscription', () => {
 
   it('returns null when subscription not found', async () => {
     const chain = makeChain(null)
-    chain.single = vi.fn().mockResolvedValue({ data: null, error: { message: 'not found', code: 'PGRST116' } })
+    chain.maybeSingle = vi.fn().mockResolvedValue({ data: null, error: { message: 'not found', code: 'PGRST116' } })
     mockFrom.mockReturnValue(chain)
 
     const sub = await getSubscription('org-missing')
@@ -140,7 +142,7 @@ describe('getSubscription', () => {
 
   it('returns null on any DB error', async () => {
     const chain = makeChain(null)
-    chain.single = vi.fn().mockResolvedValue({ data: null, error: { message: 'permission denied' } })
+    chain.maybeSingle = vi.fn().mockResolvedValue({ data: null, error: { message: 'permission denied' } })
     mockFrom.mockReturnValue(chain)
 
     const sub = await getSubscription('org-bad')
