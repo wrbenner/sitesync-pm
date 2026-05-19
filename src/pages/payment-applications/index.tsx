@@ -22,6 +22,7 @@ import { PermissionGate } from '../../components/auth/PermissionGate'
 import { ErrorBoundary } from '../../components/ErrorBoundary'
 import { PeriodClosedBanner } from '../../components/ui/PeriodClosedBanner'
 import { useRealtimeInvalidation } from '../../hooks/useRealtimeInvalidation'
+import { useLoadingTimeout } from '../../hooks/useLoadingTimeout'
 import { PageInsightBanners } from '../../components/ai/PredictiveAlert'
 import { useCopilotStore } from '../../stores/copilotStore'
 import { fmtCurrency, type TabKey, type PayAppProject } from './types'
@@ -224,6 +225,7 @@ const PaymentApplicationsPage: React.FC = () => {
   const selectedApp = apps.find((a) => a.id === selectedAppId)
 
   const isLoading = loadingApps || loadingContracts || loadingRetainage
+  const payAppLoadTimedOut = useLoadingTimeout(isLoading, 5000)
 
   // Derive G702 data from the pay app selected in the modal
   const g702ModalApp = apps.find((a) => a.id === g702ModalAppId)
@@ -294,6 +296,7 @@ const PaymentApplicationsPage: React.FC = () => {
   useEffect(() => {
     const retainageArr = (retainage ?? []) as unknown as Array<Record<string, unknown>>
     if (retainageArr.length > 0 && retainageItems.length === 0) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setRetainageItems(retainageArr.map((r) => ({
         id: (r.id as string) || crypto.randomUUID(),
         description: (r.description as string) || 'SOV Item',
@@ -448,13 +451,13 @@ const PaymentApplicationsPage: React.FC = () => {
         }} />
       </div>
 
-      {isLoading && (
+      {isLoading && !payAppLoadTimedOut && (
         <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(4, 1fr)', gap: spacing['4'], marginBottom: spacing['2xl'] }}>
           {[1, 2, 3, 4].map((i) => <Skeleton key={i} width="100%" height="100px" />)}
         </div>
       )}
 
-      {!isLoading && apps.length > 0 && (
+      {(!isLoading || payAppLoadTimedOut) && apps.length > 0 && (
         <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fit, minmax(180px, 1fr))', gap: spacing['4'], marginBottom: spacing['2xl'] }}>
           <MetricBox label="Total Applications" value={kpis.total} />
           <MetricBox label="Total Billed" value={fmtCurrency(kpis.totalDue)} />
@@ -467,7 +470,7 @@ const PaymentApplicationsPage: React.FC = () => {
 
       <PageInsightBanners page="payment_applications" />
 
-      {!isLoading && apps.length === 0 && activeTab === 'applications' && (
+      {(!isLoading || payAppLoadTimedOut) && apps.length === 0 && activeTab === 'applications' && (
         <Card padding={spacing['5']}>
           <EmptyState
             icon={<Receipt size={48} />}
@@ -479,7 +482,7 @@ const PaymentApplicationsPage: React.FC = () => {
         </Card>
       )}
 
-      {activeTab === 'applications' && !isLoading && (
+      {activeTab === 'applications' && (!isLoading || payAppLoadTimedOut) && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: spacing['4'] }}>
           {selectedApp && projectId && (
             <PayAppDetail
@@ -558,7 +561,7 @@ const PaymentApplicationsPage: React.FC = () => {
         </div>
       )}
 
-      {activeTab === 'lien_waivers' && !isLoading && (
+      {activeTab === 'lien_waivers' && (!isLoading || payAppLoadTimedOut) && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: spacing['4'] }}>
           <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
             <PermissionGate permission="budget.edit">
@@ -589,12 +592,12 @@ const PaymentApplicationsPage: React.FC = () => {
         </div>
       )}
 
-      {activeTab === 'cash_flow' && !isLoading && (
+      {activeTab === 'cash_flow' && (!isLoading || payAppLoadTimedOut) && (
         <CashFlowPanel payApps={apps} retainage={(retainage ?? []) as unknown as Array<Record<string, unknown>>} />
       )}
 
       {/* ── Retainage Ledger (retainage_entries) ────────────── */}
-      {activeTab === 'retainage' && !isLoading && (
+      {activeTab === 'retainage' && (!isLoading || payAppLoadTimedOut) && (
         <Card padding={spacing['5']} style={{ marginBottom: spacing['4'] }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'], marginBottom: spacing['3'] }}>
             <ShieldCheck size={16} color={colors.primaryOrange} />
@@ -695,7 +698,7 @@ const PaymentApplicationsPage: React.FC = () => {
       )}
 
       {/* ── Retainage Release Workflow Tab (legacy ledger pipeline) ── */}
-      {activeTab === 'retainage' && !isLoading && (() => {
+      {activeTab === 'retainage' && (!isLoading || payAppLoadTimedOut) && (() => {
         const totalHeld = sumDollarsViaCents(retainageItems, (i) => i.retainageHeld)
         const totalReleased = sumDollarsViaCents(retainageItems, (i) => i.retainageReleased)
         const totalUnreleased = fromCents(
@@ -893,12 +896,16 @@ const PaymentApplicationsPage: React.FC = () => {
       {/* ── AIA G702/G703 Document Generation Modal ─────────── */}
       {g702ModalOpen && (
         <div
+          role="button"
+          tabIndex={-1}
+          aria-label="Close G702 dialog"
           style={{
             position: 'fixed', inset: 0, zIndex: zIndex.modal,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             backgroundColor: colors.overlayDark, padding: spacing['4'],
           }}
-          onClick={() => setG702ModalOpen(false)}
+          onClick={(e) => { if (e.target === e.currentTarget) setG702ModalOpen(false) }}
+          onKeyDown={(e) => { if (e.key === 'Escape') setG702ModalOpen(false) }}
         >
           <div
             style={{
@@ -906,7 +913,6 @@ const PaymentApplicationsPage: React.FC = () => {
               boxShadow: shadows.panel, width: '100%', maxWidth: 960,
               maxHeight: '90vh', overflow: 'auto',
             }}
-            onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
             <div style={{
@@ -1123,8 +1129,9 @@ const PaymentApplicationsPage: React.FC = () => {
       <Modal open={genWaiverOpen} onClose={() => setGenWaiverOpen(false)} title="Generate Lien Waiver">
         <div style={{ display: 'flex', flexDirection: 'column', gap: spacing['4'] }}>
           <div>
-            <label style={{ display: 'block', marginBottom: spacing['1'], fontSize: typography.fontSize.caption, color: colors.textSecondary }}>Waiver Type</label>
+            <label htmlFor="lw-waiver-type" style={{ display: 'block', marginBottom: spacing['1'], fontSize: typography.fontSize.caption, color: colors.textSecondary }}>Waiver Type</label>
             <select
+              id="lw-waiver-type"
               value={genWaiverForm.type}
               onChange={(e) => setGenWaiverForm((f) => ({ ...f, type: e.target.value as WaiverType }))}
               style={{ width: '100%', padding: spacing['2'], borderRadius: borderRadius.base, border: `1px solid ${colors.borderDefault}`, backgroundColor: colors.surfaceRaised, color: colors.textPrimary, fontSize: typography.fontSize.sm }}
@@ -1156,8 +1163,9 @@ const PaymentApplicationsPage: React.FC = () => {
             />
           </div>
           <div>
-            <label style={{ display: 'block', marginBottom: spacing['1'], fontSize: typography.fontSize.caption, color: colors.textSecondary }}>Associated Pay Application</label>
+            <label htmlFor="lw-application-id" style={{ display: 'block', marginBottom: spacing['1'], fontSize: typography.fontSize.caption, color: colors.textSecondary }}>Associated Pay Application</label>
             <select
+              id="lw-application-id"
               value={genWaiverForm.application_id}
               onChange={(e) => setGenWaiverForm((f) => ({ ...f, application_id: e.target.value }))}
               style={{ width: '100%', padding: spacing['2'], borderRadius: borderRadius.base, border: `1px solid ${colors.borderDefault}`, backgroundColor: colors.surfaceRaised, color: colors.textPrimary, fontSize: typography.fontSize.sm }}
@@ -1171,8 +1179,9 @@ const PaymentApplicationsPage: React.FC = () => {
             </select>
           </div>
           <div>
-            <label style={{ display: 'block', marginBottom: spacing['1'], fontSize: typography.fontSize.caption, color: colors.textSecondary }}>Notes</label>
+            <label htmlFor="lw-notes" style={{ display: 'block', marginBottom: spacing['1'], fontSize: typography.fontSize.caption, color: colors.textSecondary }}>Notes</label>
             <textarea
+              id="lw-notes"
               value={genWaiverForm.notes}
               onChange={(e) => setGenWaiverForm((f) => ({ ...f, notes: e.target.value }))}
               rows={3}
@@ -1261,8 +1270,9 @@ const PaymentApplicationsPage: React.FC = () => {
                 <Btn variant="ghost" size="sm" onClick={() => setReleaseAmount(String(outstanding))}>Release Full</Btn>
               </div>
               <div>
-                <label style={{ display: 'block', marginBottom: spacing['1'], fontSize: typography.fontSize.caption, color: colors.textSecondary }}>Notes</label>
+                <label htmlFor="retainage-release-notes" style={{ display: 'block', marginBottom: spacing['1'], fontSize: typography.fontSize.caption, color: colors.textSecondary }}>Notes</label>
                 <textarea
+                  id="retainage-release-notes"
                   value={releaseNotes}
                   onChange={(e) => setReleaseNotes(e.target.value)}
                   rows={2}
