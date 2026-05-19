@@ -11,6 +11,7 @@ import { useMfa } from '../../hooks/useMfa'
 import { useAuthStore } from '../../stores/authStore'
 import { evaluateMfaRequirement } from './MfaRequiredBanner'
 import { supabase } from '../../lib/supabase'
+import { toast } from 'sonner'
 
 interface Props {
   children: React.ReactNode
@@ -192,7 +193,7 @@ const RequestAccessPage: React.FC<RequestAccessPageProps> = ({ moduleName }) => 
         : 'You do not have permission to access this page.'}
     </p>
     <button
-      onClick={() => {/* TODO: wire up request access flow */}}
+      onClick={() => toast.info('Request access — contact your project admin to update your role.')}
       style={{
         backgroundColor: colors.brand400, color: colors.white,
         border: 'none', borderRadius: borderRadius.md,
